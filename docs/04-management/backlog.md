@@ -76,6 +76,7 @@
 | VJLAB-57 | Evolve panel visibility with floating toggle and top bar | Feature | High | E11 | M11 | New |
 | VJLAB-58 | Mobile bottom sheet with Audio / Scenes / FX / Guide tabs | Feature | High | E11 | M11 | New |
 | VJLAB-59 | First-run tour with help drawer and empty-state guide | Feature | Medium | E11 | M11 | New |
+| VJLAB-60 | Detached second-screen popup with synced controls for clean fullscreen output | Feature | Medium | E11 | M11 | New |
 
 ## Dependencies
 
@@ -105,3 +106,4 @@
 | 0.5.1 | 2026-09-16 | Refine VJLAB-51/52 to Grid LED Octagon Pulse and Avatar Chroma Bouncer |
 | 0.5.2 | 2026-09-16 | Add VJLAB-55 Fractal full-screen |
 | 0.6.0 | 2026-09-21 | Add E11 Web Experience with VJLAB-56/57/58/59 (Sprint 21-22) |
+| 0.6.1 | 2026-09-22 | Add VJLAB-60 detached second-screen popup with synced controls |
