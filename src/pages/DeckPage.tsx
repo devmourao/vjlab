@@ -1,13 +1,13 @@
-import { useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import '../App.css';
 import { useAudioEngine } from '../audio/useAudioEngine';
 import { AudioPanel } from '../components/AudioPanel';
 import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
-import { AboutPanel, Seal } from '../components/Identity';
+import { AboutPanel } from '../components/Identity';
 import { ShortcutMap } from '../components/ShortcutMap';
 import { StrobeOverlay } from '../components/StrobeOverlay';
 import { TextOverlay } from '../components/TextOverlay';
+import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
 import { useDirectorStore } from '../director/directorStore';
 import { useAutoPilot } from '../director/useAutoPilot';
@@ -27,38 +27,14 @@ function DeckPage() {
   const panelMode = useDirectorStore((s) => s.panelMode);
   const autoPilotOn = useDirectorStore((s) => s.autoPilotOn);
   const preset = getPreset(activePresetId);
-  const popupRef = useRef<Window | null>(null);
-
-  // Detached mode: try to open a separate popup window for controls.
-  // If blocked, fall back to an in-page floating panel.
-  useEffect(() => {
-    if (panelMode !== 'detached') {
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-      popupRef.current = null;
-      return;
-    }
-    try {
-      const popup = window.open('', '_blank', 'popup,width=460,height=700');
-      if (popup) {
-        popupRef.current = popup;
-        popup.document.title = 'VJ Lab — Controls';
-        popup.document.body.innerHTML =
-          '<p style="font-family: sans-serif; padding: 16px;">VJ Lab controls are detached. Use U to cycle panel modes. This popup is a placeholder — controls stay synced via BroadcastChannel in the next iteration.</p>';
-      }
-    } catch {
-      // Fallback is the in-page floating panel rendered below.
-    }
-    return () => {
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-    };
-  }, [panelMode]);
 
   const showDocked = panelMode === 'docked';
   const showDetached = panelMode === 'detached';
-  const showHidden = panelMode === 'hidden';
 
   return (
     <div className="stage-container" data-testid="blank-stage">
+      <TopBar />
+      <FloatingPanelToggle />
       {showDocked && <AudioPanel engine={engine} />}
       {showDocked && <ShortcutMap />}
       {showDetached && (
@@ -84,17 +60,15 @@ function DeckPage() {
           <AudioPanel engine={engine} />
           <ShortcutMap />
           <span style={{ color: '#fff', fontSize: 11, opacity: 0.7 }}>
-            Detached — press U to cycle (popup fallback if blocked)
+            Detached — press U to cycle
           </span>
         </div>
       )}
-      {!showHidden && showDetached ? null : null}
       <StrobeOverlay />
       <BeatFlashOverlay />
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
-      <Seal />
       <div className="scene-badge" data-testid="scene-name">
         {preset.name} · {activePresetId + 1}/{PRESETS.length} · playlist{' '}
         {PLAYLIST.length}
