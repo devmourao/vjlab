@@ -423,3 +423,9 @@
   opacity: 0;
   pointer-events: none;
 }
+
+.detached-panel .audio-panel,
+.detached-panel .shortcut-map {
+  position: static;
+  max-width: none;
+}

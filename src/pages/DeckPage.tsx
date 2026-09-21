@@ -40,19 +40,22 @@ function DeckPage() {
       {showDetached && (
         <div
           data-testid="detached-panel"
+          className="detached-panel"
           style={{
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            top: '60px',
+            left: '12px',
+            bottom: '60px',
             zIndex: 10,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            maxHeight: '90vh',
-            overflow: 'auto',
+            width: '380px',
+            maxWidth: 'min(380px, calc(100vw - 24px))',
+            overflowY: 'auto',
+            overflowX: 'hidden',
             padding: '12px',
-            background: 'rgba(0,0,0,0.75)',
+            background: 'rgba(0,0,0,0.8)',
             border: '1px solid rgba(255,255,255,0.2)',
             borderRadius: '12px',
           }}
@@ -60,7 +63,7 @@ function DeckPage() {
           <AudioPanel engine={engine} />
           <ShortcutMap />
           <span style={{ color: '#fff', fontSize: 11, opacity: 0.7 }}>
-            Detached — press U to cycle
+            Second-screen preview — press U to cycle
           </span>
         </div>
       )}
