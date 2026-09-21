@@ -14,6 +14,7 @@
 * E08 — Stage Control v0.3.0 (panel modes, fullscreen output, auto-pilot tour, desk status HUD)
 * E09 — Playlists v0.4.0 (local music queue and effects preset queue)
 * E10 — Builder & Media v0.5.0 (preset builder, video frame, elemental library, export/import)
+* E11 — Web Experience v0.6.0 (landing, responsive shell, panel visibility, onboarding guide)
 
 ## Items
 
@@ -71,6 +72,10 @@
 | VJLAB-53 | Preset export/import — JSON file without DB, versioned schema | Feature | Medium | E10 | M10 | New |
 | VJLAB-54 | Video frame — local video as VideoTexture in scene frame with audio analysis | Feature | Medium | E10 | M10 | New |
 | VJLAB-55 | Fractal full-screen — Mandelbrot/Julia shader with zoom/rotation reactive to bass/mids | Feature | Medium | E10 | M10 | New |
+| VJLAB-56 | Landing route with presentation page and deck entry | Feature | High | E11 | M11 | New |
+| VJLAB-57 | Evolve panel visibility with floating toggle and top bar | Feature | High | E11 | M11 | New |
+| VJLAB-58 | Mobile bottom sheet with Audio / Scenes / FX / Guide tabs | Feature | High | E11 | M11 | New |
+| VJLAB-59 | First-run tour with help drawer and empty-state guide | Feature | Medium | E11 | M11 | New |
 
 ## Dependencies
 
@@ -99,3 +104,4 @@
 | 0.5.0 | 2026-09-16 | Add E10 Builder & Media with VJLAB-50/51/52/53 (M10) |
 | 0.5.1 | 2026-09-16 | Refine VJLAB-51/52 to Grid LED Octagon Pulse and Avatar Chroma Bouncer |
 | 0.5.2 | 2026-09-16 | Add VJLAB-55 Fractal full-screen |
+| 0.6.0 | 2026-09-21 | Add E11 Web Experience with VJLAB-56/57/58/59 (Sprint 21-22) |
