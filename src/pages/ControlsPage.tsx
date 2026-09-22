@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { createTrack } from '../audio/track';
 import { SITE_META } from '../config/siteMeta';
 import {
   CONTROL_CHANNEL,
@@ -17,6 +18,7 @@ import {
   ZOOM_MIN,
 } from '../director/fx';
 import { PRESETS } from '../scenes/presets';
+import { TrackCard } from '../components/TrackCard';
 import './ControlsPage.css';
 
 function slotRange(slot: string): { min: number; max: number; step: number } {
@@ -91,6 +93,11 @@ export default function ControlsPage() {
     setOverlayDraft(text);
     send({ type: 'setOverlayText', text });
   };
+  const fileName = snapshot?.fileName ?? null;
+  const track = useMemo(
+    () => (fileName ? createTrack(fileName) : null),
+    [fileName],
+  );
 
   return (
     <div className="controls-page" data-testid="controls-page">
@@ -117,16 +124,13 @@ export default function ControlsPage() {
         <>
           <section className="controls-section" aria-label="Track">
             <h2>Track</h2>
-            <p className="controls-track" data-testid="controls-track">
-              {snapshot.fileName ?? 'No file loaded'} ·{' '}
-              {snapshot.isPlaying ? 'Playing' : 'Paused'}
-            </p>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'togglePlayback' })}>
-                Play / Pause
-              </button>
-              <span className="controls-hint">Upload stays on the main deck.</span>
-            </div>
+            <TrackCard
+              track={track}
+              isPlaying={snapshot.isPlaying}
+              variant="status"
+              onTogglePlayback={() => send({ type: 'togglePlayback' })}
+            />
+            <p className="controls-hint">Upload stays on the main deck.</p>
           </section>
 
           <section className="controls-section" aria-label="Scenes">

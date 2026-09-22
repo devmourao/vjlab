@@ -199,15 +199,18 @@ function DeckPage() {
 
   const showDocked = panelMode === 'docked';
   const showDetached = panelMode === 'detached';
+  // Focus mode: with no track loaded the hero player and tour lead,
+  // so side panels stay collapsed until the first stage reveals.
+  const focusMode = !engine.fileName;
 
   return (
     <div className="stage-container" data-testid="blank-stage">
       <TopBar />
       <FloatingPanelToggle />
       <BottomSheet engine={engine} />
-      {showDocked && <AudioPanel engine={engine} />}
-      {showDocked && <ShortcutMap />}
-      {showDetached && (
+      {showDocked && !focusMode && <AudioPanel engine={engine} />}
+      {showDocked && !focusMode && <ShortcutMap />}
+      {showDetached && !focusMode && (
         <div
           data-testid="detached-panel"
           className="detached-panel"
