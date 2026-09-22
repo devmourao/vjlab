@@ -131,6 +131,17 @@ function executeControlCommand(
     case 'setOverlayText':
       store.setOverlayText(command.text);
       break;
+    case 'setMix':
+      if ((FX_SLOTS as readonly string[]).includes(command.slot)) {
+        store.setFxMix(command.slot as FxSlot, command.value);
+      }
+      break;
+    case 'setZoom':
+      store.setZoomTarget(command.value);
+      break;
+    case 'setStrobeHz':
+      store.setStrobeRate(command.value);
+      break;
   }
 }
 

@@ -106,6 +106,11 @@
   font-size: 13px;
 }
 
+.controls-overlay.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .controls-overlay input {
   flex: 1;
   min-height: 44px;
@@ -115,4 +120,53 @@
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
   font-size: 14px;
+}
+
+.controls-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.controls-slider input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+
+.controls-button.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  text-align: left;
+}
+
+.slot-name {
+  font-weight: 800;
+}
+
+.slot-value {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.slot-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.slot-bar span {
+  display: block;
+  height: 100%;
+  background: #22d3ee;
+}
+
+.controls-end {
+  height: 24px;
 }

@@ -6,8 +6,31 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
+import {
+  CONTRAST_MAX,
+  CONTRAST_MIN,
+  FX_SLOTS,
+  SATURATION_MAX,
+  STROBE_MAX_HZ,
+  STROBE_MIN_HZ,
+  ZOOM_MAX,
+  ZOOM_MIN,
+} from '../director/fx';
 import { PRESETS } from '../scenes/presets';
 import './ControlsPage.css';
+
+function slotRange(slot: string): { min: number; max: number; step: number } {
+  if (slot === 'contrast')
+    return { min: CONTRAST_MIN, max: CONTRAST_MAX, step: 0.01 };
+  if (slot === 'saturation') return { min: 0, max: SATURATION_MAX, step: 0.01 };
+  return { min: 0, max: 1, step: 0.01 };
+}
+
+function slotFraction(slot: string, value: number): number {
+  const { min, max } = slotRange(slot);
+  if (max === min) return 0;
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
 
 function useControlDeck() {
   const [snapshot, setSnapshot] = useState<ControlSnapshot | null>(null);
@@ -149,14 +172,25 @@ export default function ControlsPage() {
               <button type="button" onClick={() => send({ type: 'cycleStrobeMode' })}>
                 {snapshot.strobeMode}
               </button>
-              <button type="button" onClick={() => send({ type: 'strobeSlower' })}>
-                −
-              </button>
               <span>{snapshot.strobeRateHz}Hz</span>
-              <button type="button" onClick={() => send({ type: 'strobeFaster' })}>
-                +
-              </button>
             </div>
+            <label className="controls-slider">
+              <span>Speed</span>
+              <input
+                type="range"
+                min={STROBE_MIN_HZ}
+                max={STROBE_MAX_HZ}
+                step={1}
+                value={snapshot.strobeRateHz}
+                aria-label="Strobe speed"
+                onChange={(event) =>
+                  send({
+                    type: 'setStrobeHz',
+                    value: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
           </section>
 
           <section className="controls-section" aria-label="Flags">
@@ -193,35 +227,82 @@ export default function ControlsPage() {
           </section>
 
           <section className="controls-section" aria-label="Effects">
-            <h2>Effects</h2>
-            <p className="controls-track">
-              {snapshot.selectedFx} · {(snapshot.mixes[snapshot.selectedFx] ?? 0).toFixed(1)}
-            </p>
+            <h2>Effect slot</h2>
+            <div className="controls-grid">
+              {FX_SLOTS.map((slot) => {
+                const value = snapshot.mixes[slot] ?? 0;
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    className={
+                      slot === snapshot.selectedFx
+                        ? 'controls-button slot active'
+                        : 'controls-button slot'
+                    }
+                    onClick={() => send({ type: 'selectFxSlot', slot })}
+                  >
+                    <span className="slot-name">{slot}</span>
+                    <span className="slot-value">{value.toFixed(2)}</span>
+                    <span className="slot-bar" aria-hidden>
+                      <span
+                        style={{
+                          width: `${Math.round(slotFraction(slot, value) * 100)}%`,
+                        }}
+                      />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <label className="controls-slider">
+              <span>Mix · {snapshot.selectedFx}</span>
+              <input
+                type="range"
+                min={slotRange(snapshot.selectedFx).min}
+                max={slotRange(snapshot.selectedFx).max}
+                step={slotRange(snapshot.selectedFx).step}
+                value={snapshot.mixes[snapshot.selectedFx] ?? 0}
+                aria-label="Selected effect mix"
+                onChange={(event) =>
+                  send({
+                    type: 'setMix',
+                    slot: snapshot.selectedFx,
+                    value: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </section>
+
+          <section className="controls-section" aria-label="Color and zoom">
+            <h2>Color and zoom</h2>
             <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'cycleFxSlot' })}>
-                Slot
-              </button>
-              <button type="button" onClick={() => send({ type: 'fxDown' })}>
-                −
-              </button>
-              <button type="button" onClick={() => send({ type: 'fxUp' })}>
-                +
-              </button>
               <button type="button" onClick={() => send({ type: 'stepHue' })}>
-                Hue
+                Hue step
               </button>
+              <span>{Math.round(snapshot.hueShift * 8)}/8</span>
             </div>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'zoomOut' })}>
-                Zoom −
-              </button>
-              <span>{snapshot.zoomTarget.toFixed(2)}x</span>
-              <button type="button" onClick={() => send({ type: 'zoomIn' })}>
-                Zoom +
-              </button>
-            </div>
-            <label className="controls-overlay">
-              <span>Overlay</span>
+            <label className="controls-slider">
+              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
+              <input
+                type="range"
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={0.01}
+                value={snapshot.zoomTarget}
+                aria-label="Zoom"
+                onChange={(event) =>
+                  send({ type: 'setZoom', value: Number(event.target.value) })
+                }
+              />
+            </label>
+          </section>
+
+          <section className="controls-section" aria-label="Overlay and actions">
+            <h2>Overlay and actions</h2>
+            <label className="controls-overlay stacked">
+              <span>Overlay text</span>
               <input
                 type="text"
                 maxLength={60}
@@ -241,6 +322,7 @@ export default function ControlsPage() {
               </button>
             </div>
           </section>
+          <div className="controls-end" aria-hidden />
         </>
       )}
     </div>

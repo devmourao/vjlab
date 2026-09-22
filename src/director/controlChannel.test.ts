@@ -26,6 +26,30 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({ type: 'command', command: { type: 'formatDisk' } }),
     ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setMix', slot: 'bloom', value: 0.5 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setZoom', value: 1.2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setMix', slot: 'bloom' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setZoom', value: 'far' },
+      }),
+    ).toBe(false);
     expect(isControlMessage({ type: 'command', command: null })).toBe(false);
     expect(isControlMessage(null)).toBe(false);
     expect(isControlMessage('toggleStrobe')).toBe(false);

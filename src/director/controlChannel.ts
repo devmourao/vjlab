@@ -39,7 +39,10 @@ export type ControlCommand =
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
   | { type: 'togglePlayback' }
-  | { type: 'setOverlayText'; text: string };
+  | { type: 'setOverlayText'; text: string }
+  | { type: 'setMix'; slot: string; value: number }
+  | { type: 'setZoom'; value: number }
+  | { type: 'setStrobeHz'; value: number };
 
 export interface ControlSnapshot {
   activePresetId: number;
@@ -98,7 +101,33 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'cyclePanelMode',
   'togglePlayback',
   'setOverlayText',
+  'setMix',
+  'setZoom',
+  'setStrobeHz',
 ]);
+
+function hasValidPayload(command: Record<string, unknown>): boolean {
+  switch (command['type']) {
+    case 'dissolve':
+      return typeof command['id'] === 'number';
+    case 'selectFxSlot':
+      return typeof command['slot'] === 'string';
+    case 'setPanelMode':
+      return typeof command['mode'] === 'string';
+    case 'setOverlayText':
+      return typeof command['text'] === 'string';
+    case 'setMix':
+      return (
+        typeof command['slot'] === 'string' &&
+        typeof command['value'] === 'number'
+      );
+    case 'setZoom':
+    case 'setStrobeHz':
+      return typeof command['value'] === 'number';
+    default:
+      return true;
+  }
+}
 
 export function isControlMessage(value: unknown): value is ControlMessage {
   if (typeof value !== 'object' || value === null) return false;
@@ -114,7 +143,8 @@ export function isControlMessage(value: unknown): value is ControlMessage {
     if (typeof command !== 'object' || command === null) return false;
     return (
       typeof command['type'] === 'string' &&
-      COMMAND_TYPES.has(command['type'])
+      COMMAND_TYPES.has(command['type']) &&
+      hasValidPayload(command)
     );
   }
   return false;
