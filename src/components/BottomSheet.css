@@ -10,6 +10,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px 16px 0 0;
   color: #fff;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .bottom-sheet.mini {
@@ -18,10 +19,12 @@
 
 .bottom-sheet.half {
   height: 45vh;
+  height: 45dvh;
 }
 
 .bottom-sheet.expanded {
   height: 85vh;
+  height: 85dvh;
 }
 
 .sheet-header {
@@ -87,6 +90,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-sheet .audio-panel,
