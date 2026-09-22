@@ -78,6 +78,7 @@
 | VJLAB-59 | First-run tour with help drawer and empty-state guide | Feature | Medium | E11 | M11 | New |
 | VJLAB-60 | Detached second-screen popup with synced controls for clean fullscreen output | Feature | Medium | E11 | M11 | New |
 | VJLAB-61 | Responsive shell standard — unify breakpoints, safe-area and control surface per UX best practices (queued after Sprint 22) | Enhancement | Medium | E11 | M11 | New |
+| VJLAB-62 | Deck entry sequence — focus mode, staged reveal and reusable TrackCard ready for track queue (queued after Sprint 22) | Enhancement | Medium | E11 | M11 | New |
 
 ## Dependencies
 
@@ -109,3 +110,4 @@
 | 0.6.0 | 2026-09-21 | Add E11 Web Experience with VJLAB-56/57/58/59 (Sprint 21-22) |
 | 0.6.1 | 2026-09-22 | Add VJLAB-60 detached second-screen popup with synced controls |
 | 0.6.2 | 2026-09-22 | Queue VJLAB-61 responsive shell standard after Sprint 22 |
+| 0.6.3 | 2026-09-22 | Queue VJLAB-62 deck entry sequence with reusable TrackCard after Sprint 22 |
