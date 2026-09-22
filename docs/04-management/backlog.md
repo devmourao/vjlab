@@ -15,6 +15,7 @@
 * E09 — Playlists v0.4.0 (local music queue and effects preset queue)
 * E10 — Builder & Media v0.5.0 (preset builder, video frame, elemental library, export/import)
 * E11 — Web Experience v0.6.0 (landing, responsive shell, panel visibility, onboarding guide)
+* E12 — Scene Packs and Library v0.9.0 (instance foundation, pack format, scene CRUD)
 
 ## Items
 
@@ -82,6 +83,9 @@
 | VJLAB-63 | Unify side panels — retire right desk, docked uses left tabbed scrollable panel (Track / Scenes / FX / Guide) | Refactor | High | E11 | M11 | New |
 | VJLAB-64 | Dedicated player area with track info and transport plus library / setlist / favorites scene model (UI setlist deferred) | Feature | High | E11 | M11 | New |
 | VJLAB-65 | Explicit hide vs pop-out controls — Hide UI never opens popups or exits fullscreen (Sprint 26) | UX fix | High | E11 | M11 | New |
+| VJLAB-66 | Importable scene and media packs — versioned pack format with validator (complete deck-reactive scenes, per-instance params, clean rejection) | Feature | High | E12 | M12 | New |
+| VJLAB-67 | Instance-scoped scene foundation — single instances[] composition, per-instance asset slots, base capability registry | Refactor | High | E12 | M12 | New |
+| VJLAB-68 | Scene CRUD v1 — create, edit and delete on native bases with text export/import (playlist born here) | Feature | High | E12 | M12 | New |
 
 ## Dependencies
 
@@ -93,6 +97,9 @@
 * VJLAB-18 blocks beat-synced auto-cut (follow-up).
 * VJLAB-19 blocks VJLAB-22 (image blend uses palettes).
 * VJLAB-63 and VJLAB-64 block VJLAB-65 (explicit controls build on the unified shell).
+* VJLAB-67 blocks VJLAB-66 (pack validator needs the per-instance model and capability registry).
+* VJLAB-66 blocks VJLAB-68 (CRUD imports through the pack format).
+* VJLAB-68 supports VJLAB-45 and VJLAB-46 (playlists build on packs and CRUD).
 
 ## Notes for Sprint 1 Candidates
 
@@ -117,3 +124,4 @@
 | 0.6.3 | 2026-09-22 | Queue VJLAB-62 deck entry sequence with reusable TrackCard after Sprint 22 |
 | 0.7.1 | 2026-09-23 | Add VJLAB-63/64 unified panels and player model (Sprint 25) |
 | 0.7.2 | 2026-09-23 | Add VJLAB-65 explicit hide vs pop-out controls (Sprint 26) |
+| 0.8.1 | 2026-09-23 | Add E12 Scene Packs and Library with VJLAB-66/67/68 (Sprints 27-29) |
