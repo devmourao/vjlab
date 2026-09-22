@@ -1,3 +1,12 @@
+:root {
+  /* Shell design tokens (single source).
+     Note: media queries below hardcode 768px because CSS cannot use
+     var() in query conditions — keep every breakpoint aligned here. */
+  --shell-bp-tablet: 768px;
+  --shell-bar-height: 48px;
+  --shell-sheet-mini: 56px;
+}
+
 body {
   margin: 0;
   background: #000;

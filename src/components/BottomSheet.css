@@ -165,12 +165,14 @@
   cursor: pointer;
 }
 
+/* Breakpoint aligned with --shell-bp-tablet (see index.css). */
 @media (min-width: 768px) {
   .bottom-sheet {
     display: none;
   }
 }
 
+/* One pixel below --shell-bp-tablet. */
 @media (max-width: 767px) {
   .panel-toggle {
     display: none;
