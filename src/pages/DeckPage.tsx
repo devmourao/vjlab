@@ -7,6 +7,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
 import { AboutPanel } from '../components/Identity';
+import { PlayerBar } from '../components/PlayerBar';
 import { SidePanel } from '../components/SidePanel';
 import { StrobeOverlay } from '../components/StrobeOverlay';
 import { TextOverlay } from '../components/TextOverlay';
@@ -218,6 +219,9 @@ function DeckPage() {
       <GuideDrawer />
       <TourOverlay />
       <EmptyState engine={engine} />
+      {!focusMode && panelMode !== 'hidden' && (
+        <PlayerBar engine={engine} />
+      )}
       <div className="scene-badge" data-testid="scene-name">
         {preset.name} · {activePresetId + 1}/{PRESETS.length} · playlist{' '}
         {PLAYLIST.length}

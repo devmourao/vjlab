@@ -34,6 +34,11 @@
   flex-shrink: 0;
 }
 
+.scene-fav {
+  color: #facc15;
+  font-size: 12px;
+}
+
 .scene-sub {
   margin-left: auto;
   font-size: 11px;

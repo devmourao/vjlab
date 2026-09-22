@@ -55,9 +55,9 @@
 
 .panel-toggle {
   position: absolute;
-  left: 50%;
+  right: 12px;
   bottom: 12px;
-  transform: translateX(-50%);
+  bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 25;
   min-width: 44px;
   min-height: 44px;

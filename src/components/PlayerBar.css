@@ -1,0 +1,22 @@
+.player-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 12;
+  max-width: min(460px, calc(100vw - 24px));
+  padding: 8px 14px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+/* Breakpoint aligned with --shell-bp-tablet (see index.css):
+   small screens play from the bottom sheet instead. */
+@media (max-width: 767px) {
+  .player-bar {
+    display: none;
+  }
+}
