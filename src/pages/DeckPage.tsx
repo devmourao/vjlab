@@ -2,13 +2,12 @@ import { useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import '../App.css';
 import { useAudioEngine, type AudioEngineApi } from '../audio/useAudioEngine';
-import { AudioPanel } from '../components/AudioPanel';
 import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
 import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
 import { AboutPanel } from '../components/Identity';
-import { ShortcutMap } from '../components/ShortcutMap';
+import { SidePanel } from '../components/SidePanel';
 import { StrobeOverlay } from '../components/StrobeOverlay';
 import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
@@ -208,37 +207,8 @@ function DeckPage() {
       <TopBar />
       <FloatingPanelToggle />
       <BottomSheet engine={engine} />
-      {showDocked && !focusMode && <AudioPanel engine={engine} />}
-      {showDocked && !focusMode && <ShortcutMap />}
-      {showDetached && !focusMode && (
-        <div
-          data-testid="detached-panel"
-          className="detached-panel"
-          style={{
-            position: 'absolute',
-            top: 'calc(60px + env(safe-area-inset-top, 0px))',
-            left: '12px',
-            bottom: '60px',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            width: '380px',
-            maxWidth: 'min(380px, calc(100vw - 24px))',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            padding: '12px',
-            background: 'rgba(0,0,0,0.8)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-          }}
-        >
-          <AudioPanel engine={engine} />
-          <ShortcutMap />
-          <span style={{ color: '#fff', fontSize: 11, opacity: 0.7 }}>
-            Second-screen preview — press U to cycle
-          </span>
-        </div>
+      {(showDocked || showDetached) && !focusMode && (
+        <SidePanel engine={engine} />
       )}
       <StrobeOverlay />
       <BeatFlashOverlay />
