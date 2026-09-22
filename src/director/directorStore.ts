@@ -69,6 +69,9 @@ interface DirectorState {
   zoomOut: () => void;
   cycleFxSlot: () => void;
   selectFxSlot: (slot: FxSlot) => void;
+  setFxMix: (slot: FxSlot, value: number) => void;
+  setZoomTarget: (value: number) => void;
+  setStrobeRate: (value: number) => void;
   fxUp: () => void;
   fxDown: () => void;
   strobeFaster: () => void;
@@ -277,6 +280,21 @@ export const useDirectorStore = create<DirectorState>((set) => ({
   },
   cycleFxSlot: () => set((s) => ({ selectedFx: nextFxSlot(s.selectedFx) })),
   selectFxSlot: (slot: FxSlot) => set({ selectedFx: slot }),
+  setFxMix: (slot: FxSlot, value: number) =>
+    set((s) => {
+      if (slot === 'contrast')
+        return { colorContrast: clampContrast(value) };
+      if (slot === 'saturation')
+        return { colorSaturation: clampSaturation(value) };
+      return {
+        mixBloom: slot === 'bloom' ? clampMix(value) : s.mixBloom,
+        mixVignette: slot === 'vignette' ? clampMix(value) : s.mixVignette,
+        mixStrobe: slot === 'strobe' ? clampMix(value) : s.mixStrobe,
+        masterMix: slot === 'master' ? clampMix(value) : s.masterMix,
+      };
+    }),
+  setZoomTarget: (value: number) => set({ zoomTarget: clampZoom(value) }),
+  setStrobeRate: (value: number) => set({ strobeRateHz: clampStrobeHz(value) }),
   cycleStrobeMode: () =>
     set((s) => ({ strobeMode: nextStrobeMode(s.strobeMode) })),
   fxUp: () =>

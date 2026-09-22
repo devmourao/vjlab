@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { SITE_META } from '../config/siteMeta';
+import { requestDetachedMode } from '../director/controlChannel';
 import { useDirectorStore } from '../director/directorStore';
 import './TopBar.css';
 
@@ -14,7 +15,6 @@ function toggleFullscreen() {
 
 export function TopBar() {
   const panelMode = useDirectorStore((s) => s.panelMode);
-  const cyclePanelMode = useDirectorStore((s) => s.cyclePanelMode);
 
   if (panelMode === 'hidden') return null;
 
@@ -32,7 +32,7 @@ export function TopBar() {
           className="top-bar-button"
           data-testid="panel-toggle"
           title="Cycle panel visibility (U)"
-          onClick={cyclePanelMode}
+          onClick={requestDetachedMode}
         >
           Hide UI
         </button>
@@ -61,7 +61,6 @@ export function TopBar() {
 
 export function FloatingPanelToggle() {
   const panelMode = useDirectorStore((s) => s.panelMode);
-  const cyclePanelMode = useDirectorStore((s) => s.cyclePanelMode);
   const isHidden = panelMode === 'hidden';
 
   return (
@@ -70,7 +69,7 @@ export function FloatingPanelToggle() {
       className="panel-toggle"
       data-testid="floating-panel-toggle"
       title="Cycle panel visibility (U)"
-      onClick={cyclePanelMode}
+      onClick={requestDetachedMode}
     >
       {isHidden ? 'Show UI' : 'Hide UI'}
     </button>

@@ -1,0 +1,172 @@
+.controls-page {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px
+    calc(16px + env(safe-area-inset-bottom, 0px));
+  background: #05050c;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.controls-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.controls-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.controls-pill.on {
+  background: #22d3ee;
+  color: #000;
+}
+
+.controls-pill.off {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.controls-offline {
+  margin-top: 24px;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.controls-section {
+  margin-top: 20px;
+}
+
+.controls-section h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.controls-track {
+  margin: 0 0 10px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.controls-row button,
+.controls-grid button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.controls-button.active {
+  background: #22d3ee;
+  color: #000;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.controls-hint {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.controls-overlay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.controls-overlay.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.controls-overlay input {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 14px;
+}
+
+.controls-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.controls-slider input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+
+.controls-button.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  text-align: left;
+}
+
+.slot-name {
+  font-weight: 800;
+}
+
+.slot-value {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.slot-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.slot-bar span {
+  display: block;
+  height: 100%;
+  background: #22d3ee;
+}
+
+.controls-end {
+  height: 24px;
+}

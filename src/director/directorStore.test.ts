@@ -170,4 +170,20 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().tourOpen).toBe(false);
     expect(useDirectorStore.getState().tourSeen).toBe(true);
   });
+
+  it('sets absolute mix, zoom and strobe values with clamps', () => {
+    const api = useDirectorStore.getState();
+    api.setFxMix('bloom', 0.4);
+    expect(useDirectorStore.getState().mixBloom).toBeCloseTo(0.4);
+    api.setFxMix('bloom', 9);
+    expect(useDirectorStore.getState().mixBloom).toBe(1);
+    api.setFxMix('contrast', -9);
+    expect(useDirectorStore.getState().colorContrast).toBe(-0.5);
+    api.setFxMix('saturation', 9);
+    expect(useDirectorStore.getState().colorSaturation).toBe(0.6);
+    api.setZoomTarget(9);
+    expect(useDirectorStore.getState().zoomTarget).toBe(2.5);
+    api.setStrobeRate(99);
+    expect(useDirectorStore.getState().strobeRateHz).toBe(12);
+  });
 });
