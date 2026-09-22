@@ -108,6 +108,7 @@ export function useKeyboardDesk() {
           break;
         case 'Escape':
           if (store.aboutOpen) store.toggleAbout();
+          if (store.helpOpen) store.setHelpOpen(false);
           break;
         case 'Space':
           event.preventDefault();

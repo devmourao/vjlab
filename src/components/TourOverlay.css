@@ -1,0 +1,89 @@
+.tour-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tour-card {
+  width: min(420px, calc(100vw - 48px));
+  padding: 24px;
+  color: #fff;
+  background: #0b0b12;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+}
+
+.tour-kicker {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.tour-card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.tour-card p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tour-dots span {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tour-dots span.on {
+  background: #22d3ee;
+}
+
+.tour-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tour-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tour-button.primary {
+  border: 0;
+  background: #22d3ee;
+  color: #000;
+}
+
+.tour-button.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #fff;
+}
+
+.tour-button.ghost {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  opacity: 0.7;
+}

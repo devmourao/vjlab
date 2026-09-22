@@ -45,6 +45,15 @@ export function TopBar() {
         >
           Fullscreen
         </button>
+        <button
+          type="button"
+          className="top-bar-button"
+          data-testid="help-toggle"
+          title="Open usage guide"
+          onClick={() => useDirectorStore.getState().toggleHelp()}
+        >
+          Guide
+        </button>
       </div>
     </header>
   );

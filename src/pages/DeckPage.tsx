@@ -4,10 +4,13 @@ import { useAudioEngine } from '../audio/useAudioEngine';
 import { AudioPanel } from '../components/AudioPanel';
 import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
 import { BottomSheet } from '../components/BottomSheet';
+import { EmptyState } from '../components/EmptyState';
+import { GuideDrawer } from '../components/GuideDrawer';
 import { AboutPanel } from '../components/Identity';
 import { ShortcutMap } from '../components/ShortcutMap';
 import { StrobeOverlay } from '../components/StrobeOverlay';
 import { TextOverlay } from '../components/TextOverlay';
+import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
 import { useDirectorStore } from '../director/directorStore';
@@ -74,6 +77,9 @@ function DeckPage() {
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
+      <GuideDrawer />
+      <TourOverlay />
+      <EmptyState engine={engine} />
       <div className="scene-badge" data-testid="scene-name">
         {preset.name} · {activePresetId + 1}/{PRESETS.length} · playlist{' '}
         {PLAYLIST.length}
