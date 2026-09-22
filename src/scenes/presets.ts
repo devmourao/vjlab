@@ -30,6 +30,7 @@ export const PRESETS: ScenePreset[] = [
     background: '#010409',
     gain: 1,
     speed: 1,
+    instances: [{ base: 'particles' }],
   },
   {
     id: 1,
@@ -39,6 +40,7 @@ export const PRESETS: ScenePreset[] = [
     background: '#0a0310',
     gain: 1,
     speed: 1,
+    instances: [{ base: 'mesh' }],
   },
   {
     id: 2,
@@ -48,6 +50,7 @@ export const PRESETS: ScenePreset[] = [
     background: '#01090d',
     gain: 1,
     speed: 1,
+    instances: [{ base: 'tunnel' }],
   },
   {
     id: 3,
@@ -57,6 +60,7 @@ export const PRESETS: ScenePreset[] = [
     background: '#050000',
     gain: 1.3,
     speed: 1.6,
+    instances: [{ base: 'tunnel' }],
   },
   {
     id: 4,
@@ -67,8 +71,8 @@ export const PRESETS: ScenePreset[] = [
     gain: 1,
     speed: 1,
     instances: [
-      { base: 'tunnel', params: { cameraMode: 'centered', shape: 'mixed', cameraSensitivity: 1, zoom: 1 } },
-      { base: 'particles', params: { count: 400, cameraSensitivity: 0.05, zoom: 1.4 } },
+      { base: 'tunnel', params: { cameraSensitivity: 1, zoom: 1 } },
+      { base: 'particles', params: { cameraSensitivity: 0.05, zoom: 1.4 } },
     ],
   },
   {
@@ -79,12 +83,27 @@ export const PRESETS: ScenePreset[] = [
     background: '#020208',
     gain: 1.2,
     speed: 0.8,
+    instances: [{ base: 'fractal' }],
   },
 ];
 
 export const PRESET_COUNT = PRESETS.length;
 
 export const PLAYLIST: number[] = PRESETS.map((p) => p.id);
+
+const LEGACY_SCENE_BASES = ['particles', 'mesh', 'tunnel', 'fractal'] as const;
+
+/**
+ * Single composition path: presets carrying instances use them, legacy
+ * presets resolve their scene index to one equivalent instance.
+ */
+export function resolveInstances(preset: ScenePreset): BaseInstance[] {
+  if (preset.instances && preset.instances.length > 0) {
+    return preset.instances;
+  }
+  const base = LEGACY_SCENE_BASES[preset.scene] ?? 'particles';
+  return [{ base }];
+}
 
 export function getPreset(id: number): ScenePreset {
   const normalized = ((Math.floor(id) % PRESETS.length) + PRESETS.length) % PRESETS.length;

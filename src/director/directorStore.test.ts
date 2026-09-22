@@ -66,17 +66,17 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().overlayVisible).toBe(false);
   });
 
-  it('sets and clears the mesh texture', () => {
+  it('sets and clears per-instance maps', () => {
     const store = useDirectorStore.getState();
-    store.setMeshTexture('blob:fake-url');
-    expect(useDirectorStore.getState().meshTextureUrl).toBe('blob:fake-url');
+    store.setInstanceMap('1:mesh:0', 'blob:fake-url');
+    expect(useDirectorStore.getState().instanceMaps['1:mesh:0']).toBe(
+      'blob:fake-url',
+    );
     expect(useDirectorStore.getState().meshTextureStatus).toBe('loading');
     store.setMeshTextureStatus('ready');
     expect(useDirectorStore.getState().meshTextureStatus).toBe('ready');
-    store.setMeshTextureStatus('error');
-    expect(useDirectorStore.getState().meshTextureStatus).toBe('error');
-    store.setMeshTexture(null);
-    expect(useDirectorStore.getState().meshTextureUrl).toBeNull();
+    store.setInstanceMap('1:mesh:0', null);
+    expect(useDirectorStore.getState().instanceMaps['1:mesh:0']).toBeNull();
     expect(useDirectorStore.getState().meshTextureStatus).toBe('idle');
   });
 

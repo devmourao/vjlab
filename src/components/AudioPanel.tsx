@@ -2,11 +2,23 @@ import { useMemo, type ChangeEvent } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { createTrack } from '../audio/track';
 import { useDirectorStore } from '../director/directorStore';
+import { instanceKey } from '../scenes/bases';
+import { getPreset, resolveInstances } from '../scenes/presets';
 import { TrackCard } from './TrackCard';
+
+function activeMeshKeys(): string[] {
+  const { activePresetId } = useDirectorStore.getState();
+  const preset = getPreset(activePresetId);
+  return resolveInstances(preset)
+    .map((inst, index) => ({ inst, index }))
+    .filter(({ inst }) => inst.base === 'mesh')
+    .map(({ inst, index }) => instanceKey(preset.id, inst.base, index));
+}
 
 export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
   const overlayText = useDirectorStore((s) => s.overlayText);
-  const meshTextureUrl = useDirectorStore((s) => s.meshTextureUrl);
+  const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const instanceMaps = useDirectorStore((s) => s.instanceMaps);
   const meshTextureStatus = useDirectorStore((s) => s.meshTextureStatus);
   const onFile = (file: File) => {
     engine.loadFile(file);
@@ -15,13 +27,42 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
     () => (engine.fileName ? createTrack(engine.fileName) : null),
     [engine.fileName],
   );
+  const meshKeys = useMemo(
+    () =>
+      resolveInstances(getPreset(activePresetId))
+        .map((inst, index) => ({ inst, index }))
+        .filter(({ inst }) => inst.base === 'mesh')
+        .map(({ inst, index }) =>
+          instanceKey(getPreset(activePresetId).id, inst.base, index),
+        ),
+    [activePresetId],
+  );
+  const meshMapUrl = meshKeys
+    .map((key) => instanceMaps[key] ?? null)
+    .find((url) => url !== null) ?? null;
   const onImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) return;
-    const previous = useDirectorStore.getState().meshTextureUrl;
-    if (previous) URL.revokeObjectURL(previous);
-    useDirectorStore.getState().setMeshTexture(URL.createObjectURL(file));
+    const store = useDirectorStore.getState();
+    const url = URL.createObjectURL(file);
+    for (const key of activeMeshKeys()) {
+      const previous = store.instanceMaps[key];
+      if (previous) URL.revokeObjectURL(previous);
+      store.setInstanceMap(key, url);
+    }
+  };
+  const onClearImage = () => {
+    const store = useDirectorStore.getState();
+    const seen = new Set<string>();
+    for (const key of activeMeshKeys()) {
+      const previous = store.instanceMaps[key];
+      if (previous && !seen.has(previous)) {
+        URL.revokeObjectURL(previous);
+        seen.add(previous);
+      }
+      store.setInstanceMap(key, null);
+    }
   };
 
   return (
@@ -36,27 +77,32 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
       {engine.error ? <p className="audio-error">{engine.error}</p> : null}
       <label className="audio-panel-row">
         <span>Mesh image</span>
-        <input type="file" accept="image/png,image/jpeg" onChange={onImage} />
-        {meshTextureUrl ? (
-          <button
-            type="button"
-            onClick={() => {
-              URL.revokeObjectURL(meshTextureUrl);
-              useDirectorStore.getState().setMeshTexture(null);
-            }}
-          >
-            Clear
-          </button>
-        ) : null}
-        {meshTextureUrl ? (
-          <span data-testid="texture-status">
-            {meshTextureStatus === 'ready'
-              ? 'Image applied'
-              : meshTextureStatus === 'error'
-                ? 'Image failed — try PNG/JPG'
-                : 'Loading image…'}
-          </span>
-        ) : null}
+        <input
+          type="file"
+          accept="image/png,image/jpeg"
+          onChange={onImage}
+          disabled={meshKeys.length === 0}
+        />
+        {meshKeys.length === 0 ? (
+          <span data-testid="texture-status">No mesh instance</span>
+        ) : (
+          <>
+            {meshMapUrl ? (
+              <button type="button" onClick={onClearImage}>
+                Clear
+              </button>
+            ) : null}
+            {meshMapUrl ? (
+              <span data-testid="texture-status">
+                {meshTextureStatus === 'ready'
+                  ? 'Image applied'
+                  : meshTextureStatus === 'error'
+                    ? 'Image failed — try PNG/JPG'
+                    : 'Loading image…'}
+              </span>
+            ) : null}
+          </>
+        )}
       </label>
       <label className="audio-panel-row">
         <span>Overlay (T)</span>
