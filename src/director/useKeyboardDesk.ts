@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { requestDetachedMode } from './controlChannel';
+import {
+  toggleControlsDetachment,
+  toggleInterfaceVisibility,
+} from './controlChannel';
 import { liveRefs, useDirectorStore } from './directorStore';
 import { PRESET_COUNT } from '../scenes/presets';
 
@@ -125,7 +128,10 @@ export function useKeyboardDesk() {
           store.killAll();
           break;
         case 'KeyU':
-          requestDetachedMode();
+          toggleInterfaceVisibility();
+          break;
+        case 'KeyD':
+          toggleControlsDetachment();
           break;
         case 'KeyG':
         case 'F11':

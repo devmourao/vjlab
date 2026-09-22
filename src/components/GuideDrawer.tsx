@@ -11,7 +11,7 @@ const TABS: Array<{ id: GuideTab; label: string }> = [
   { id: 'tips', label: 'Tips' },
 ];
 
-const START_KEYS = new Set(['U', 'G / F11', 'L', 'A', 'I']);
+const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I']);
 const PERFORM_KEYS = new Set([
   '1–6',
   'N / P',

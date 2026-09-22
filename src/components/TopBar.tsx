@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import { SITE_META } from '../config/siteMeta';
-import { requestDetachedMode } from '../director/controlChannel';
+import {
+  toggleControlsDetachment,
+  toggleInterfaceVisibility,
+} from '../director/controlChannel';
 import { useDirectorStore } from '../director/directorStore';
 import './TopBar.css';
 
@@ -31,10 +34,19 @@ export function TopBar() {
           type="button"
           className="top-bar-button"
           data-testid="panel-toggle"
-          title="Cycle panel visibility (U)"
-          onClick={requestDetachedMode}
+          title="Toggle interface visibility (U)"
+          onClick={toggleInterfaceVisibility}
         >
           Hide UI
+        </button>
+        <button
+          type="button"
+          className="top-bar-button"
+          data-testid="popout-toggle"
+          title="Detach controls to second screen (D)"
+          onClick={toggleControlsDetachment}
+        >
+          Pop out
         </button>
         <button
           type="button"
@@ -68,8 +80,8 @@ export function FloatingPanelToggle() {
       type="button"
       className="panel-toggle"
       data-testid="floating-panel-toggle"
-      title="Cycle panel visibility (U)"
-      onClick={requestDetachedMode}
+      title="Toggle interface visibility (U)"
+      onClick={toggleInterfaceVisibility}
     >
       {isHidden ? 'Show UI' : 'Hide UI'}
     </button>
