@@ -13,7 +13,7 @@ const STEPS = [
   },
   {
     title: 'Present clean',
-    body: 'Press U to hide every panel and G for fullscreen output. S kills all effects instantly.',
+    body: 'Press U to hide every panel and G for fullscreen output. D pops controls out to a second screen. S kills all effects instantly.',
   },
 ];
 

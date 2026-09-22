@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
+import { toggleInterfaceVisibility } from '../director/controlChannel';
 import { useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
@@ -88,7 +89,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           className="sheet-hide"
           data-testid="sheet-hide"
           title="Hide all UI"
-          onClick={() => useDirectorStore.getState().setPanelMode('hidden')}
+          onClick={toggleInterfaceVisibility}
         >
           Hide
         </button>

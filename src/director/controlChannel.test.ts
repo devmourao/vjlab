@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSnapshot,
   isControlMessage,
+  resolveDetachmentToggle,
+  resolveVisibilityToggle,
 } from './controlChannel';
 import { useDirectorStore } from './directorStore';
 
@@ -68,5 +70,14 @@ describe('controlChannel', () => {
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });
+  });
+
+  it('splits visibility and detachment into single-purpose toggles', () => {
+    expect(resolveVisibilityToggle('docked')).toBe('hidden');
+    expect(resolveVisibilityToggle('hidden')).toBe('docked');
+    expect(resolveVisibilityToggle('detached')).toBe('hidden');
+    expect(resolveDetachmentToggle('docked')).toBe('detached');
+    expect(resolveDetachmentToggle('detached')).toBe('docked');
+    expect(resolveDetachmentToggle('hidden')).toBe('detached');
   });
 });

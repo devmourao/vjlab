@@ -217,14 +217,40 @@ export function closeControlsPopup(): void {
 }
 
 /**
- * Cycle docked / detached / hidden from a real user gesture so the
- * second-screen popup is allowed by popup blockers. Falls back to the
- * in-page panel when the popup is blocked.
+ * Pure next state for the interface toggle (button A / U key).
+ * Hiding and showing never opens popups and never touches fullscreen.
  */
-export function requestDetachedMode(): void {
+export function resolveVisibilityToggle(mode: PanelMode): PanelMode {
+  return mode === 'hidden' ? 'docked' : 'hidden';
+}
+
+/**
+ * Pure next state for the detach toggle (button B / D key).
+ * Detaching owns the popup; re-docking returns to the in-page panels.
+ */
+export function resolveDetachmentToggle(mode: PanelMode): PanelMode {
+  return mode === 'detached' ? 'docked' : 'detached';
+}
+
+/**
+ * Button A: hide or show the interface. Never opens a popup and never
+ * touches fullscreen, so it is safe at any moment of a performance.
+ */
+export function toggleInterfaceVisibility(): void {
   const store = useDirectorStore.getState();
-  const order: PanelMode[] = ['docked', 'detached', 'hidden'];
-  const next = order[(order.indexOf(store.panelMode) + 1) % order.length];
+  if (store.panelMode === 'detached') closeControlsPopup();
+  store.setPanelMode(resolveVisibilityToggle(store.panelMode));
+}
+
+/**
+ * Button B: detach controls into the second-screen popup, or dock them
+ * back into the interface. Must run inside a real user gesture so popup
+ * blockers allow the window. Falls back to the in-page panel when the
+ * popup is blocked.
+ */
+export function toggleControlsDetachment(): void {
+  const store = useDirectorStore.getState();
+  const next = resolveDetachmentToggle(store.panelMode);
   if (next === 'detached') {
     openControlsPopup();
   } else {
