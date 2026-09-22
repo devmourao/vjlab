@@ -9,23 +9,25 @@ export function DeformableMeshScene({
   color = '#f0abfc',
   emissive = '#a21caf',
   gain = 1,
+  mapUrl = null,
 }: {
   color?: string;
   emissive?: string;
   gain?: number;
+  mapUrl?: string | null;
 }) {
-  const meshTextureUrl = useDirectorStore((s) => s.meshTextureUrl);
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
   // Textured mode is unlit (tone mapping off) so uploaded images keep
   // their original colors. Flat mode keeps the lit wireframe look.
+  // The map belongs to this instance only — never to global state.
   useEffect(() => {
-    if (!meshTextureUrl) return;
+    if (!mapUrl) return;
     const store = useDirectorStore.getState();
     const loader = new THREE.TextureLoader();
     let cancelled = false;
     loader.load(
-      meshTextureUrl,
+      mapUrl,
       (loaded) => {
         if (cancelled) return;
         loaded.colorSpace = THREE.SRGBColorSpace;
@@ -47,7 +49,7 @@ export function DeformableMeshScene({
     return () => {
       cancelled = true;
     };
-  }, [meshTextureUrl]);
+  }, [mapUrl]);
   const meshRef = useRef<THREE.Mesh>(null);
   const { base, normals } = useMemo(() => {
     const geometry = new THREE.SphereGeometry(1.2, 40, 40);
@@ -92,12 +94,9 @@ export function DeformableMeshScene({
   });
 
   return (
-    <mesh
-      ref={meshRef}
-      key={meshTextureUrl ? (texture ? 'textured' : 'loading') : 'flat'}
-    >
+    <mesh ref={meshRef} key={mapUrl ? (texture ? 'textured' : 'loading') : 'flat'}>
       <sphereGeometry args={[1.2, 40, 40]} />
-      {meshTextureUrl && texture ? (
+      {mapUrl && texture ? (
         <meshBasicMaterial map={texture} toneMapped={false} />
       ) : (
         <meshStandardMaterial

@@ -6,7 +6,8 @@ import { DeformableMeshScene } from './DeformableMeshScene';
 import { FractalScene } from './FractalScene';
 import { ParticleFieldScene } from './ParticleFieldScene';
 import { TunnelFieldScene } from './TunnelFieldScene';
-import { getPreset } from './presets';
+import { instanceKey } from './bases';
+import { getPreset, resolveInstances, type BaseInstance } from './presets';
 
 function ParallaxGroup({
   sensitivity,
@@ -35,16 +36,21 @@ function ParallaxGroup({
   return <group ref={ref}>{children}</group>;
 }
 
-function renderBase(base: string, preset: ReturnType<typeof getPreset>) {
-  if (base === 'mesh')
+function renderBase(
+  instance: BaseInstance,
+  preset: ReturnType<typeof getPreset>,
+  mapUrl: string | null,
+) {
+  if (instance.base === 'mesh')
     return (
       <DeformableMeshScene
         color={preset.palette.primary}
         emissive={preset.palette.emissive}
         gain={preset.gain}
+        mapUrl={mapUrl}
       />
     );
-  if (base === 'tunnel')
+  if (instance.base === 'tunnel')
     return (
       <TunnelFieldScene
         color={preset.palette.primary}
@@ -53,7 +59,7 @@ function renderBase(base: string, preset: ReturnType<typeof getPreset>) {
         speed={preset.speed}
       />
     );
-  if (base === 'fractal')
+  if (instance.base === 'fractal')
     return (
       <FractalScene
         color={preset.palette.primary}
@@ -72,62 +78,45 @@ function renderBase(base: string, preset: ReturnType<typeof getPreset>) {
   );
 }
 
+function instanceMapUrl(
+  presetId: number,
+  instance: BaseInstance,
+  index: number,
+  sessionMaps: Record<string, string | null>,
+): string | null {
+  const declared = instance.params?.['map'];
+  if (typeof declared === 'string' && declared.length > 0) return declared;
+  return sessionMaps[instanceKey(presetId, instance.base, index)] ?? null;
+}
+
 export function SceneHost() {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const sessionMaps = useDirectorStore((s) => s.instanceMaps);
   const preset = getPreset(activePresetId);
+  const instances = resolveInstances(preset);
 
-  if (preset.instances && preset.instances.length > 0) {
-    return (
-      <group key={preset.id}>
-        {preset.instances.map((inst, idx) => {
-          const sens = (inst.params?.cameraSensitivity as number | undefined) ?? 1;
-          const zoom = inst.params?.zoom as number | undefined;
-          return (
-            <ParallaxGroup key={`${preset.id}-${inst.base}-${idx}`} sensitivity={sens} zoom={zoom}>
-              {renderBase(inst.base, preset)}
-            </ParallaxGroup>
-          );
-        })}
-      </group>
-    );
-  }
-
-  if (preset.scene === 1)
-    return (
-      <DeformableMeshScene
-        key={preset.id}
-        color={preset.palette.primary}
-        emissive={preset.palette.emissive}
-        gain={preset.gain}
-      />
-    );
-  if (preset.scene === 2)
-    return (
-      <TunnelFieldScene
-        key={preset.id}
-        color={preset.palette.primary}
-        emissive={preset.palette.emissive}
-        gain={preset.gain}
-        speed={preset.speed}
-      />
-    );
-  if (preset.scene === 3)
-    return (
-      <FractalScene
-        key={preset.id}
-        color={preset.palette.primary}
-        emissive={preset.palette.emissive}
-        gain={preset.gain}
-        speed={preset.speed}
-      />
-    );
   return (
-    <ParticleFieldScene
-      key={preset.id}
-      color={preset.palette.primary}
-      emissive={preset.palette.emissive}
-      gain={preset.gain}
-      speed={preset.speed}
-    />
+    <group key={preset.id}>
+      {instances.map((inst, idx) => {
+        const sens =
+          (inst.params?.['cameraSensitivity'] as number | undefined) ?? 1;
+        const zoom = inst.params?.['zoom'] as number | undefined;
+        return (
+          <ParallaxGroup
+            key={`${preset.id}-${inst.base}-${idx}`}
+            sensitivity={sens}
+            zoom={zoom}
+          >
+            {renderBase(
+              inst,
+              preset,
+              inst.base === 'mesh'
+                ? instanceMapUrl(preset.id, inst, idx, sessionMaps)
+                : null,
+            )}
+          </ParallaxGroup>
+        );
+      })}
+    </group>
   );
 }

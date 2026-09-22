@@ -72,13 +72,27 @@ Post: VHS/RGB/beat
 Why it feels new (which 2 pieces changed):
 ```
 
-## 7. References
+## 7. Instance Composition (single path)
+
+Every preset composes through `instances[]` resolved by `resolveInstances`
+(one equivalent instance for legacy rows). The host applies host-level
+params (`cameraSensitivity`, `zoom`) around each instance and injects
+per-instance assets (mesh `map`) from the preset or the session override
+table — scenes never read global customization state.
+
+Editable params per base live in the capability registry
+(`src/scenes/bases.ts`) with preset vs instance scope. A cloned base may
+reinvent its mechanics as long as it honors the input contract (§2) and
+registers its schemas.
+
+## 8. References
 
 *   `src/scenes/presets.ts:6` — ScenePreset interface
 *   `src/scenes/SceneHost.tsx` — host that injects contract
+*   `src/scenes/bases.ts` — native base capability registry and instance keys
 *   Industry: Resolume clip = base + preset, VDMX layer = base + composition
 
-## 8. Revision History
+## 9. Revision History
 
 | Version | Date | Change | Author |
 | ------- | ---- | ------ | ------ |
@@ -86,3 +100,4 @@ Why it feels new (which 2 pieces changed):
 | 1.1.0 | 2026-09-16 | Add cameraSensitivity per base for parallax in multi-base scenes | Marcos Ferreira Mourão |
 | 1.2.0 | 2026-09-16 | Add rotation as standard base mechanic and doubleTri star shape for Tunnel | Marcos Ferreira Mourão |
 | 1.3.0 | 2026-09-16 | Standardize Q/W for Z rotation and Arrows for shape/innerScale (2D) with Zoom on +/− | Marcos Ferreira Mourão |
+| 1.4.0 | 2026-09-23 | Single instances[] composition, per-instance assets, capability registry | Marcos Ferreira Mourão |
