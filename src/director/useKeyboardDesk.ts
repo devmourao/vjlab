@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { requestDetachedMode } from './controlChannel';
 import { liveRefs, useDirectorStore } from './directorStore';
 import { PRESET_COUNT } from '../scenes/presets';
 
@@ -124,7 +125,7 @@ export function useKeyboardDesk() {
           store.killAll();
           break;
         case 'KeyU':
-          store.cyclePanelMode();
+          requestDetachedMode();
           break;
         case 'KeyG':
         case 'F11':
