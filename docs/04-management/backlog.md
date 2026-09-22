@@ -81,6 +81,7 @@
 | VJLAB-62 | Deck entry sequence — focus mode, staged reveal and reusable TrackCard ready for track queue (queued after Sprint 22) | Enhancement | Medium | E11 | M11 | New |
 | VJLAB-63 | Unify side panels — retire right desk, docked uses left tabbed scrollable panel (Track / Scenes / FX / Guide) | Refactor | High | E11 | M11 | New |
 | VJLAB-64 | Dedicated player area with track info and transport plus library / setlist / favorites scene model (UI setlist deferred) | Feature | High | E11 | M11 | New |
+| VJLAB-65 | Explicit hide vs pop-out controls — Hide UI never opens popups or exits fullscreen (Sprint 26) | UX fix | High | E11 | M11 | New |
 
 ## Dependencies
 
@@ -91,6 +92,7 @@
 * VJLAB-14 and VJLAB-15 block the v0.1.0 release.
 * VJLAB-18 blocks beat-synced auto-cut (follow-up).
 * VJLAB-19 blocks VJLAB-22 (image blend uses palettes).
+* VJLAB-63 and VJLAB-64 block VJLAB-65 (explicit controls build on the unified shell).
 
 ## Notes for Sprint 1 Candidates
 
@@ -114,3 +116,4 @@
 | 0.6.2 | 2026-09-22 | Queue VJLAB-61 responsive shell standard after Sprint 22 |
 | 0.6.3 | 2026-09-22 | Queue VJLAB-62 deck entry sequence with reusable TrackCard after Sprint 22 |
 | 0.7.1 | 2026-09-23 | Add VJLAB-63/64 unified panels and player model (Sprint 25) |
+| 0.7.2 | 2026-09-23 | Add VJLAB-65 explicit hide vs pop-out controls (Sprint 26) |
