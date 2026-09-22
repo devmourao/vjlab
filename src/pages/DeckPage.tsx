@@ -213,7 +213,7 @@ function DeckPage() {
           className="detached-panel"
           style={{
             position: 'absolute',
-            top: '60px',
+            top: 'calc(60px + env(safe-area-inset-top, 0px))',
             left: '12px',
             bottom: '60px',
             zIndex: 10,
