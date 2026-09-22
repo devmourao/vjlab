@@ -1,15 +1,20 @@
-import type { ChangeEvent } from 'react';
+import { useMemo, type ChangeEvent } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
+import { createTrack } from '../audio/track';
 import { useDirectorStore } from '../director/directorStore';
+import { TrackCard } from './TrackCard';
 
 export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
   const overlayText = useDirectorStore((s) => s.overlayText);
   const meshTextureUrl = useDirectorStore((s) => s.meshTextureUrl);
   const meshTextureStatus = useDirectorStore((s) => s.meshTextureStatus);
-  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) engine.loadFile(file);
+  const onFile = (file: File) => {
+    engine.loadFile(file);
   };
+  const track = useMemo(
+    () => (engine.fileName ? createTrack(engine.fileName) : null),
+    [engine.fileName],
+  );
   const onImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -21,19 +26,13 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
 
   return (
     <div className="audio-panel">
-      <label className="audio-panel-row">
-        <span>Track (.mp3)</span>
-        <input type="file" accept=".mp3,audio/*" onChange={onFile} />
-      </label>
-      <div className="audio-panel-row">
-        <button type="button" onClick={() => void engine.toggle()}>
-          {engine.isPlaying ? 'Pause' : 'Play'}
-        </button>
-        <span data-testid="audio-status">
-          {engine.fileName ?? 'No file loaded'} — bass {engine.spectrum.bass.toFixed(2)} / mids{' '}
-          {engine.spectrum.mids.toFixed(2)} / treble {engine.spectrum.treble.toFixed(2)}
-        </span>
-      </div>
+      <TrackCard
+        track={track}
+        isPlaying={engine.isPlaying}
+        variant="row"
+        onTogglePlayback={() => void engine.toggle()}
+        onLoadFile={onFile}
+      />
       {engine.error ? <p className="audio-error">{engine.error}</p> : null}
       <label className="audio-panel-row">
         <span>Mesh image</span>
