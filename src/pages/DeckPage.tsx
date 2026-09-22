@@ -3,6 +3,7 @@ import '../App.css';
 import { useAudioEngine } from '../audio/useAudioEngine';
 import { AudioPanel } from '../components/AudioPanel';
 import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
+import { BottomSheet } from '../components/BottomSheet';
 import { AboutPanel } from '../components/Identity';
 import { ShortcutMap } from '../components/ShortcutMap';
 import { StrobeOverlay } from '../components/StrobeOverlay';
@@ -35,6 +36,7 @@ function DeckPage() {
     <div className="stage-container" data-testid="blank-stage">
       <TopBar />
       <FloatingPanelToggle />
+      <BottomSheet engine={engine} />
       {showDocked && <AudioPanel engine={engine} />}
       {showDocked && <ShortcutMap />}
       {showDetached && (
