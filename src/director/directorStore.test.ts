@@ -156,4 +156,18 @@ describe('directorStore', () => {
     for (let i = 0; i < 12; i += 1) useDirectorStore.getState().fxUp();
     expect(useDirectorStore.getState().colorContrast).toBe(0.5);
   });
+
+  it('toggles help and completes the tour', () => {
+    const api = useDirectorStore.getState();
+    api.setHelpOpen(false);
+    expect(useDirectorStore.getState().helpOpen).toBe(false);
+    api.toggleHelp();
+    expect(useDirectorStore.getState().helpOpen).toBe(true);
+    api.setHelpOpen(false);
+    api.replayTour();
+    expect(useDirectorStore.getState().tourOpen).toBe(true);
+    api.completeTour();
+    expect(useDirectorStore.getState().tourOpen).toBe(false);
+    expect(useDirectorStore.getState().tourSeen).toBe(true);
+  });
 });

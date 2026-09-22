@@ -146,8 +146,12 @@
   flex-direction: column;
   gap: 10px;
   margin: 0;
-  padding-left: 20px;
   font-size: 14px;
+}
+
+.sheet-guide p {
+  margin: 0;
+  opacity: 0.8;
 }
 
 .sheet-restore {

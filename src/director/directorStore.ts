@@ -41,6 +41,9 @@ interface DirectorState {
   beatFlashOn: boolean;
   fxBypassed: boolean;
   aboutOpen: boolean;
+  helpOpen: boolean;
+  tourSeen: boolean;
+  tourOpen: boolean;
   liteOn: boolean;
   overlayText: string;
   overlayVisible: boolean;
@@ -76,6 +79,11 @@ interface DirectorState {
   toggleBeatFlash: () => void;
   toggleFxBypass: () => void;
   toggleAbout: () => void;
+  toggleHelp: () => void;
+  setHelpOpen: (open: boolean) => void;
+  completeTour: () => void;
+  replayTour: () => void;
+  closeTour: () => void;
   toggleLite: () => void;
   setOverlayText: (text: string) => void;
   fireText: () => void;
@@ -97,6 +105,28 @@ interface DirectorState {
  * Per-frame data (audio bands, camera nudge, burst impulse) lives in
  * mutable refs in `liveRefs` to avoid 60 fps re-renders.
  */
+const TOUR_SEEN_KEY = 'vjlab.tour.seen.v1';
+
+function readTourSeen(): boolean {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    return window.localStorage.getItem(TOUR_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeTourSeen(): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(TOUR_SEEN_KEY, '1');
+  } catch {
+    // Private mode or blocked storage must never break the deck.
+  }
+}
+
+const tourSeenInitial = readTourSeen();
+
 export const useDirectorStore = create<DirectorState>((set) => ({
   strobeOn: false,
   burstCount: 0,
@@ -118,6 +148,9 @@ export const useDirectorStore = create<DirectorState>((set) => ({
   beatFlashOn: false,
   fxBypassed: false,
   aboutOpen: false,
+  helpOpen: false,
+  tourSeen: tourSeenInitial,
+  tourOpen: !tourSeenInitial,
   liteOn: false,
   overlayText: 'VJ LAB',
   overlayVisible: false,
@@ -203,6 +236,14 @@ export const useDirectorStore = create<DirectorState>((set) => ({
   toggleBeatFlash: () => set((s) => ({ beatFlashOn: !s.beatFlashOn })),
   toggleFxBypass: () => set((s) => ({ fxBypassed: !s.fxBypassed })),
   toggleAbout: () => set((s) => ({ aboutOpen: !s.aboutOpen })),
+  toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),
+  setHelpOpen: (open: boolean) => set({ helpOpen: open }),
+  completeTour: () => {
+    writeTourSeen();
+    set({ tourSeen: true, tourOpen: false });
+  },
+  replayTour: () => set({ tourOpen: true }),
+  closeTour: () => set({ tourOpen: false }),
   toggleLite: () => set((s) => ({ liteOn: !s.liteOn })),
   cyclePanelMode: () =>
     set((s) => ({

@@ -128,19 +128,28 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           )}
           {activeTab === 'fx' && <ShortcutMap />}
           {activeTab === 'guide' && (
-            <ol className="sheet-guide" data-testid="sheet-guide">
-              <li>
-                <strong>Load.</strong> Drop a local .mp3 file, then press play.
-              </li>
-              <li>
-                <strong>Perform.</strong> Use Scenes to dissolve, FX to shape
-                the image.
-              </li>
-              <li>
-                <strong>Present.</strong> Hide the UI for a clean output, drag
-                the handle to resize this sheet.
-              </li>
-            </ol>
+            <div className="sheet-guide" data-testid="sheet-guide">
+              <p>
+                New here? Open the full guide with shortcuts and pro tips, or
+                replay the first-run tour.
+              </p>
+              <button
+                type="button"
+                className="sheet-scene"
+                onClick={() =>
+                  useDirectorStore.getState().setHelpOpen(true)
+                }
+              >
+                <strong>Open full guide</strong>
+              </button>
+              <button
+                type="button"
+                className="sheet-scene"
+                onClick={() => useDirectorStore.getState().replayTour()}
+              >
+                <strong>Replay tour</strong>
+              </button>
+            </div>
           )}
         </div>
       )}
