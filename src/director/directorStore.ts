@@ -79,7 +79,7 @@ interface DirectorState {
     headerErrors: string[];
   };
   exportCustomScenes: () => void;
-  addMediaTracks: (files: File[]) => void;
+  addMediaTracks: (files: File[]) => import('../audio/track').Track[];
   removeMediaTrack: (id: string) => void;
   reorderMedia: (from: number, to: number) => void;
   playMedia: (id: string) => void;
@@ -446,15 +446,16 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
-  addMediaTracks: (files) =>
-    set((state) => {
-      const nextQueue = [...state.mediaQueue];
-      for (const file of files) {
-        const url = URL.createObjectURL(file);
-        nextQueue.push(createTrack(file.name, url));
-      }
-      return { mediaQueue: nextQueue, mediaIndex: state.mediaIndex ?? 0 };
-    }),
+  addMediaTracks: (files) => {
+    const created = files.map((file) =>
+      createTrack(file.name, URL.createObjectURL(file)),
+    );
+    set((state) => ({
+      mediaQueue: [...state.mediaQueue, ...created],
+      mediaIndex: state.mediaIndex ?? 0,
+    }));
+    return created;
+  },
   removeMediaTrack: (id) =>
     set((state) => {
       const index = state.mediaQueue.findIndex((entry) => entry.id === id);

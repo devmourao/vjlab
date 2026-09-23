@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { useDirectorStore } from '../director/directorStore';
 import './MediaQueue.css';
@@ -6,12 +6,20 @@ import './MediaQueue.css';
 export function MediaQueue({ engine }: { engine: AudioEngineApi }) {
   const mediaQueue = useDirectorStore((s) => s.mediaQueue);
   const mediaIndex = useDirectorStore((s) => s.mediaIndex);
+  const loadedRef = useRef<{ id: string; url: string } | null>(null);
+  const { loadUrl } = engine;
 
+  // Load only when the selected track actually changes: reloading on
+  // every queue or engine identity change restarts playback (stutter).
   useEffect(() => {
-    if (mediaIndex === null || mediaQueue[mediaIndex]?.url == null) return;
+    if (mediaIndex === null) return;
     const track = mediaQueue[mediaIndex];
-    if (track?.url) engine.loadUrl(track.url, track.name);
-  }, [mediaIndex, mediaQueue, engine]);
+    if (!track?.url) return;
+    const loaded = loadedRef.current;
+    if (loaded && loaded.id === track.id && loaded.url === track.url) return;
+    loadedRef.current = { id: track.id, url: track.url };
+    loadUrl(track.url, track.name);
+  }, [mediaIndex, mediaQueue, loadUrl]);
 
   const onAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
