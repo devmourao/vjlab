@@ -1,12 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { useDirectorStore } from '../director/directorStore';
 import './MediaQueue.css';
 
+// Session memory of the loaded track, shared across component mounts:
+// reopening tabs remounts the queue, and reloading the same track would
+// restart playback from zero.
+let loadedTrack: { id: string; url: string } | null = null;
+
 export function MediaQueue({ engine }: { engine: AudioEngineApi }) {
   const mediaQueue = useDirectorStore((s) => s.mediaQueue);
   const mediaIndex = useDirectorStore((s) => s.mediaIndex);
-  const loadedRef = useRef<{ id: string; url: string } | null>(null);
   const { loadUrl } = engine;
 
   // Load only when the selected track actually changes: reloading on
@@ -15,9 +19,14 @@ export function MediaQueue({ engine }: { engine: AudioEngineApi }) {
     if (mediaIndex === null) return;
     const track = mediaQueue[mediaIndex];
     if (!track?.url) return;
-    const loaded = loadedRef.current;
-    if (loaded && loaded.id === track.id && loaded.url === track.url) return;
-    loadedRef.current = { id: track.id, url: track.url };
+    if (
+      loadedTrack &&
+      loadedTrack.id === track.id &&
+      loadedTrack.url === track.url
+    ) {
+      return;
+    }
+    loadedTrack = { id: track.id, url: track.url };
     loadUrl(track.url, track.name);
   }, [mediaIndex, mediaQueue, loadUrl]);
 
