@@ -52,6 +52,29 @@ describe('controlChannel', () => {
         command: { type: 'setZoom', value: 'far' },
       }),
     ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'uploadTrack',
+          name: 'set.mp3',
+          mime: 'audio/mpeg',
+          data: new ArrayBuffer(8),
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'uploadTrack', name: '', mime: 'audio/mpeg', data: new ArrayBuffer(8) },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'uploadTrack', name: 'set.mp3', mime: 'audio/mpeg', data: 'nope' },
+      }),
+    ).toBe(false);
     expect(isControlMessage({ type: 'command', command: null })).toBe(false);
     expect(isControlMessage(null)).toBe(false);
     expect(isControlMessage('toggleStrobe')).toBe(false);

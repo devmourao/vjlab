@@ -42,7 +42,8 @@ export type ControlCommand =
   | { type: 'setOverlayText'; text: string }
   | { type: 'setMix'; slot: string; value: number }
   | { type: 'setZoom'; value: number }
-  | { type: 'setStrobeHz'; value: number };
+  | { type: 'setStrobeHz'; value: number }
+  | { type: 'uploadTrack'; name: string; mime: string; data: ArrayBuffer };
 
 export interface ControlSnapshot {
   activePresetId: number;
@@ -104,6 +105,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'setMix',
   'setZoom',
   'setStrobeHz',
+  'uploadTrack',
 ]);
 
 function hasValidPayload(command: Record<string, unknown>): boolean {
@@ -124,6 +126,14 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'setZoom':
     case 'setStrobeHz':
       return typeof command['value'] === 'number';
+    case 'uploadTrack':
+      return (
+        typeof command['name'] === 'string' &&
+        command['name'].length > 0 &&
+        typeof command['mime'] === 'string' &&
+        command['data'] instanceof ArrayBuffer &&
+        command['data'].byteLength > 0
+      );
     default:
       return true;
   }

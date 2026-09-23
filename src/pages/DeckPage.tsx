@@ -126,6 +126,16 @@ function executeControlCommand(
     case 'togglePlayback':
       void engine.toggle();
       break;
+    case 'uploadTrack': {
+      // ArrayBuffer clones reliably across same-origin windows; the main
+      // deck owns the resulting object URL, so playback stays local.
+      const file = new File([command.data], command.name, {
+        type: command.mime,
+      });
+      const [created] = store.addMediaTracks([file]);
+      if (created) store.playMedia(created.id);
+      break;
+    }
     case 'setOverlayText':
       store.setOverlayText(command.text);
       break;

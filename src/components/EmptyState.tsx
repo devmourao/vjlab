@@ -18,7 +18,9 @@ export function EmptyState({ engine }: { engine: AudioEngineApi }) {
           onLoadFile={(file) => {
             const store = useDirectorStore.getState();
             const [created] = store.addMediaTracks([file]);
-            if (created) store.playMedia(created.id);
+            if (!created) return;
+            store.playMedia(created.id);
+            if (created.url) engine.loadUrl(created.url, created.name);
           }}
         />
         <button

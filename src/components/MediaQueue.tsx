@@ -21,10 +21,18 @@ export function MediaQueue({ engine }: { engine: AudioEngineApi }) {
     loadUrl(track.url, track.name);
   }, [mediaIndex, mediaQueue, loadUrl]);
 
+  const playNow = (id: string, url: string | null | undefined, name: string) => {
+    useDirectorStore.getState().playMedia(id);
+    if (url) engine.loadUrl(url, name);
+  };
+
   const onAdd = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    useDirectorStore.getState().addMediaTracks(Array.from(files));
+    const store = useDirectorStore.getState();
+    const wasEmpty = store.mediaQueue.length === 0;
+    const [first] = store.addMediaTracks(Array.from(files));
+    if (wasEmpty && first) playNow(first.id, first.url, first.name);
     event.target.value = '';
   };
 
@@ -53,7 +61,7 @@ export function MediaQueue({ engine }: { engine: AudioEngineApi }) {
       <ul className="media-list">
         {mediaQueue.map((track, index) => (
           <li key={track.id} className={index === mediaIndex ? 'media-item active' : 'media-item'}>
-            <button type="button" className="media-play" onClick={() => useDirectorStore.getState().playMedia(track.id)}>
+            <button type="button" className="media-play" onClick={() => playNow(track.id, track.url, track.name)}>
               {index === mediaIndex ? '●' : '▶'} {track.name}
             </button>
             <div className="media-actions">

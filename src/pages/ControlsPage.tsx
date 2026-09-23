@@ -119,7 +119,29 @@ export default function ControlsPage() {
               variant="status"
               onTogglePlayback={() => send({ type: 'togglePlayback' })}
             />
-            <p className="controls-hint">Upload stays on the main deck.</p>
+            <label className="controls-upload">
+              <span>Load audio here</span>
+              <input
+                type="file"
+                accept=".mp3,audio/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  void file.arrayBuffer().then((data) =>
+                    send({
+                      type: 'uploadTrack',
+                      name: file.name,
+                      mime: file.type || 'audio/mpeg',
+                      data,
+                    }),
+                  );
+                  event.target.value = '';
+                }}
+              />
+            </label>
+            <p className="controls-hint">
+              Files sent here join the deck queue; if silent, press Play.
+            </p>
           </section>
 
           <section className="controls-section" aria-label="Scenes">

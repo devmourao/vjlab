@@ -83,6 +83,18 @@
   cursor: pointer;
 }
 
+.controls-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.controls-upload input {
+  min-height: 44px;
+}
+
 .controls-hint {
   font-size: 12px;
   opacity: 0.6;
