@@ -86,6 +86,7 @@
 | VJLAB-66 | Importable scene and media packs — versioned pack format with validator (complete deck-reactive scenes, per-instance params, clean rejection) | Feature | High | E12 | M12 | New |
 | VJLAB-67 | Instance-scoped scene foundation — single instances[] composition, per-instance asset slots, base capability registry | Refactor | High | E12 | M12 | New |
 | VJLAB-68 | Scene CRUD v1 — create, edit and delete on native bases with text export/import (playlist born here) | Feature | High | E12 | M12 | New |
+| VJLAB-69 | Popup polish round — shared control kit, strobe switch and color radio with swatches, active flags, per-slot sliders, fullscreen layout, retire DETACHED pill | Enhancement | Medium | E11 | M11 | New |
 
 ## Dependencies
 
@@ -100,6 +101,7 @@
 * VJLAB-67 blocks VJLAB-66 (pack validator needs the per-instance model and capability registry).
 * VJLAB-66 blocks VJLAB-68 (CRUD imports through the pack format).
 * VJLAB-68 supports VJLAB-45 and VJLAB-46 (playlists build on packs and CRUD).
+* VJLAB-60 blocks VJLAB-69 (popup polish builds on the control channel).
 
 ## Notes for Sprint 1 Candidates
 
@@ -126,3 +128,4 @@
 | 0.7.2 | 2026-09-23 | Add VJLAB-65 explicit hide vs pop-out controls (Sprint 26) |
 | 0.8.1 | 2026-09-23 | Add E12 Scene Packs and Library with VJLAB-66/67/68 (Sprints 27-29) |
 | 0.9.1 | 2026-09-23 | Refresh VJLAB-50 builder redesign scope (Sprint 31) |
+| 0.10.1 | 2026-09-23 | Add VJLAB-69 popup polish round with shared control kit (Sprint 32) |
