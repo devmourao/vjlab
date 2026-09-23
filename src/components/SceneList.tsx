@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
+import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
 
@@ -26,6 +27,7 @@ export function SceneList() {
   const presets = [...ordered, ...missing];
   const favorites = new Set(favoriteIds);
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
+  const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
@@ -54,6 +56,9 @@ export function SceneList() {
   return (
     <div className="scene-library" data-testid="scene-library">
       <div className="scene-library-actions">
+        <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
+          Builder
+        </button>
         <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
           Create
         </button>
@@ -123,6 +128,7 @@ export function SceneList() {
       {editing !== undefined && (
         <SceneEditor preset={editing ?? undefined} onClose={() => setEditing(undefined)} />
       )}
+      {building && <PresetBuilder onClose={() => setBuilding(false)} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
+import { InstanceParamFields } from './InstanceParamFields';
 import { useDirectorStore } from '../director/directorStore';
 import './SceneEditor.css';
 
@@ -139,67 +140,27 @@ export function SceneEditor({ preset, onClose }: SceneEditorProps) {
             </button>
           </div>
 
-          {instances.map((inst, index) => {
-            const capability = BASE_CAPABILITIES[inst.base];
-            const hostSchemas = HOST_PARAM_SCHEMAS;
-            return (
-              <div key={index} className="scene-editor-instance">
-                <div className="scene-editor-instance-head">
-                  <select value={inst.base} onChange={(e) => updateInstanceBase(index, e.target.value as BaseId)}>
-                    {BASE_OPTIONS.map((base) => (
-                      <option key={base} value={base}>
-                        {BASE_CAPABILITIES[base].label}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={() => setInstances((prev) => prev.filter((_, i) => i !== index))}>
-                    Remove
-                  </button>
-                </div>
-                <p className="scene-editor-desc">{capability.description}</p>
-                {[...hostSchemas, ...capability.params].map((schema) => {
-                  const value = inst.params?.[schema.name] ?? schema.default;
-                  if (schema.type === 'image') {
-                    return (
-                      <label key={schema.name} className="scene-editor-field">
-                        <span>{schema.name} (image URL)</span>
-                        <input
-                          value={(value as string) ?? ''}
-                          placeholder="https://... or leave empty"
-                          onChange={(e) => updateInstanceParam(index, schema.name, e.target.value || null)}
-                        />
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const url = URL.createObjectURL(file);
-                            updateInstanceParam(index, schema.name, url);
-                          }}
-                        />
-                      </label>
-                    );
-                  }
-                  return (
-                    <label key={schema.name} className="scene-editor-field">
-                      <span>
-                        {schema.name} {typeof value === 'number' ? value.toString() : ''}
-                      </span>
-                      <input
-                        type="range"
-                        min={schema.min}
-                        max={schema.max}
-                        step={0.01}
-                        value={typeof value === 'number' ? value : (schema.default as number)}
-                        onChange={(e) => updateInstanceParam(index, schema.name, Number(e.target.value))}
-                      />
-                    </label>
-                  );
-                })}
+          {instances.map((inst, index) => (
+            <div key={index} className="scene-editor-instance">
+              <div className="scene-editor-instance-head">
+                <select value={inst.base} onChange={(e) => updateInstanceBase(index, e.target.value as BaseId)}>
+                  {BASE_OPTIONS.map((base) => (
+                    <option key={base} value={base}>
+                      {BASE_CAPABILITIES[base].label}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => setInstances((prev) => prev.filter((_, i) => i !== index))}>
+                  Remove
+                </button>
               </div>
-            );
-          })}
+              <InstanceParamFields
+                base={inst.base}
+                params={inst.params ?? {}}
+                onParam={(key, value) => updateInstanceParam(index, key, value)}
+              />
+            </div>
+          ))}
         </div>
 
         {error && <p className="scene-editor-error">{error}</p>}
