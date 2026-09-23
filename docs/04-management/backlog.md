@@ -67,7 +67,7 @@
 | VJLAB-44 | Strobe color reinforcement — swatch, glow and Hz bar tint for strobe mode | Enhancement | Small | E08 | M7 | New |
 | VJLAB-45 | Local music playlist — queue, reorder and load local tracks (session) | Feature | Medium | E09 | M9 | New |
 | VJLAB-46 | Effects preset playlist — queue, reorder and save effect presets as playlist | Feature | Medium | E09 | M9 | New |
-| VJLAB-50 | Preset builder UI — browser, preview and knobs to assemble and save presets (reverted, needs redesign) | Feature | Medium | E10 | M10 | New |
+| VJLAB-50 | Preset builder UI redesigned — base browser, isolated live preview and schema knobs on registry/CRUD foundation (Sprint 31) | Feature | Medium | E10 | M10 | New |
 | VJLAB-51 | Grid LED scene — Punch Club image + LED points reactive to bass/mids (Octagon Pulse) | Feature | Medium | E10 | M10 | New |
 | VJLAB-52 | Avatar low-poly scene — human GLB with edge/fill materials and audio-driven bounce/sway (Chroma Bouncer) | Feature | Medium | E10 | M10 | New |
 | VJLAB-53 | Preset export/import — JSON file without DB, versioned schema | Feature | Medium | E10 | M10 | New |
@@ -125,3 +125,4 @@
 | 0.7.1 | 2026-09-23 | Add VJLAB-63/64 unified panels and player model (Sprint 25) |
 | 0.7.2 | 2026-09-23 | Add VJLAB-65 explicit hide vs pop-out controls (Sprint 26) |
 | 0.8.1 | 2026-09-23 | Add E12 Scene Packs and Library with VJLAB-66/67/68 (Sprints 27-29) |
+| 0.9.1 | 2026-09-23 | Refresh VJLAB-50 builder redesign scope (Sprint 31) |
