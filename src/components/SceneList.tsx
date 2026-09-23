@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
-import { buildLibrary } from '../scenes/library';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { SceneEditor } from './SceneEditor';
@@ -17,12 +16,15 @@ function useAllPresets() {
 
 export function SceneList() {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
-  const presets = useAllPresets();
-  const favorites = new Set(
-    buildLibrary(presets.map((preset) => preset.id))
-      .filter((entry) => entry.favorite)
-      .map((entry) => entry.presetId),
-  );
+  const sceneOrder = useDirectorStore((s) => s.sceneOrder);
+  const favoriteIds = useDirectorStore((s) => s.favoriteIds);
+  const all = useAllPresets();
+  const ordered = sceneOrder
+    .map((id) => all.find((preset) => preset.id === id))
+    .filter((entry): entry is ScenePreset => Boolean(entry));
+  const missing = all.filter((preset) => !sceneOrder.includes(preset.id));
+  const presets = [...ordered, ...missing];
+  const favorites = new Set(favoriteIds);
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [report, setReport] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -65,7 +67,7 @@ export function SceneList() {
       </div>
       {report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
-        {presets.map((preset) => (
+        {presets.map((preset, index) => (
           <li key={preset.id} className="scene-row">
             <button
               type="button"
@@ -85,20 +87,36 @@ export function SceneList() {
                 {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
               </span>
             </button>
-            {!isNative(preset.id) && (
-              <div className="scene-item-actions">
-                <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => useDirectorStore.getState().deleteScene(preset.id)}
-                  data-testid={`delete-scene-${preset.id}`}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+            <div className="scene-item-actions">
+              <button type="button" disabled={index === 0} onClick={() => useDirectorStore.getState().reorderScenes(index, index - 1)} data-testid={`up-scene-${preset.id}`}>
+                ↑
+              </button>
+              <button type="button" disabled={index === presets.length - 1} onClick={() => useDirectorStore.getState().reorderScenes(index, index + 1)} data-testid={`down-scene-${preset.id}`}>
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() => useDirectorStore.getState().toggleFavorite(preset.id)}
+                data-testid={`fav-scene-${preset.id}`}
+                title={favorites.has(preset.id) ? 'Unfavorite' : 'Favorite'}
+              >
+                {favorites.has(preset.id) ? '★' : '☆'}
+              </button>
+              {!isNative(preset.id) && (
+                <>
+                  <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => useDirectorStore.getState().deleteScene(preset.id)}
+                    data-testid={`delete-scene-${preset.id}`}
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
           </li>
         ))}
       </ul>

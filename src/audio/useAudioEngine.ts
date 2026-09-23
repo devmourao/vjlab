@@ -16,6 +16,7 @@ export interface AudioEngineApi {
   error: string | null;
   spectrum: SpectrumBands;
   loadFile: (file: File) => void;
+  loadUrl: (url: string, name: string) => void;
   toggle: () => Promise<void>;
   getSpectrum: () => SpectrumBands;
 }
@@ -103,6 +104,25 @@ export function useAudioEngine(): AudioEngineApi {
     [ensureGraph],
   );
 
+  const loadUrl = useCallback(
+    (url: string, name: string) => {
+      try {
+        setError(null);
+        ensureGraph();
+        elementRef.current!.src = url;
+        elementRef.current!.play().then(
+          () => setIsPlaying(true),
+          () => setIsPlaying(false),
+        );
+        setFileName(name);
+        void contextRef.current?.resume();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load audio.');
+      }
+    },
+    [ensureGraph],
+  );
+
   const toggle = useCallback(async () => {
     try {
       const element = elementRef.current;
@@ -166,5 +186,5 @@ export function useAudioEngine(): AudioEngineApi {
     [],
   );
 
-  return { fileName, isPlaying, error, spectrum, loadFile, toggle, getSpectrum };
+  return { fileName, isPlaying, error, spectrum, loadFile, loadUrl, toggle, getSpectrum };
 }

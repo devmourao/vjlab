@@ -4,6 +4,7 @@ import { createTrack } from '../audio/track';
 import { useDirectorStore } from '../director/directorStore';
 import { instanceKey } from '../scenes/bases';
 import { getPreset, PRESETS, resolveInstances } from '../scenes/presets';
+import { MediaQueue } from './MediaQueue';
 import { TrackCard } from './TrackCard';
 
 function activePreset(): ReturnType<typeof getPreset> {
@@ -81,6 +82,7 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
         onTogglePlayback={() => void engine.toggle()}
         onLoadFile={onFile}
       />
+      <MediaQueue engine={engine} />
       {engine.error ? <p className="audio-error">{engine.error}</p> : null}
       <label className="audio-panel-row">
         <span>Mesh image</span>
