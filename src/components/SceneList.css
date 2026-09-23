@@ -39,8 +39,71 @@
   font-size: 12px;
 }
 
+.scene-badge-native {
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
 .scene-sub {
   margin-left: auto;
   font-size: 11px;
   opacity: 0.6;
+}
+
+.scene-library {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scene-library-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.scene-library-actions button,
+.scene-import {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.scene-report {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.scene-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scene-item-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.scene-item-actions button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
 }

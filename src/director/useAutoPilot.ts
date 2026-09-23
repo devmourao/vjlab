@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { liveRefs, useDirectorStore } from './directorStore';
-import { PRESET_COUNT } from '../scenes/presets';
+import { PRESETS } from '../scenes/presets';
 
 const TOUR_INTERVAL_MS = 5000;
 
@@ -27,7 +27,9 @@ export function useAutoPilot() {
 
       // 4. Scene tour — every 3rd tick, respect dissolve guardrail.
       if (tick % 3 === 0) {
-        const next = (store.activePresetId + 1) % PRESET_COUNT;
+        const all = [...PRESETS, ...store.customPresets];
+        const index = all.findIndex((preset) => preset.id === store.activePresetId);
+        const next = all[(index + 1) % all.length].id;
         store.requestDissolve(next);
       }
     }, TOUR_INTERVAL_MS);

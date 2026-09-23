@@ -4,7 +4,7 @@ import {
   toggleInterfaceVisibility,
 } from './controlChannel';
 import { liveRefs, useDirectorStore } from './directorStore';
-import { PRESET_COUNT } from '../scenes/presets';
+import { PRESETS } from '../scenes/presets';
 
 const CAMERA_STEP = 0.12;
 
@@ -42,16 +42,20 @@ export function useKeyboardDesk() {
         case 'Digit6':
           store.requestDissolve(5);
           break;
-        case 'KeyN':
-          store.requestDissolve(
-            (store.activePresetId + 1) % PRESET_COUNT,
-          );
+        case 'KeyN': {
+          const all = [...PRESETS, ...store.customPresets];
+          const index = all.findIndex((preset) => preset.id === store.activePresetId);
+          const next = all[(index + 1) % all.length].id;
+          store.requestDissolve(next);
           break;
-        case 'KeyP':
-          store.requestDissolve(
-            (store.activePresetId - 1 + PRESET_COUNT) % PRESET_COUNT,
-          );
+        }
+        case 'KeyP': {
+          const all = [...PRESETS, ...store.customPresets];
+          const index = all.findIndex((preset) => preset.id === store.activePresetId);
+          const prev = all[(index - 1 + all.length) % all.length].id;
+          store.requestDissolve(prev);
           break;
+        }
         case 'KeyX':
           store.hardCutNext();
           break;

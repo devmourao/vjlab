@@ -27,7 +27,7 @@ import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import { PLAYLIST, PRESETS, PRESET_COUNT, getPreset } from '../scenes/presets';
+import { PLAYLIST, PRESETS, getPreset } from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -42,12 +42,10 @@ function executeControlCommand(
       store.requestDissolve(command.id);
       break;
     case 'nextPreset':
-      store.requestDissolve((store.activePresetId + 1) % PRESET_COUNT);
+      store.nextPreset();
       break;
     case 'prevPreset':
-      store.requestDissolve(
-        (store.activePresetId - 1 + PRESET_COUNT) % PRESET_COUNT,
-      );
+      store.prevPreset();
       break;
     case 'hardCut':
       store.hardCutNext();
@@ -150,10 +148,15 @@ function DeckPage() {
   useKeyboardDesk();
   useAutoPilot();
   const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const customPresets = useDirectorStore((s) => s.customPresets);
   const liteOn = useDirectorStore((s) => s.liteOn);
   const panelMode = useDirectorStore((s) => s.panelMode);
   const autoPilotOn = useDirectorStore((s) => s.autoPilotOn);
-  const preset = getPreset(activePresetId);
+  const allPresets = [...PRESETS, ...customPresets];
+  const preset =
+    allPresets.find((entry) => entry.id === activePresetId) ??
+    getPreset(activePresetId);
+  const orderIndex = allPresets.findIndex((entry) => entry.id === activePresetId);
   const engineRef = useRef(engine);
   useEffect(() => {
     engineRef.current = engine;
@@ -167,12 +170,13 @@ function DeckPage() {
     const sendSnapshot = () => {
       try {
         const current = engineRef.current;
+        const state = useDirectorStore.getState();
         channel.postMessage({
           kind: 'snapshot',
           snapshot: buildSnapshot(
-            useDirectorStore.getState(),
+            state,
             { fileName: current.fileName, isPlaying: current.isPlaying },
-            PRESET_COUNT,
+            [...PRESETS, ...state.customPresets].length,
           ),
         });
       } catch {
@@ -223,8 +227,7 @@ function DeckPage() {
         <PlayerBar engine={engine} />
       )}
       <div className="scene-badge" data-testid="scene-name">
-        {preset.name} · {activePresetId + 1}/{PRESETS.length} · playlist{' '}
-        {PLAYLIST.length}
+        {preset.name} · {orderIndex + 1}/{allPresets.length} · playlist {PLAYLIST.length}
         {liteOn ? ' · LITE' : ''}
         {panelMode !== 'docked' ? ` · ${panelMode.toUpperCase()}` : ''}
         {autoPilotOn ? ' · AUTO' : ''}
