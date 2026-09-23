@@ -27,9 +27,9 @@ export function useAutoPilot() {
 
       // 4. Scene tour — every 3rd tick, respect dissolve guardrail.
       if (tick % 3 === 0) {
-        const all = [...PRESETS, ...store.customPresets];
-        const index = all.findIndex((preset) => preset.id === store.activePresetId);
-        const next = all[(index + 1) % all.length].id;
+        const order = store.sceneOrder.length > 0 ? store.sceneOrder : [...PRESETS, ...store.customPresets].map((preset) => preset.id);
+        const index = order.indexOf(store.activePresetId);
+        const next = order[(index + 1) % order.length];
         store.requestDissolve(next);
       }
     }, TOUR_INTERVAL_MS);

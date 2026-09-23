@@ -25,23 +25,19 @@ export function useKeyboardDesk() {
 
       switch (event.code) {
         case 'Digit1':
-          store.requestDissolve(0);
-          break;
         case 'Digit2':
-          store.requestDissolve(1);
-          break;
         case 'Digit3':
-          store.requestDissolve(2);
-          break;
         case 'Digit4':
-          store.requestDissolve(3);
-          break;
         case 'Digit5':
-          store.requestDissolve(4);
+        case 'Digit6': {
+          const index = Number(event.code.slice(5)) - 1;
+          const fav = store.favoriteIds[index];
+          const ordered = store.sceneOrder[index];
+          const fallback = index;
+          const target = fav ?? ordered ?? fallback;
+          store.requestDissolve(target);
           break;
-        case 'Digit6':
-          store.requestDissolve(5);
-          break;
+        }
         case 'KeyN': {
           const all = [...PRESETS, ...store.customPresets];
           const index = all.findIndex((preset) => preset.id === store.activePresetId);

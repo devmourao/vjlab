@@ -9,6 +9,7 @@ export interface Track {
   id: string;
   name: string;
   source: 'local';
+  url?: string | null;
 }
 
 let counter = 0;
@@ -28,8 +29,8 @@ function nextId(): string {
   return `track-${Date.now().toString(36)}-${counter}`;
 }
 
-export function createTrack(name: string): Track {
-  return { id: nextId(), name, source: 'local' };
+export function createTrack(name: string, url?: string | null): Track {
+  return { id: nextId(), name, source: 'local', url: url ?? null };
 }
 
 export function formatQueueLabel(

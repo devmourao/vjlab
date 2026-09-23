@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createTrack, type Track } from '../audio/track';
 import { exportScenesPack, validatePack } from '../packs/packFormat';
 import { PRESETS, type ScenePreset } from '../scenes/presets';
 import {
@@ -52,6 +53,10 @@ interface DirectorState {
   meshTextureStatus: 'idle' | 'loading' | 'ready' | 'error';
   instanceMaps: Record<string, string | null>;
   customPresets: ScenePreset[];
+  mediaQueue: Track[];
+  mediaIndex: number | null;
+  sceneOrder: number[];
+  favoriteIds: number[];
   panelMode: PanelMode;
   autoPilotOn: boolean;
   fractalShape: number;
@@ -74,6 +79,12 @@ interface DirectorState {
     headerErrors: string[];
   };
   exportCustomScenes: () => void;
+  addMediaTracks: (files: File[]) => void;
+  removeMediaTrack: (id: string) => void;
+  reorderMedia: (from: number, to: number) => void;
+  playMedia: (id: string) => void;
+  reorderScenes: (from: number, to: number) => void;
+  toggleFavorite: (id: number) => void;
   cycleDuration: () => void;
   stepHue: () => void;
   zoomIn: () => void;
@@ -178,14 +189,6 @@ function findPreset(custom: ScenePreset[], id: number): ScenePreset | undefined 
   return allPresets(custom).find((preset) => preset.id === id);
 }
 
-function nextPresetIdOrdered(custom: ScenePreset[], id: number, dir: 1 | -1): number {
-  const ordered = allPresets(custom);
-  const index = ordered.findIndex((preset) => preset.id === id);
-  const current = index === -1 ? 0 : index;
-  const next = (current + dir + ordered.length) % ordered.length;
-  return ordered[next].id;
-}
-
 function normalizeId(custom: ScenePreset[], id: number): number {
   const direct = findPreset(custom, id);
   if (direct) return direct.id;
@@ -196,8 +199,65 @@ function normalizeId(custom: ScenePreset[], id: number): number {
   return ordered[wrapped].id;
 }
 
+const SCENE_ORDER_KEY = 'vjlab.sceneOrder.v1';
+const FAVORITES_KEY = 'vjlab.favorites.v1';
+
+function readSceneOrder(custom: ScenePreset[]): number[] {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return allPresets(custom).map((entry) => entry.id);
+    const raw = window.localStorage.getItem(SCENE_ORDER_KEY);
+    if (!raw) return allPresets(custom).map((entry) => entry.id);
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return allPresets(custom).map((entry) => entry.id);
+    const ids = parsed.filter((entry): entry is number => typeof entry === 'number');
+    const allIds = new Set(allPresets(custom).map((entry) => entry.id));
+    const filtered = ids.filter((id) => allIds.has(id));
+    const missing = allPresets(custom).map((entry) => entry.id).filter((id) => !filtered.includes(id));
+    return [...filtered, ...missing];
+  } catch {
+    return allPresets(custom).map((entry) => entry.id);
+  }
+}
+
+function writeSceneOrder(order: number[]): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(SCENE_ORDER_KEY, JSON.stringify(order));
+  } catch {
+    // Ignore
+  }
+}
+
+function readFavorites(): number[] {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    const raw = window.localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((entry): entry is number => typeof entry === 'number');
+  } catch {
+    return [];
+  }
+}
+
+function writeFavorites(ids: number[]): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
+  } catch {
+    // Ignore
+  }
+}
+
 const tourSeenInitial = readTourSeen();
 const customPresetsInitial = readCustomPresets();
+const sceneOrderInitial = readSceneOrder(customPresetsInitial);
+const favoriteIdsInitial = (() => {
+  const stored = readFavorites();
+  if (stored.length > 0) return stored;
+  return sceneOrderInitial.slice(0, 6);
+})();
 
 export const useDirectorStore = create<DirectorState>((set, get) => ({
   strobeOn: false,
@@ -230,6 +290,10 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   meshTextureStatus: 'idle',
   instanceMaps: {},
   customPresets: customPresetsInitial,
+  mediaQueue: [],
+  mediaIndex: null,
+  sceneOrder: sceneOrderInitial,
+  favoriteIds: favoriteIdsInitial,
   panelMode: 'docked',
   autoPilotOn: true,
   fractalShape: 0,
@@ -259,21 +323,19 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       activePresetId: normalizeId(state.customPresets, id),
     })),
   nextPreset: () =>
-    set((state) => ({
-      activePresetId: nextPresetIdOrdered(
-        state.customPresets,
-        state.activePresetId,
-        1,
-      ),
-    })),
+    set((state) => {
+      const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+      const index = order.indexOf(state.activePresetId);
+      const next = order[(index + 1 + order.length) % order.length];
+      return { activePresetId: next };
+    }),
   prevPreset: () =>
-    set((state) => ({
-      activePresetId: nextPresetIdOrdered(
-        state.customPresets,
-        state.activePresetId,
-        -1,
-      ),
-    })),
+    set((state) => {
+      const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+      const index = order.indexOf(state.activePresetId);
+      const prev = order[(index - 1 + order.length) % order.length];
+      return { activePresetId: prev };
+    }),
   requestDissolve: (id: number) => {
     const state = useDirectorStore.getState();
     const target = normalizeId(state.customPresets, id);
@@ -288,7 +350,9 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const state = useDirectorStore.getState();
     transitionRef.active = false;
     transitionRef.swapped = false;
-    const next = nextPresetIdOrdered(state.customPresets, state.activePresetId, 1);
+    const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+    const index = order.indexOf(state.activePresetId);
+    const next = order[(index + 1) % order.length];
     useDirectorStore.getState().setPreset(next);
   },
   createScene: (preset) => {
@@ -298,7 +362,9 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const created: ScenePreset = { ...preset, id: nextId } as ScenePreset;
     const nextCustom = [...state.customPresets, created];
     writeCustomPresets(nextCustom);
-    set({ customPresets: nextCustom });
+    const nextOrder = [...state.sceneOrder, created.id];
+    writeSceneOrder(nextOrder);
+    set({ customPresets: nextCustom, sceneOrder: nextOrder });
     return created;
   },
   updateScene: (id, patch) => {
@@ -315,9 +381,15 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     if (PRESETS.some((entry) => entry.id === id)) return;
     const nextCustom = state.customPresets.filter((entry) => entry.id !== id);
     writeCustomPresets(nextCustom);
+    const nextOrder = state.sceneOrder.filter((entry) => entry !== id);
+    writeSceneOrder(nextOrder);
+    const nextFavorites = state.favoriteIds.filter((entry) => entry !== id);
+    if (nextFavorites.length !== state.favoriteIds.length) writeFavorites(nextFavorites);
     const stillExists = findPreset(nextCustom, state.activePresetId);
     set({
       customPresets: nextCustom,
+      sceneOrder: nextOrder,
+      favoriteIds: nextFavorites,
       activePresetId: stillExists ? state.activePresetId : PRESETS[0].id,
     });
   },
@@ -351,7 +423,9 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     }
     if (accepted.length > 0) {
       writeCustomPresets(custom);
-      set({ customPresets: custom });
+      const nextOrder = [...get().sceneOrder, ...accepted.map((entry) => entry.id)];
+      writeSceneOrder(nextOrder);
+      set({ customPresets: custom, sceneOrder: nextOrder });
     }
     return { accepted, rejected, headerErrors: [] };
   },
@@ -372,6 +446,66 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
+  addMediaTracks: (files) =>
+    set((state) => {
+      const nextQueue = [...state.mediaQueue];
+      for (const file of files) {
+        const url = URL.createObjectURL(file);
+        nextQueue.push(createTrack(file.name, url));
+      }
+      return { mediaQueue: nextQueue, mediaIndex: state.mediaIndex ?? 0 };
+    }),
+  removeMediaTrack: (id) =>
+    set((state) => {
+      const index = state.mediaQueue.findIndex((entry) => entry.id === id);
+      if (index === -1) return {};
+      const entry = state.mediaQueue[index];
+      if (entry.url) URL.revokeObjectURL(entry.url);
+      const nextQueue = state.mediaQueue.filter((entry) => entry.id !== id);
+      let nextIndex = state.mediaIndex;
+      if (nextQueue.length === 0) nextIndex = null;
+      else if (state.mediaIndex !== null) {
+        if (index < state.mediaIndex) nextIndex = state.mediaIndex - 1;
+        else if (index === state.mediaIndex) nextIndex = Math.min(state.mediaIndex, nextQueue.length - 1);
+      }
+      return { mediaQueue: nextQueue, mediaIndex: nextIndex };
+    }),
+  reorderMedia: (from, to) =>
+    set((state) => {
+      if (from < 0 || from >= state.mediaQueue.length || to < 0 || to >= state.mediaQueue.length) return {};
+      const nextQueue = [...state.mediaQueue];
+      const [moved] = nextQueue.splice(from, 1);
+      nextQueue.splice(to, 0, moved);
+      let nextIndex = state.mediaIndex;
+      if (state.mediaIndex !== null) {
+        const id = state.mediaQueue[state.mediaIndex]?.id;
+        nextIndex = nextQueue.findIndex((entry) => entry.id === id);
+      }
+      return { mediaQueue: nextQueue, mediaIndex: nextIndex };
+    }),
+  playMedia: (id) =>
+    set((state) => {
+      const index = state.mediaQueue.findIndex((entry) => entry.id === id);
+      if (index === -1) return {};
+      return { mediaIndex: index };
+    }),
+  reorderScenes: (from, to) =>
+    set((state) => {
+      const order = [...state.sceneOrder];
+      if (from < 0 || from >= order.length || to < 0 || to >= order.length) return {};
+      const [moved] = order.splice(from, 1);
+      order.splice(to, 0, moved);
+      writeSceneOrder(order);
+      return { sceneOrder: order };
+    }),
+  toggleFavorite: (id) =>
+    set((state) => {
+      const next = state.favoriteIds.includes(id)
+        ? state.favoriteIds.filter((entry) => entry !== id)
+        : [...state.favoriteIds, id];
+      writeFavorites(next);
+      return { favoriteIds: next };
+    }),
   cycleDuration: () =>
     set((s) => ({ transitionDuration: nextDuration(s.transitionDuration) })),
   stepHue: () => set((s) => ({ hueShift: (s.hueShift + 1 / 8) % 1 })),
