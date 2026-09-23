@@ -1,54 +1,110 @@
+import { useRef, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { buildLibrary } from '../scenes/library';
 import { PRESETS } from '../scenes/presets';
+import type { ScenePreset } from '../scenes/presets';
+import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
-
-const FAVORITES = new Set(
-  buildLibrary(PRESETS.map((preset) => preset.id))
-    .filter((entry) => entry.favorite)
-    .map((entry) => entry.presetId),
-);
 
 /**
  * Single source for the scene selection list, shared by the side panel
  * and the bottom sheet. Pointer-friendly companion to keyboard presets.
  */
+function useAllPresets() {
+  const customPresets = useDirectorStore((s) => s.customPresets);
+  return [...PRESETS, ...customPresets];
+}
+
 export function SceneList() {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const presets = useAllPresets();
+  const favorites = new Set(
+    buildLibrary(presets.map((preset) => preset.id))
+      .filter((entry) => entry.favorite)
+      .map((entry) => entry.presetId),
+  );
+  const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
+  const [report, setReport] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
+
+  const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        const result = useDirectorStore.getState().importScenes(parsed);
+        const lines: string[] = [];
+        if (result.headerErrors.length > 0) lines.push(`Header: ${result.headerErrors.join('; ')}`);
+        if (result.accepted.length > 0) lines.push(`Accepted: ${result.accepted.map((entry) => entry.name).join(', ')}`);
+        if (result.rejected.length > 0) lines.push(`Rejected: ${result.rejected.map((entry) => `${entry.id} (${entry.reason})`).join('; ')}`);
+        setReport(lines.join(' | ') || 'No scenes found');
+      } catch (err) {
+        setReport(err instanceof Error ? err.message : 'Invalid file');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
 
   return (
-    <ul className="scene-list" data-testid="scene-list">
-      {PRESETS.map((preset) => (
-        <li key={preset.id}>
-          <button
-            type="button"
-            className={
-              preset.id === activePresetId
-                ? 'scene-item active'
-                : 'scene-item'
-            }
-            data-testid={`scene-button-${preset.id}`}
-            onClick={() =>
-              useDirectorStore.getState().requestDissolve(preset.id)
-            }
-          >
-            <span
-              className="scene-swatch"
-              style={{ background: preset.palette.primary }}
-              aria-hidden
-            />
-            <strong>{preset.name}</strong>
-            {FAVORITES.has(preset.id) && (
-              <span className="scene-fav" title="Favorite" aria-hidden>
-                ★
+    <div className="scene-library" data-testid="scene-library">
+      <div className="scene-library-actions">
+        <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
+          Create
+        </button>
+        <button type="button" onClick={() => useDirectorStore.getState().exportCustomScenes()} data-testid="export-scenes">
+          Export
+        </button>
+        <label className="scene-import">
+          Import
+          <input ref={fileRef} type="file" accept="application/json" onChange={onImport} hidden />
+        </label>
+      </div>
+      {report && <p className="scene-report" data-testid="import-report">{report}</p>}
+      <ul className="scene-list" data-testid="scene-list">
+        {presets.map((preset) => (
+          <li key={preset.id} className="scene-row">
+            <button
+              type="button"
+              className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
+              data-testid={`scene-button-${preset.id}`}
+              onClick={() => useDirectorStore.getState().requestDissolve(preset.id)}
+            >
+              <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
+              <strong>{preset.name}</strong>
+              {favorites.has(preset.id) && (
+                <span className="scene-fav" title="Favorite" aria-hidden>
+                  ★
+                </span>
+              )}
+              {isNative(preset.id) && <span className="scene-badge-native">native</span>}
+              <span className="scene-sub">
+                {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
               </span>
+            </button>
+            {!isNative(preset.id) && (
+              <div className="scene-item-actions">
+                <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => useDirectorStore.getState().deleteScene(preset.id)}
+                  data-testid={`delete-scene-${preset.id}`}
+                >
+                  Delete
+                </button>
+              </div>
             )}
-            <span className="scene-sub">
-              {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
-            </span>
-          </button>
-        </li>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
+      {editing !== undefined && (
+        <SceneEditor preset={editing ?? undefined} onClose={() => setEditing(undefined)} />
+      )}
+    </div>
   );
 }

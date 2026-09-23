@@ -3,12 +3,17 @@ import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { createTrack } from '../audio/track';
 import { useDirectorStore } from '../director/directorStore';
 import { instanceKey } from '../scenes/bases';
-import { getPreset, resolveInstances } from '../scenes/presets';
+import { getPreset, PRESETS, resolveInstances } from '../scenes/presets';
 import { TrackCard } from './TrackCard';
 
+function activePreset(): ReturnType<typeof getPreset> {
+  const { activePresetId, customPresets } = useDirectorStore.getState();
+  const all = [...PRESETS, ...customPresets];
+  return all.find((entry) => entry.id === activePresetId) ?? getPreset(activePresetId);
+}
+
 function activeMeshKeys(): string[] {
-  const { activePresetId } = useDirectorStore.getState();
-  const preset = getPreset(activePresetId);
+  const preset = activePreset();
   return resolveInstances(preset)
     .map((inst, index) => ({ inst, index }))
     .filter(({ inst }) => inst.base === 'mesh')
@@ -27,15 +32,17 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
     () => (engine.fileName ? createTrack(engine.fileName) : null),
     [engine.fileName],
   );
+  const customPresets = useDirectorStore((s) => s.customPresets);
   const meshKeys = useMemo(
-    () =>
-      resolveInstances(getPreset(activePresetId))
+    () => {
+      const all = [...PRESETS, ...customPresets];
+      const preset = all.find((entry) => entry.id === activePresetId) ?? getPreset(activePresetId);
+      return resolveInstances(preset)
         .map((inst, index) => ({ inst, index }))
         .filter(({ inst }) => inst.base === 'mesh')
-        .map(({ inst, index }) =>
-          instanceKey(getPreset(activePresetId).id, inst.base, index),
-        ),
-    [activePresetId],
+        .map(({ inst, index }) => instanceKey(preset.id, inst.base, index));
+    },
+    [activePresetId, customPresets],
   );
   const meshMapUrl = meshKeys
     .map((key) => instanceMaps[key] ?? null)

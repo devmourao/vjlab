@@ -7,7 +7,7 @@ import { FractalScene } from './FractalScene';
 import { ParticleFieldScene } from './ParticleFieldScene';
 import { TunnelFieldScene } from './TunnelFieldScene';
 import { instanceKey } from './bases';
-import { getPreset, resolveInstances, type BaseInstance } from './presets';
+import { getPreset, PRESETS, resolveInstances, type BaseInstance } from './presets';
 
 function ParallaxGroup({
   sensitivity,
@@ -92,7 +92,10 @@ function instanceMapUrl(
 export function SceneHost() {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const sessionMaps = useDirectorStore((s) => s.instanceMaps);
-  const preset = getPreset(activePresetId);
+  const customPresets = useDirectorStore((s) => s.customPresets);
+  const preset =
+    [...PRESETS, ...customPresets].find((entry) => entry.id === activePresetId) ??
+    getPreset(activePresetId);
   const instances = resolveInstances(preset);
 
   return (

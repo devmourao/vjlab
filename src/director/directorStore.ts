@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { PRESET_COUNT } from '../scenes/presets';
+import { exportScenesPack, validatePack } from '../packs/packFormat';
+import { PRESETS, type ScenePreset } from '../scenes/presets';
 import {
   CONTRAST_DEFAULT,
   MIX_STEP,
@@ -50,6 +51,7 @@ interface DirectorState {
   overlayKey: number;
   meshTextureStatus: 'idle' | 'loading' | 'ready' | 'error';
   instanceMaps: Record<string, string | null>;
+  customPresets: ScenePreset[];
   panelMode: PanelMode;
   autoPilotOn: boolean;
   fractalShape: number;
@@ -63,6 +65,15 @@ interface DirectorState {
   prevPreset: () => void;
   requestDissolve: (id: number) => void;
   hardCutNext: () => void;
+  createScene: (preset: Omit<ScenePreset, 'id'>) => ScenePreset;
+  updateScene: (id: number, patch: Partial<Omit<ScenePreset, 'id'>>) => void;
+  deleteScene: (id: number) => void;
+  importScenes: (packFile: unknown) => {
+    accepted: ScenePreset[];
+    rejected: Array<{ id: string; reason: string }>;
+    headerErrors: string[];
+  };
+  exportCustomScenes: () => void;
   cycleDuration: () => void;
   stepHue: () => void;
   zoomIn: () => void;
@@ -128,9 +139,67 @@ function writeTourSeen(): void {
   }
 }
 
-const tourSeenInitial = readTourSeen();
+const CUSTOM_PRESETS_KEY = 'vjlab.customPresets.v1';
 
-export const useDirectorStore = create<DirectorState>((set) => ({
+function readCustomPresets(): ScenePreset[] {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    const raw = window.localStorage.getItem(CUSTOM_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (entry): entry is ScenePreset =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as ScenePreset).id === 'number' &&
+        typeof (entry as ScenePreset).name === 'string' &&
+        Array.isArray((entry as ScenePreset).instances),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeCustomPresets(presets: ScenePreset[]): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    // Private mode or quota must never break the deck.
+  }
+}
+
+function allPresets(custom: ScenePreset[]): ScenePreset[] {
+  return [...PRESETS, ...custom];
+}
+
+function findPreset(custom: ScenePreset[], id: number): ScenePreset | undefined {
+  return allPresets(custom).find((preset) => preset.id === id);
+}
+
+function nextPresetIdOrdered(custom: ScenePreset[], id: number, dir: 1 | -1): number {
+  const ordered = allPresets(custom);
+  const index = ordered.findIndex((preset) => preset.id === id);
+  const current = index === -1 ? 0 : index;
+  const next = (current + dir + ordered.length) % ordered.length;
+  return ordered[next].id;
+}
+
+function normalizeId(custom: ScenePreset[], id: number): number {
+  const direct = findPreset(custom, id);
+  if (direct) return direct.id;
+  const ordered = allPresets(custom);
+  const len = ordered.length;
+  if (len === 0) return id;
+  const wrapped = ((Math.floor(id) % len) + len) % len;
+  return ordered[wrapped].id;
+}
+
+const tourSeenInitial = readTourSeen();
+const customPresetsInitial = readCustomPresets();
+
+export const useDirectorStore = create<DirectorState>((set, get) => ({
   strobeOn: false,
   burstCount: 0,
   activePresetId: 0,
@@ -160,6 +229,7 @@ export const useDirectorStore = create<DirectorState>((set) => ({
   overlayKey: 0,
   meshTextureStatus: 'idle',
   instanceMaps: {},
+  customPresets: customPresetsInitial,
   panelMode: 'docked',
   autoPilotOn: true,
   fractalShape: 0,
@@ -185,34 +255,122 @@ export const useDirectorStore = create<DirectorState>((set) => ({
     });
   },
   setPreset: (id: number) =>
-    set({
-      activePresetId:
-        ((Math.floor(id) % PRESET_COUNT) + PRESET_COUNT) % PRESET_COUNT,
-    }),
+    set((state) => ({
+      activePresetId: normalizeId(state.customPresets, id),
+    })),
   nextPreset: () =>
-    set((s) => ({ activePresetId: (s.activePresetId + 1) % PRESET_COUNT })),
+    set((state) => ({
+      activePresetId: nextPresetIdOrdered(
+        state.customPresets,
+        state.activePresetId,
+        1,
+      ),
+    })),
   prevPreset: () =>
-    set((s) => ({
-      activePresetId:
-        (s.activePresetId - 1 + PRESET_COUNT) % PRESET_COUNT,
+    set((state) => ({
+      activePresetId: nextPresetIdOrdered(
+        state.customPresets,
+        state.activePresetId,
+        -1,
+      ),
     })),
   requestDissolve: (id: number) => {
-    const { activePresetId } = useDirectorStore.getState();
-    const target =
-      ((Math.floor(id) % PRESET_COUNT) + PRESET_COUNT) % PRESET_COUNT;
-    if (target === activePresetId || transitionRef.active) return;
+    const state = useDirectorStore.getState();
+    const target = normalizeId(state.customPresets, id);
+    if (target === state.activePresetId || transitionRef.active) return;
+    if (!findPreset(state.customPresets, target)) return;
     transitionRef.active = true;
     transitionRef.swapped = false;
     transitionRef.start = performance.now();
     transitionRef.to = target;
   },
   hardCutNext: () => {
-    const { activePresetId } = useDirectorStore.getState();
+    const state = useDirectorStore.getState();
     transitionRef.active = false;
     transitionRef.swapped = false;
-    useDirectorStore
-      .getState()
-      .setPreset(activePresetId + 1);
+    const next = nextPresetIdOrdered(state.customPresets, state.activePresetId, 1);
+    useDirectorStore.getState().setPreset(next);
+  },
+  createScene: (preset) => {
+    const state = get();
+    const ids = allPresets(state.customPresets).map((entry) => entry.id);
+    const nextId = ids.length === 0 ? 0 : Math.max(...ids) + 1;
+    const created: ScenePreset = { ...preset, id: nextId } as ScenePreset;
+    const nextCustom = [...state.customPresets, created];
+    writeCustomPresets(nextCustom);
+    set({ customPresets: nextCustom });
+    return created;
+  },
+  updateScene: (id, patch) => {
+    const state = get();
+    if (PRESETS.some((entry) => entry.id === id)) return;
+    const nextCustom = state.customPresets.map((entry) =>
+      entry.id === id ? { ...entry, ...patch, id } : entry,
+    );
+    writeCustomPresets(nextCustom);
+    set({ customPresets: nextCustom });
+  },
+  deleteScene: (id) => {
+    const state = get();
+    if (PRESETS.some((entry) => entry.id === id)) return;
+    const nextCustom = state.customPresets.filter((entry) => entry.id !== id);
+    writeCustomPresets(nextCustom);
+    const stillExists = findPreset(nextCustom, state.activePresetId);
+    set({
+      customPresets: nextCustom,
+      activePresetId: stillExists ? state.activePresetId : PRESETS[0].id,
+    });
+  },
+  importScenes: (packFile) => {
+    const report = validatePack(packFile);
+    if (report.headerErrors.length > 0) {
+      return {
+        accepted: [],
+        rejected: [],
+        headerErrors: report.headerErrors,
+      };
+    }
+    const accepted: ScenePreset[] = [];
+    const rejected: Array<{ id: string; reason: string }> = [...report.rejected];
+    let custom = get().customPresets;
+    for (const scene of report.acceptedScenes) {
+      const ids = allPresets(custom).map((entry) => entry.id);
+      const nextId = ids.length === 0 ? 0 : Math.max(...ids) + 1;
+      const preset: ScenePreset = {
+        id: nextId,
+        name: scene.name,
+        palette: scene.palette,
+        background: scene.background,
+        gain: scene.gain,
+        speed: scene.speed,
+        scene: 0 as const,
+        instances: scene.instances,
+      };
+      custom = [...custom, preset];
+      accepted.push(preset);
+    }
+    if (accepted.length > 0) {
+      writeCustomPresets(custom);
+      set({ customPresets: custom });
+    }
+    return { accepted, rejected, headerErrors: [] };
+  },
+  exportCustomScenes: () => {
+    const state = get();
+    if (state.customPresets.length === 0) return;
+    const pack = exportScenesPack(state.customPresets, {
+      name: 'Custom Scenes',
+      author: 'VJ Lab',
+      packVersion: '1.0.0',
+    });
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' }),
+    );
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `vjlab-scenes-${Date.now()}.json`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
   cycleDuration: () =>
     set((s) => ({ transitionDuration: nextDuration(s.transitionDuration) })),
