@@ -47,8 +47,7 @@
   overflow-x: hidden;
 }
 
-.side-panel .audio-panel,
-.side-panel .shortcut-map {
+.side-panel .audio-panel {
   position: static;
   max-width: none;
 }

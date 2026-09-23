@@ -62,6 +62,14 @@ export function nextStrobeMode(current: StrobeMode): StrobeMode {
   return STROBE_MODES[(STROBE_MODES.indexOf(current) + 1) % STROBE_MODES.length];
 }
 
+/** Forward steps from one strobe mode to another (radio without a setter). */
+export function strobeStepsTo(current: StrobeMode, target: StrobeMode): number {
+  const from = STROBE_MODES.indexOf(current);
+  const to = STROBE_MODES.indexOf(target);
+  if (from === -1 || to === -1) return 0;
+  return (to - from + STROBE_MODES.length) % STROBE_MODES.length;
+}
+
 /** Effective amount of an effect after its own mix and the master fader. */
 export function applyMix(base: number, mix: number, master: number): number {
   return base * clampMix(mix) * clampMix(master);
@@ -140,3 +148,21 @@ export const GLITCH_DELAY: [number, number] = [1.5, 3.5];
 export const GLITCH_DURATION: [number, number] = [0.2, 0.6];
 
 export const GLITCH_STRENGTH: [number, number] = [0.2, 0.5];
+
+/**
+ * Slider bounds per effect slot. Contrast and saturation use their own
+ * ranges; every other slot mixes dry/wet from 0 to 1.
+ */
+export function slotRange(slot: FxSlot): { min: number; max: number; step: number } {
+  if (slot === 'contrast')
+    return { min: CONTRAST_MIN, max: CONTRAST_MAX, step: 0.01 };
+  if (slot === 'saturation') return { min: 0, max: SATURATION_MAX, step: 0.01 };
+  return { min: 0, max: 1, step: 0.01 };
+}
+
+/** Fill fraction (0–1) for slot value bars. */
+export function slotFraction(slot: FxSlot, value: number): number {
+  const { min, max } = slotRange(slot);
+  if (max === min) return 0;
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}

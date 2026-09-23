@@ -1,0 +1,254 @@
+.desk-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kit-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kit-switch .kit-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #6b7280;
+}
+
+.kit-switch.on {
+  border-color: #22d3ee;
+}
+
+.kit-switch.on .kit-knob {
+  background: #22d3ee;
+}
+
+.kit-radio-group {
+  display: flex;
+  gap: 6px;
+}
+
+.kit-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.kit-radio.checked {
+  border-color: #22d3ee;
+  opacity: 1;
+}
+
+.kit-radio input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kit-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.kit-swatch.white {
+  background: #fff;
+}
+
+.kit-swatch.black {
+  background: #111;
+}
+
+.kit-swatch.color {
+  background: linear-gradient(90deg, #ff0040, #ffea00, #00ff88, #00d4ff, #cc00ff);
+}
+
+.kit-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.kit-slider input[type='range'] {
+  width: 100%;
+  min-height: 44px;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+
+.kit-flags {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kit-flag {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.kit-flag.on {
+  opacity: 1;
+}
+
+.kit-flag.on.tone-vhs {
+  background: #22d3ee;
+  color: #000;
+}
+
+.kit-flag.on.tone-rgb {
+  background: linear-gradient(90deg, #ff0040, #00ff88, #00d4ff);
+  color: #000;
+}
+
+.kit-flag.on.tone-beat {
+  background: #facc15;
+  color: #000;
+}
+
+.kit-flag.on.tone-bypass {
+  background: #ef4444;
+  color: #fff;
+}
+
+.kit-flag.on.tone-lite {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.kit-flag.on.tone-auto {
+  background: #a855f7;
+  color: #fff;
+}
+
+.kit-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kit-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.kit-slot.active {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.kit-slot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+  min-height: 24px;
+}
+
+.kit-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.kit-bar div {
+  height: 100%;
+  background: #22d3ee;
+}
+
+.kit-slot input[type='range'] {
+  width: 100%;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+
+.kit-transport {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kit-transport .kit-row button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kit-note {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.kit-link {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

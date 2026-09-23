@@ -15,17 +15,30 @@ function useAllPresets() {
   return [...PRESETS, ...customPresets];
 }
 
-export function SceneList() {
+export function SceneList({
+  items,
+  favoriteIds: favoriteOverride,
+  onSelect,
+  manage = true,
+}: {
+  items?: ScenePreset[];
+  favoriteIds?: number[];
+  onSelect?: (id: number) => void;
+  manage?: boolean;
+} = {}) {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const sceneOrder = useDirectorStore((s) => s.sceneOrder);
-  const favoriteIds = useDirectorStore((s) => s.favoriteIds);
-  const all = useAllPresets();
+  const storeFavorites = useDirectorStore((s) => s.favoriteIds);
+  const storePresets = useAllPresets();
+  const all = items ?? storePresets;
   const ordered = sceneOrder
     .map((id) => all.find((preset) => preset.id === id))
     .filter((entry): entry is ScenePreset => Boolean(entry));
   const missing = all.filter((preset) => !sceneOrder.includes(preset.id));
   const presets = [...ordered, ...missing];
-  const favorites = new Set(favoriteIds);
+  const favorites = new Set(favoriteOverride ?? storeFavorites);
+  const select =
+    onSelect ?? ((id: number) => useDirectorStore.getState().requestDissolve(id));
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
@@ -55,6 +68,7 @@ export function SceneList() {
 
   return (
     <div className="scene-library" data-testid="scene-library">
+      {manage && (
       <div className="scene-library-actions">
         <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
           Builder
@@ -70,7 +84,8 @@ export function SceneList() {
           <input ref={fileRef} type="file" accept="application/json" onChange={onImport} hidden />
         </label>
       </div>
-      {report && <p className="scene-report" data-testid="import-report">{report}</p>}
+      )}
+      {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
         {presets.map((preset, index) => (
           <li key={preset.id} className="scene-row">
@@ -78,7 +93,7 @@ export function SceneList() {
               type="button"
               className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
               data-testid={`scene-button-${preset.id}`}
-              onClick={() => useDirectorStore.getState().requestDissolve(preset.id)}
+              onClick={() => select(preset.id)}
             >
               <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
               <strong>{preset.name}</strong>
@@ -92,6 +107,7 @@ export function SceneList() {
                 {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
               </span>
             </button>
+            {manage && (
             <div className="scene-item-actions">
               <button type="button" disabled={index === 0} onClick={() => useDirectorStore.getState().reorderScenes(index, index - 1)} data-testid={`up-scene-${preset.id}`}>
                 ↑
@@ -122,13 +138,14 @@ export function SceneList() {
                 </>
               )}
             </div>
+            )}
           </li>
         ))}
       </ul>
-      {editing !== undefined && (
+      {manage && editing !== undefined && (
         <SceneEditor preset={editing ?? undefined} onClose={() => setEditing(undefined)} />
       )}
-      {building && <PresetBuilder onClose={() => setBuilding(false)} />}
+      {manage && building && <PresetBuilder onClose={() => setBuilding(false)} />}
     </div>
   );
 }

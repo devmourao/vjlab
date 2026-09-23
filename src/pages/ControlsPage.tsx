@@ -8,31 +8,20 @@ import {
   type ControlSnapshot,
 } from '../director/controlChannel';
 import {
-  CONTRAST_MAX,
-  CONTRAST_MIN,
   FX_SLOTS,
-  SATURATION_MAX,
-  STROBE_MAX_HZ,
-  STROBE_MIN_HZ,
-  ZOOM_MAX,
-  ZOOM_MIN,
+  strobeStepsTo,
+  type FxSlot,
+  type StrobeMode,
 } from '../director/fx';
 import { PRESETS } from '../scenes/presets';
+import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
+import { EffectSlotList } from '../components/controls/EffectSlotList';
+import { FlagPills } from '../components/controls/FlagPills';
+import { StrobeControl } from '../components/controls/StrobeControl';
+import { TransportRows } from '../components/controls/TransportRows';
+import '../components/controls/ControlsKit.css';
 import './ControlsPage.css';
-
-function slotRange(slot: string): { min: number; max: number; step: number } {
-  if (slot === 'contrast')
-    return { min: CONTRAST_MIN, max: CONTRAST_MAX, step: 0.01 };
-  if (slot === 'saturation') return { min: 0, max: SATURATION_MAX, step: 0.01 };
-  return { min: 0, max: 1, step: 0.01 };
-}
-
-function slotFraction(slot: string, value: number): number {
-  const { min, max } = slotRange(slot);
-  if (max === min) return 0;
-  return Math.max(0, Math.min(1, (value - min) / (max - min)));
-}
 
 function useControlDeck() {
   const [snapshot, setSnapshot] = useState<ControlSnapshot | null>(null);
@@ -116,7 +105,7 @@ export default function ControlsPage() {
       {!snapshot && (
         <p className="controls-offline" data-testid="controls-offline">
           Waiting for the main deck — open the live deck first, then reopen
-          this window from the deck Hide UI control.
+          this window with the deck Pop out control.
         </p>
       )}
 
@@ -135,22 +124,12 @@ export default function ControlsPage() {
 
           <section className="controls-section" aria-label="Scenes">
             <h2>Scenes</h2>
-            <div className="controls-grid">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={
-                    preset.id === snapshot.activePresetId
-                      ? 'controls-button active'
-                      : 'controls-button'
-                  }
-                  onClick={() => send({ type: 'dissolve', id: preset.id })}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
+            <SceneList
+              items={PRESETS}
+              favoriteIds={[]}
+              manage={false}
+              onSelect={(id) => send({ type: 'dissolve', id })}
+            />
             <div className="controls-row">
               <button type="button" onClick={() => send({ type: 'prevPreset' })}>
                 Prev
@@ -169,138 +148,69 @@ export default function ControlsPage() {
 
           <section className="controls-section" aria-label="Strobe">
             <h2>Strobe</h2>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'toggleStrobe' })}>
-                {snapshot.strobeOn ? 'On' : 'Off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'cycleStrobeMode' })}>
-                {snapshot.strobeMode}
-              </button>
-              <span>{snapshot.strobeRateHz}Hz</span>
-            </div>
-            <label className="controls-slider">
-              <span>Speed</span>
-              <input
-                type="range"
-                min={STROBE_MIN_HZ}
-                max={STROBE_MAX_HZ}
-                step={1}
-                value={snapshot.strobeRateHz}
-                aria-label="Strobe speed"
-                onChange={(event) =>
-                  send({
-                    type: 'setStrobeHz',
-                    value: Number(event.target.value),
-                  })
+            <StrobeControl
+              on={snapshot.strobeOn}
+              mode={snapshot.strobeMode}
+              hz={snapshot.strobeRateHz}
+              onToggle={() => send({ type: 'toggleStrobe' })}
+              onMode={(mode: StrobeMode) => {
+                const steps = strobeStepsTo(
+                  snapshot.strobeMode as StrobeMode,
+                  mode,
+                );
+                for (let i = 0; i < steps; i += 1) {
+                  send({ type: 'cycleStrobeMode' });
                 }
-              />
-            </label>
+              }}
+              onHz={(value) => send({ type: 'setStrobeHz', value })}
+            />
           </section>
 
           <section className="controls-section" aria-label="Flags">
             <h2>Flags</h2>
-            <div className="controls-grid">
-              <button type="button" onClick={() => send({ type: 'toggleVhs' })}>
-                VHS {snapshot.vhsOn ? 'on' : 'off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'toggleRgb' })}>
-                RGB {snapshot.rgbOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleBeatFlash' })}
-              >
-                Beat {snapshot.beatFlashOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleFxBypass' })}
-              >
-                Bypass {snapshot.fxBypassed ? 'on' : 'off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'toggleLite' })}>
-                Lite {snapshot.liteOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleAutoPilot' })}
-              >
-                Auto {snapshot.autoPilotOn ? 'on' : 'off'}
-              </button>
-            </div>
+            <FlagPills
+              flags={[
+                { id: 'vhs', label: `VHS ${snapshot.vhsOn ? 'on' : 'off'}`, on: snapshot.vhsOn, tone: 'vhs' },
+                { id: 'rgb', label: `RGB ${snapshot.rgbOn ? 'on' : 'off'}`, on: snapshot.rgbOn, tone: 'rgb' },
+                { id: 'beat', label: `Beat ${snapshot.beatFlashOn ? 'on' : 'off'}`, on: snapshot.beatFlashOn, tone: 'beat' },
+                { id: 'bypass', label: `Bypass ${snapshot.fxBypassed ? 'on' : 'off'}`, on: snapshot.fxBypassed, tone: 'bypass' },
+                { id: 'lite', label: `Lite ${snapshot.liteOn ? 'on' : 'off'}`, on: snapshot.liteOn, tone: 'lite' },
+                { id: 'auto', label: `Auto ${snapshot.autoPilotOn ? 'on' : 'off'}`, on: snapshot.autoPilotOn, tone: 'auto' },
+              ]}
+              onToggle={(id) => {
+                if (id === 'vhs') send({ type: 'toggleVhs' });
+                else if (id === 'rgb') send({ type: 'toggleRgb' });
+                else if (id === 'beat') send({ type: 'toggleBeatFlash' });
+                else if (id === 'bypass') send({ type: 'toggleFxBypass' });
+                else if (id === 'lite') send({ type: 'toggleLite' });
+                else send({ type: 'toggleAutoPilot' });
+              }}
+            />
           </section>
 
           <section className="controls-section" aria-label="Effects">
-            <h2>Effect slot</h2>
-            <div className="controls-grid">
-              {FX_SLOTS.map((slot) => {
-                const value = snapshot.mixes[slot] ?? 0;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    className={
-                      slot === snapshot.selectedFx
-                        ? 'controls-button slot active'
-                        : 'controls-button slot'
-                    }
-                    onClick={() => send({ type: 'selectFxSlot', slot })}
-                  >
-                    <span className="slot-name">{slot}</span>
-                    <span className="slot-value">{value.toFixed(2)}</span>
-                    <span className="slot-bar" aria-hidden>
-                      <span
-                        style={{
-                          width: `${Math.round(slotFraction(slot, value) * 100)}%`,
-                        }}
-                      />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <label className="controls-slider">
-              <span>Mix · {snapshot.selectedFx}</span>
-              <input
-                type="range"
-                min={slotRange(snapshot.selectedFx).min}
-                max={slotRange(snapshot.selectedFx).max}
-                step={slotRange(snapshot.selectedFx).step}
-                value={snapshot.mixes[snapshot.selectedFx] ?? 0}
-                aria-label="Selected effect mix"
-                onChange={(event) =>
-                  send({
-                    type: 'setMix',
-                    slot: snapshot.selectedFx,
-                    value: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
+            <h2>Effects</h2>
+            <EffectSlotList
+              slots={[...FX_SLOTS]}
+              values={snapshot.mixes}
+              selected={snapshot.selectedFx}
+              onSelect={(slot: FxSlot) => send({ type: 'selectFxSlot', slot })}
+              onMix={(slot: FxSlot, value: number) =>
+                send({ type: 'setMix', slot, value })
+              }
+            />
           </section>
 
           <section className="controls-section" aria-label="Color and zoom">
             <h2>Color and zoom</h2>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'stepHue' })}>
-                Hue step
-              </button>
-              <span>{Math.round(snapshot.hueShift * 8)}/8</span>
-            </div>
-            <label className="controls-slider">
-              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
-              <input
-                type="range"
-                min={ZOOM_MIN}
-                max={ZOOM_MAX}
-                step={0.01}
-                value={snapshot.zoomTarget}
-                aria-label="Zoom"
-                onChange={(event) =>
-                  send({ type: 'setZoom', value: Number(event.target.value) })
-                }
-              />
-            </label>
+            <TransportRows
+              duration={snapshot.transitionDuration}
+              hue={snapshot.hueShift}
+              zoom={snapshot.zoomTarget}
+              onCycleDuration={() => send({ type: 'cycleDuration' })}
+              onStepHue={() => send({ type: 'stepHue' })}
+              onZoom={(value) => send({ type: 'setZoom', value })}
+            />
           </section>
 
           <section className="controls-section" aria-label="Overlay and actions">

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { AudioPanel } from './AudioPanel';
+import { DeskPanel } from './controls/DeskPanel';
 import { GuideTeaser } from './GuideTeaser';
 import { SceneList } from './SceneList';
-import { ShortcutMap } from './ShortcutMap';
 import './SidePanel.css';
 
 type PanelTab = 'track' | 'scenes' | 'fx' | 'guide';
@@ -43,7 +43,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
       <div className="side-content" data-testid="side-content">
         {activeTab === 'track' && <AudioPanel engine={engine} />}
         {activeTab === 'scenes' && <SceneList />}
-        {activeTab === 'fx' && <ShortcutMap />}
+        {activeTab === 'fx' && <DeskPanel />}
         {activeTab === 'guide' && <GuideTeaser />}
       </div>
     </div>

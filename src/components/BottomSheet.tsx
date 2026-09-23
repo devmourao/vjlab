@@ -4,9 +4,9 @@ import { toggleInterfaceVisibility } from '../director/controlChannel';
 import { useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
+import { DeskPanel } from './controls/DeskPanel';
 import { GuideTeaser } from './GuideTeaser';
 import { SceneList } from './SceneList';
-import { ShortcutMap } from './ShortcutMap';
 
 type SheetTab = 'audio' | 'scenes' | 'fx' | 'guide';
 type SheetSize = 'mini' | 'half' | 'expanded';
@@ -98,7 +98,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
         <div className="sheet-content" data-testid="sheet-content">
           {activeTab === 'audio' && <AudioPanel engine={engine} />}
           {activeTab === 'scenes' && <SceneList />}
-          {activeTab === 'fx' && <ShortcutMap />}
+          {activeTab === 'fx' && <DeskPanel />}
           {activeTab === 'guide' && <GuideTeaser />}
         </div>
       )}

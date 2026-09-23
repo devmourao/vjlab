@@ -16,7 +16,10 @@ import {
   nextFxSlot,
   nextStrobeMode,
   relativeLuminance,
+  slotFraction,
+  slotRange,
   strobeIntervalMs,
+  strobeStepsTo,
   zoomRadius,
 } from './fx';
 
@@ -106,5 +109,25 @@ describe('post pass stability', () => {
     expect(GLITCH_DELAY).toEqual([1.5, 3.5]);
     expect(GLITCH_DURATION).toEqual([0.2, 0.6]);
     expect(GLITCH_STRENGTH).toEqual([0.2, 0.5]);
+  });
+});
+
+describe('strobe radio steps', () => {
+  it('reaches any mode with forward cycles only', () => {
+    expect(strobeStepsTo('white', 'white')).toBe(0);
+    expect(strobeStepsTo('white', 'black')).toBe(1);
+    expect(strobeStepsTo('white', 'color')).toBe(2);
+    expect(strobeStepsTo('color', 'white')).toBe(1);
+  });
+});
+
+describe('slot ranges', () => {
+  it('bounds every slot for sliders and bars', () => {
+    expect(slotRange('bloom')).toEqual({ min: 0, max: 1, step: 0.01 });
+    expect(slotRange('saturation').max).toBe(0.6);
+    expect(slotRange('contrast')).toMatchObject({ min: -0.5, max: 0.5 });
+    expect(slotFraction('bloom', 0.5)).toBeCloseTo(0.5);
+    expect(slotFraction('contrast', 0)).toBeCloseTo(0.5);
+    expect(slotFraction('saturation', 0.6)).toBeCloseTo(1);
   });
 });

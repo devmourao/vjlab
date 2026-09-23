@@ -27,9 +27,6 @@ export function TopBar() {
         {SITE_META.name} · v{SITE_META.version}
       </Link>
       <div className="top-bar-actions">
-        <span className="top-bar-mode" data-testid="panel-mode">
-          {panelMode.toUpperCase()}
-        </span>
         <button
           type="button"
           className="top-bar-button"

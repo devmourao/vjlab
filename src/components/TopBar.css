@@ -30,16 +30,6 @@
   gap: 8px;
 }
 
-.top-bar-mode {
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  opacity: 0.8;
-}
-
 .top-bar-button {
   min-width: 44px;
   min-height: 44px;

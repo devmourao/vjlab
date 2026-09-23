@@ -7,6 +7,8 @@
   background: #05050c;
   color: #fff;
   font-family: system-ui, -apple-system, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .controls-head {
@@ -68,8 +70,7 @@
   font-size: 13px;
 }
 
-.controls-row button,
-.controls-grid button {
+.controls-row button {
   min-width: 44px;
   min-height: 44px;
   padding: 10px 14px;
@@ -80,17 +81,6 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.controls-button.active {
-  background: #22d3ee;
-  color: #000;
-}
-
-.controls-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
 }
 
 .controls-hint {
@@ -120,51 +110,6 @@
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
   font-size: 14px;
-}
-
-.controls-slider {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 10px 0;
-  font-size: 13px;
-}
-
-.controls-slider input[type='range'] {
-  width: 100%;
-  min-height: 44px;
-  accent-color: #22d3ee;
-  cursor: pointer;
-}
-
-.controls-button.slot {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
-  text-align: left;
-}
-
-.slot-name {
-  font-weight: 800;
-}
-
-.slot-value {
-  font-size: 11px;
-  opacity: 0.65;
-}
-
-.slot-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-}
-
-.slot-bar span {
-  display: block;
-  height: 100%;
-  background: #22d3ee;
 }
 
 .controls-end {
