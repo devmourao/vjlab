@@ -13,6 +13,7 @@ import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
+import { SceneTransport } from '../components/controls/SceneTransport';
 import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
 import './ControlsPage.css';
@@ -200,20 +201,31 @@ export default function ControlsPage() {
                 importReport,
               }}
             />
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'prevPreset' })}>
-                Prev
-              </button>
-              <button type="button" onClick={() => send({ type: 'nextPreset' })}>
-                Next
-              </button>
-              <button type="button" onClick={() => send({ type: 'hardCut' })}>
-                Cut
-              </button>
-              <button type="button" onClick={() => send({ type: 'cycleDuration' })}>
-                {snapshot.transitionDuration.toFixed(1)}s
-              </button>
-            </div>
+            <SceneTransport
+              durationLabel={`${snapshot.transitionDuration.toFixed(1)}s`}
+              onPrev={() => send({ type: 'prevPreset' })}
+              onNext={() => send({ type: 'nextPreset' })}
+              onCut={() => send({ type: 'hardCut' })}
+              onCycleDuration={() => send({ type: 'cycleDuration' })}
+            />
+          </section>
+
+          <section className="controls-section" aria-label="Stage">
+            <h2>Stage</h2>
+            <label className="kit-slider">
+              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
+              <input
+                type="range"
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={0.01}
+                value={snapshot.zoomTarget}
+                aria-label="Stage zoom"
+                onChange={(event) =>
+                  send({ type: 'setZoom', value: Number(event.target.value) })
+                }
+              />
+            </label>
           </section>
 
           <section className="controls-section" aria-label="Strobe">
@@ -229,6 +241,24 @@ export default function ControlsPage() {
               onMix={(value) => send({ type: 'setMix', slot: 'strobe', value })}
               onBurst={() => send({ type: 'fireBurst' })}
             />
+          </section>
+
+          <section className="controls-section" aria-label="Effects">
+            <h2>Effects</h2>
+            <EffectSlotList
+              slots={[...FX_SLOTS]}
+              values={snapshot.mixes}
+              selected={snapshot.selectedFx}
+              onSelect={(slot: FxSlot) => send({ type: 'selectFxSlot', slot })}
+              onMix={(slot: FxSlot, value: number) =>
+                send({ type: 'setMix', slot, value })
+              }
+            />
+            <div className="controls-row">
+              <button type="button" onClick={() => send({ type: 'stepHue' })}>
+                Global hue · {Math.round(snapshot.hueShift * 8)}/8
+              </button>
+            </div>
           </section>
 
           <section className="controls-section" aria-label="Flags">
@@ -251,42 +281,6 @@ export default function ControlsPage() {
                 else send({ type: 'toggleAutoPilot' });
               }}
             />
-          </section>
-
-          <section className="controls-section" aria-label="Effects">
-            <h2>Effects</h2>
-            <EffectSlotList
-              slots={[...FX_SLOTS]}
-              values={snapshot.mixes}
-              selected={snapshot.selectedFx}
-              onSelect={(slot: FxSlot) => send({ type: 'selectFxSlot', slot })}
-              onMix={(slot: FxSlot, value: number) =>
-                send({ type: 'setMix', slot, value })
-              }
-            />
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'stepHue' })}>
-                Global hue · {Math.round(snapshot.hueShift * 8)}/8
-              </button>
-            </div>
-          </section>
-
-          <section className="controls-section" aria-label="Stage">
-            <h2>Stage</h2>
-            <label className="kit-slider">
-              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
-              <input
-                type="range"
-                min={ZOOM_MIN}
-                max={ZOOM_MAX}
-                step={0.01}
-                value={snapshot.zoomTarget}
-                aria-label="Stage zoom"
-                onChange={(event) =>
-                  send({ type: 'setZoom', value: Number(event.target.value) })
-                }
-              />
-            </label>
           </section>
 
           <section className="controls-section" aria-label="Overlay and actions">

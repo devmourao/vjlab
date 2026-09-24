@@ -30,7 +30,6 @@ export function DeskPanel() {
   const masterMix = useDirectorStore((s) => s.masterMix);
   const colorSaturation = useDirectorStore((s) => s.colorSaturation);
   const colorContrast = useDirectorStore((s) => s.colorContrast);
-  const transitionDuration = useDirectorStore((s) => s.transitionDuration);
   const hueShift = useDirectorStore((s) => s.hueShift);
   const zoomTarget = useDirectorStore((s) => s.zoomTarget);
   const activePresetId = useDirectorStore((s) => s.activePresetId);
@@ -54,68 +53,92 @@ export function DeskPanel() {
 
   return (
     <div className="desk-panel" data-testid="desk-panel">
-      <StrobeControl
-        on={strobeOn}
-        mode={strobeMode}
-        hz={strobeRateHz}
-        mix={mixStrobe}
-        onToggle={() => store.toggleStrobe()}
-        onCycleMode={() => store.cycleStrobeMode()}
-        onHz={(value) => store.setStrobeRate(value)}
-        onMix={(value) => store.setFxMix('strobe', value)}
-        onBurst={() => store.fireBurst()}
-      />
-      <FlagPills
-        flags={[
-          { id: 'vhs', label: `VHS ${vhsOn ? 'on' : 'off'}`, on: vhsOn, tone: 'vhs' },
-          { id: 'rgb', label: `RGB ${rgbOn ? 'on' : 'off'}`, on: rgbOn, tone: 'rgb' },
-          { id: 'beat', label: `Beat ${beatFlashOn ? 'on' : 'off'}`, on: beatFlashOn, tone: 'beat' },
-          { id: 'bypass', label: `Bypass ${fxBypassed ? 'on' : 'off'}`, on: fxBypassed, tone: 'bypass' },
-          { id: 'lite', label: `Lite ${liteOn ? 'on' : 'off'}`, on: liteOn, tone: 'lite' },
-          { id: 'auto', label: `Auto ${autoPilotOn ? 'on' : 'off'}`, on: autoPilotOn, tone: 'auto' },
-        ]}
-        onToggle={(id) => {
-          if (id === 'vhs') store.toggleVhs();
-          else if (id === 'rgb') store.toggleRgb();
-          else if (id === 'beat') store.toggleBeatFlash();
-          else if (id === 'bypass') store.toggleFxBypass();
-          else if (id === 'lite') store.toggleLite();
-          else store.toggleAutoPilot();
-        }}
-      />
-      {resolveInstances(preset).some((inst) => inst.base === 'fractal') && (
-        <p className="kit-note" data-testid="fractal-hud">
-          Fractal {FRACTAL_SIDES[fractalShape]}p · inner {fractalInner.toFixed(2)}x · Z{' '}
-          {fractalZ.toFixed(1)}rad
-        </p>
-      )}
-      <EffectSlotList
-        slots={[...FX_SLOTS]}
-        values={values}
-        selected={selectedFx}
-        onSelect={(slot: FxSlot) => store.selectFxSlot(slot)}
-        onMix={(slot: FxSlot, value: number) => store.setFxMix(slot, value)}
-      />
-      <div className="kit-row">
-        <button type="button" onClick={() => store.stepHue()}>
-          Global hue · {Math.round(hueShift * 8)}/8
-        </button>
-        <button type="button" onClick={() => store.cycleDuration()}>
-          Duration · {transitionDuration.toFixed(1)}s
-        </button>
-      </div>
-      <label className="kit-slider">
-        <span>Stage zoom · {zoomTarget.toFixed(2)}x</span>
-        <input
-          type="range"
-          min={ZOOM_MIN}
-          max={ZOOM_MAX}
-          step={0.01}
-          value={zoomTarget}
-          aria-label="Stage zoom"
-          onChange={(event) => store.setZoomTarget(Number(event.target.value))}
+      <section className="kit-section" aria-label="Stage">
+        <h2>Stage</h2>
+        <label className="kit-slider">
+          <span>Stage zoom · {zoomTarget.toFixed(2)}x</span>
+          <input
+            type="range"
+            min={ZOOM_MIN}
+            max={ZOOM_MAX}
+            step={0.01}
+            value={zoomTarget}
+            aria-label="Stage zoom"
+            onChange={(event) => store.setZoomTarget(Number(event.target.value))}
+          />
+        </label>
+        {resolveInstances(preset).some((inst) => inst.base === 'fractal') && (
+          <p className="kit-note" data-testid="fractal-hud">
+            Fractal {FRACTAL_SIDES[fractalShape]}p · inner {fractalInner.toFixed(2)}x · Z{' '}
+            {fractalZ.toFixed(1)}rad
+          </p>
+        )}
+      </section>
+      <section className="kit-section" aria-label="Strobe">
+        <h2>Strobe</h2>
+        <StrobeControl
+          on={strobeOn}
+          mode={strobeMode}
+          hz={strobeRateHz}
+          mix={mixStrobe}
+          onToggle={() => store.toggleStrobe()}
+          onCycleMode={() => store.cycleStrobeMode()}
+          onHz={(value) => store.setStrobeRate(value)}
+          onMix={(value) => store.setFxMix('strobe', value)}
+          onBurst={() => store.fireBurst()}
         />
-      </label>
+      </section>
+      <section className="kit-section" aria-label="Effects">
+        <h2>Effects</h2>
+        <EffectSlotList
+          slots={[...FX_SLOTS]}
+          values={values}
+          selected={selectedFx}
+          onSelect={(slot: FxSlot) => store.selectFxSlot(slot)}
+          onMix={(slot: FxSlot, value: number) => store.setFxMix(slot, value)}
+        />
+        <div className="kit-row">
+          <button type="button" onClick={() => store.stepHue()}>
+            Global hue · {Math.round(hueShift * 8)}/8
+          </button>
+        </div>
+      </section>
+      <section className="kit-section" aria-label="Flags">
+        <h2>Flags</h2>
+        <FlagPills
+          flags={[
+            { id: 'vhs', label: `VHS ${vhsOn ? 'on' : 'off'}`, on: vhsOn, tone: 'vhs' },
+            { id: 'rgb', label: `RGB ${rgbOn ? 'on' : 'off'}`, on: rgbOn, tone: 'rgb' },
+            { id: 'beat', label: `Beat ${beatFlashOn ? 'on' : 'off'}`, on: beatFlashOn, tone: 'beat' },
+            { id: 'bypass', label: `Bypass ${fxBypassed ? 'on' : 'off'}`, on: fxBypassed, tone: 'bypass' },
+            { id: 'lite', label: `Lite ${liteOn ? 'on' : 'off'}`, on: liteOn, tone: 'lite' },
+            { id: 'auto', label: `Auto ${autoPilotOn ? 'on' : 'off'}`, on: autoPilotOn, tone: 'auto' },
+          ]}
+          onToggle={(id) => {
+            if (id === 'vhs') store.toggleVhs();
+            else if (id === 'rgb') store.toggleRgb();
+            else if (id === 'beat') store.toggleBeatFlash();
+            else if (id === 'bypass') store.toggleFxBypass();
+            else if (id === 'lite') store.toggleLite();
+            else store.toggleAutoPilot();
+          }}
+        />
+      </section>
+      <section className="kit-section" aria-label="Overlay and actions">
+        <h2>Overlay and actions</h2>
+        <div className="kit-row">
+          <button type="button" onClick={() => store.fireText()}>
+            Fire text
+          </button>
+          <button type="button" onClick={() => store.fireBurst()}>
+            Burst
+          </button>
+          <button type="button" onClick={() => store.killAll()}>
+            Kill all
+          </button>
+        </div>
+        <p className="kit-note">Overlay text lives in the Track tab.</p>
+      </section>
       <button
         type="button"
         className="kit-link"
