@@ -32,5 +32,5 @@ plus transport only.
 ## Guide
 
 Help. The interactive drawer and first-run tour live on the deck; the
-Console popup carries a static shortcut reference noting that
-shortcuts and the tour run on the main deck window.
+Console popup carries the same compact teaser, firing remote commands
+so the guide and the tour open on the main deck window.

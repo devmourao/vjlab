@@ -142,6 +142,9 @@ function executeControlCommand(
     case 'showGuide':
       store.setHelpOpen(true);
       break;
+    case 'replayTour':
+      store.replayTour();
+      break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
       store.cyclePanelMode();

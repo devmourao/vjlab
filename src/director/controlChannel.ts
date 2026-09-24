@@ -44,6 +44,7 @@ export type ControlCommand =
   | { type: 'openLibrary' }
   | { type: 'closeLibrary' }
   | { type: 'showGuide' }
+  | { type: 'replayTour' }
   | { type: 'togglePlayback' }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
@@ -150,6 +151,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'openLibrary',
   'closeLibrary',
   'showGuide',
+  'replayTour',
   'togglePlayback',
   'playQueueTrack',
   'removeQueueTrack',

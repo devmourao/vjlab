@@ -16,7 +16,8 @@ import { FlagPills } from '../components/controls/FlagPills';
 import { HueSlider } from '../components/controls/HueSlider';
 import { MixRow } from '../components/controls/MixRow';
 import { RemoteQueue } from '../components/controls/RemoteQueue';
-import { ShortcutReference } from '../components/controls/ShortcutReference';
+import { GuideTeaser } from '../components/GuideTeaser';
+import '../components/GuideTeaser.css';
 import { SceneTransport } from '../components/controls/SceneTransport';
 import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
@@ -302,12 +303,10 @@ export default function ControlsPage() {
 
           <section className="controls-section" aria-label="Guide">
             <h2>Guide</h2>
-            <ShortcutReference note="Shortcuts run on the main deck window. The interactive first-run tour lives there too — open the deck Guide tab to replay it." />
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'showGuide' })}>
-                Open guide on deck
-              </button>
-            </div>
+            <GuideTeaser
+              onOpenGuide={() => send({ type: 'showGuide' })}
+              onReplayTour={() => send({ type: 'replayTour' })}
+            />
           </section>
           <div className="controls-end" aria-hidden />
         </div>

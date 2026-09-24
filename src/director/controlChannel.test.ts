@@ -125,6 +125,9 @@ describe('controlChannel', () => {
       isControlMessage({ type: 'command', command: { type: 'showGuide' } }),
     ).toBe(true);
     expect(
+      isControlMessage({ type: 'command', command: { type: 'replayTour' } }),
+    ).toBe(true);
+    expect(
       isControlMessage({
         type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },
