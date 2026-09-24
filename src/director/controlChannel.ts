@@ -49,6 +49,9 @@ export type ControlCommand =
   | { type: 'closeLibrary' }
   | { type: 'showGuide' }
   | { type: 'replayTour' }
+  | { type: 'switchPlaylist'; id: string }
+  | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
+  | { type: 'playlistRemoveScene'; playlistId: string; sceneId: number }
   | { type: 'togglePlayback' }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
@@ -86,11 +89,20 @@ export interface SnapshotPreset {
   instances: Array<{ base: string; params?: Record<string, unknown> }>;
 }
 
+export interface SnapshotPlaylist {
+  id: string;
+  name: string;
+  sceneCount: number;
+  deckCount: number;
+}
+
 export interface ControlSnapshot {
   activePresetId: number;
   presets: SnapshotPreset[];
   favoriteIds: number[];
   sceneOrder: number[];
+  playlists: SnapshotPlaylist[];
+  activePlaylistId: string;
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -157,6 +169,9 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'closeLibrary',
   'showGuide',
   'replayTour',
+  'switchPlaylist',
+  'playlistAddScene',
+  'playlistRemoveScene',
   'togglePlayback',
   'playQueueTrack',
   'removeQueueTrack',
@@ -240,6 +255,14 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'deleteScene':
     case 'toggleFavorite':
       return typeof command['id'] === 'number';
+    case 'switchPlaylist':
+      return typeof command['id'] === 'string';
+    case 'playlistAddScene':
+    case 'playlistRemoveScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['sceneId'] === 'number'
+      );
     case 'moveScene':
     case 'moveFavorite':
       return (
@@ -302,6 +325,13 @@ export function buildSnapshot(
     })),
     favoriteIds: [...selectActivePlaylist(state).favoriteIds],
     sceneOrder: [...selectActivePlaylist(state).sceneIds],
+    playlists: state.playlists.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      sceneCount: entry.sceneIds.length,
+      deckCount: entry.favoriteIds.length,
+    })),
+    activePlaylistId: state.activePlaylistId,
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,

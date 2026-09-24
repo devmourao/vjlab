@@ -177,6 +177,22 @@ export default function ControlsPage() {
 
           <section className="controls-section" aria-label="Scenes">
             <h2>Scenes</h2>
+            <label className="controls-playlist">
+              <span>Playlist</span>
+              <select
+                value={snapshot.activePlaylistId}
+                aria-label="Active playlist"
+                onChange={(event) =>
+                  send({ type: 'switchPlaylist', id: event.target.value })
+                }
+              >
+                {snapshot.playlists.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name} ({entry.sceneCount} · deck {entry.deckCount})
+                  </option>
+                ))}
+              </select>
+            </label>
             <DeckStrip
               slots={snapshot.favoriteIds.map((id) => ({
                 id,

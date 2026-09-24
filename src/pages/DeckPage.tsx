@@ -145,6 +145,15 @@ function executeControlCommand(
     case 'replayTour':
       store.replayTour();
       break;
+    case 'switchPlaylist':
+      store.setActivePlaylist(command.id);
+      break;
+    case 'playlistAddScene':
+      store.addSceneToPlaylist(command.playlistId, command.sceneId);
+      break;
+    case 'playlistRemoveScene':
+      store.removeSceneFromPlaylist(command.playlistId, command.sceneId);
+      break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
       store.cyclePanelMode();

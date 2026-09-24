@@ -142,6 +142,36 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'switchPlaylist', id: 'main' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistRemoveScene', playlistId: 'main', sceneId: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'switchPlaylist', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 'two' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },
       }),
     ).toBe(true);
@@ -227,6 +257,8 @@ describe('controlChannel', () => {
     expect(snapshot.queue).toEqual([]);
     expect(snapshot.mediaIndex).toBeNull();
     expect(Array.isArray(snapshot.sceneOrder)).toBe(true);
+    expect(snapshot.playlists.length).toBeGreaterThan(0);
+    expect(snapshot.activePlaylistId).toBe(snapshot.playlists[0].id);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });
