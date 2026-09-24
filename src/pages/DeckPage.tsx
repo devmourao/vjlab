@@ -131,6 +131,19 @@ function executeControlCommand(
     case 'togglePlayback':
       void engine.toggle();
       break;
+    case 'playQueueTrack': {
+      const track = store.mediaQueue.find((entry) => entry.id === command.id);
+      if (!track) break;
+      store.playMedia(command.id);
+      if (track.url) engine.loadUrl(track.url, track.name);
+      break;
+    }
+    case 'removeQueueTrack':
+      store.removeMediaTrack(command.id);
+      break;
+    case 'moveQueueTrack':
+      store.reorderMedia(command.from, command.to);
+      break;
     case 'uploadTrack': {
       // ArrayBuffer clones reliably across same-origin windows; the main
       // deck owns the resulting object URL, so playback stays local.
@@ -240,7 +253,11 @@ function DeckPage() {
           kind: 'snapshot',
           snapshot: buildSnapshot(
             state,
-            { fileName: current.fileName, isPlaying: current.isPlaying },
+            {
+              fileName: current.fileName,
+              isPlaying: current.isPlaying,
+              error: current.error,
+            },
             [...PRESETS, ...state.customPresets],
             state.favoriteIds,
           ),

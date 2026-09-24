@@ -105,6 +105,36 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'playQueueTrack', id: 'track-1' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'removeQueueTrack', id: 'track-1' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveQueueTrack', from: 0, to: 1 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playQueueTrack', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveQueueTrack', from: 0, to: 'far' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'importPack', pack: { header: {} } },
       }),
     ).toBe(true);
@@ -133,6 +163,9 @@ describe('controlChannel', () => {
     expect(snapshot.presets).toHaveLength(1);
     expect(snapshot.favoriteIds).toEqual([0]);
     expect(snapshot.mixes['bloom']).toBe(1);
+    expect(snapshot.audioError).toBeNull();
+    expect(snapshot.queue).toEqual([]);
+    expect(snapshot.mediaIndex).toBeNull();
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });

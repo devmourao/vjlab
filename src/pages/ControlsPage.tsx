@@ -13,6 +13,7 @@ import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
+import { RemoteQueue } from '../components/controls/RemoteQueue';
 import { SceneTransport } from '../components/controls/SceneTransport';
 import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
@@ -129,6 +130,18 @@ export default function ControlsPage() {
               isPlaying={snapshot.isPlaying}
               variant="status"
               onTogglePlayback={() => send({ type: 'togglePlayback' })}
+            />
+            {snapshot.audioError ? (
+              <p className="controls-error" data-testid="controls-audio-error">
+                {snapshot.audioError}
+              </p>
+            ) : null}
+            <RemoteQueue
+              items={snapshot.queue}
+              activeIndex={snapshot.mediaIndex}
+              onPlay={(id) => send({ type: 'playQueueTrack', id })}
+              onMove={(from, to) => send({ type: 'moveQueueTrack', from, to })}
+              onRemove={(id) => send({ type: 'removeQueueTrack', id })}
             />
             <label className="controls-upload">
               <span>Load audio here</span>

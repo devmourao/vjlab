@@ -41,6 +41,9 @@ export type ControlCommand =
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
   | { type: 'togglePlayback' }
+  | { type: 'playQueueTrack'; id: string }
+  | { type: 'removeQueueTrack'; id: string }
+  | { type: 'moveQueueTrack'; from: number; to: number }
   | { type: 'setOverlayText'; text: string }
   | { type: 'setMix'; slot: string; value: number }
   | { type: 'setZoom'; value: number }
@@ -92,6 +95,9 @@ export interface ControlSnapshot {
   mixes: Record<string, number>;
   fileName: string | null;
   isPlaying: boolean;
+  audioError: string | null;
+  queue: Array<{ id: string; name: string }>;
+  mediaIndex: number | null;
 }
 
 export interface ImportResult {
@@ -134,6 +140,9 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'setPanelMode',
   'cyclePanelMode',
   'togglePlayback',
+  'playQueueTrack',
+  'removeQueueTrack',
+  'moveQueueTrack',
   'setOverlayText',
   'setMix',
   'setZoom',
@@ -170,6 +179,14 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
   switch (command['type']) {
     case 'dissolve':
       return typeof command['id'] === 'number';
+    case 'playQueueTrack':
+    case 'removeQueueTrack':
+      return typeof command['id'] === 'string';
+    case 'moveQueueTrack':
+      return (
+        typeof command['from'] === 'number' &&
+        typeof command['to'] === 'number'
+      );
     case 'selectFxSlot':
       return typeof command['slot'] === 'string';
     case 'setPanelMode':
@@ -237,7 +254,7 @@ export function isControlMessage(value: unknown): value is ControlMessage {
 
 export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
-  track: { fileName: string | null; isPlaying: boolean },
+  track: { fileName: string | null; isPlaying: boolean; error?: string | null },
   presets: ScenePreset[],
   favoriteIds: number[],
 ): ControlSnapshot {
@@ -280,6 +297,9 @@ export function buildSnapshot(
     },
     fileName: track.fileName,
     isPlaying: track.isPlaying,
+    audioError: track.error ?? null,
+    queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
+    mediaIndex: state.mediaIndex,
   };
 }
 
