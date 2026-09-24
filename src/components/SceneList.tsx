@@ -15,16 +15,29 @@ function useAllPresets() {
   return [...PRESETS, ...customPresets];
 }
 
+export interface SceneListOps {
+  onRemove?: (id: number) => void;
+  onExport?: () => void;
+  onImport?: (file: File) => void;
+  onSaveDraft?: (
+    draft: Omit<ScenePreset, 'id'>,
+    editingId: number | null,
+  ) => void;
+  importReport?: string | null;
+}
+
 export function SceneList({
   items,
   favoriteIds: favoriteOverride,
   onSelect,
   manage = true,
+  ops = {},
 }: {
   items?: ScenePreset[];
   favoriteIds?: number[];
   onSelect?: (id: number) => void;
   manage?: boolean;
+  ops?: SceneListOps;
 } = {}) {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const sceneOrder = useDirectorStore((s) => s.sceneOrder);
@@ -42,12 +55,18 @@ export function SceneList({
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
+  const remoteSave = ops.onSaveDraft ?? null;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
 
   const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (ops.onImport) {
+      ops.onImport(file);
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -76,7 +95,15 @@ export function SceneList({
         <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
           Create
         </button>
-        <button type="button" onClick={() => useDirectorStore.getState().exportCustomScenes()} data-testid="export-scenes">
+        <button
+          type="button"
+          onClick={() =>
+            ops.onExport
+              ? ops.onExport()
+              : useDirectorStore.getState().exportCustomScenes()
+          }
+          data-testid="export-scenes"
+        >
           Export
         </button>
         <label className="scene-import">
@@ -130,7 +157,11 @@ export function SceneList({
                   </button>
                   <button
                     type="button"
-                    onClick={() => useDirectorStore.getState().deleteScene(preset.id)}
+                    onClick={() =>
+                      ops.onRemove
+                        ? ops.onRemove(preset.id)
+                        : useDirectorStore.getState().deleteScene(preset.id)
+                    }
                     data-testid={`delete-scene-${preset.id}`}
                   >
                     Delete
@@ -143,9 +174,32 @@ export function SceneList({
         ))}
       </ul>
       {manage && editing !== undefined && (
-        <SceneEditor preset={editing ?? undefined} onClose={() => setEditing(undefined)} />
+        <SceneEditor
+          preset={editing ?? undefined}
+          onClose={() => setEditing(undefined)}
+          onSave={
+            remoteSave
+              ? (draft, editingId) =>
+                  remoteSave({ ...draft, instances: draft.instances ?? [] }, editingId)
+              : undefined
+          }
+        />
       )}
-      {manage && building && <PresetBuilder onClose={() => setBuilding(false)} />}
+      {manage && building && (
+        <PresetBuilder
+          onClose={() => setBuilding(false)}
+          onSave={
+            remoteSave
+              ? (draft) => remoteSave({ ...draft, instances: draft.instances ?? [] }, null)
+              : undefined
+          }
+        />
+      )}
+      {manage && ops.importReport && (
+        <p className="scene-report" data-testid="import-report-remote">
+          {ops.importReport}
+        </p>
+      )}
     </div>
   );
 }

@@ -78,17 +78,60 @@ describe('controlChannel', () => {
     expect(isControlMessage({ type: 'command', command: null })).toBe(false);
     expect(isControlMessage(null)).toBe(false);
     expect(isControlMessage('toggleStrobe')).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'createScene',
+          draft: { name: 'Built', instances: [{ base: 'tunnel' }] },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'createScene', draft: { name: '', instances: [] } },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'deleteScene', id: 7 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'exportScenes' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'importPack', pack: { header: {} } },
+      }),
+    ).toBe(true);
   });
 
   it('builds a serializable snapshot from store state', () => {
     const snapshot = buildSnapshot(
       useDirectorStore.getState(),
       { fileName: 'demo.mp3', isPlaying: true },
-      6,
+      [
+        {
+          id: 0,
+          name: 'Nebula',
+          palette: { primary: '#ffffff', emissive: '#000000' },
+          background: '#000000',
+          gain: 1,
+          speed: 1,
+          scene: 0 as const,
+          instances: [{ base: 'particles' as const }],
+        },
+      ],
+      [0],
     );
     expect(snapshot.fileName).toBe('demo.mp3');
     expect(snapshot.isPlaying).toBe(true);
-    expect(snapshot.presetCount).toBe(6);
+    expect(snapshot.presets).toHaveLength(1);
+    expect(snapshot.favoriteIds).toEqual([0]);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',

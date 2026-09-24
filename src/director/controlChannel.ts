@@ -1,3 +1,5 @@
+import { BASE_CAPABILITIES } from '../scenes/bases';
+import type { ScenePreset } from '../scenes/presets';
 import { useDirectorStore, type PanelMode } from './directorStore';
 
 /**
@@ -43,11 +45,36 @@ export type ControlCommand =
   | { type: 'setMix'; slot: string; value: number }
   | { type: 'setZoom'; value: number }
   | { type: 'setStrobeHz'; value: number }
-  | { type: 'uploadTrack'; name: string; mime: string; data: ArrayBuffer };
+  | { type: 'uploadTrack'; name: string; mime: string; data: ArrayBuffer }
+  | { type: 'createScene'; draft: SceneDraftPayload }
+  | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
+  | { type: 'deleteScene'; id: number }
+  | { type: 'exportScenes' }
+  | { type: 'importPack'; pack: unknown };
+
+export interface SceneDraftPayload {
+  name: string;
+  palette: { primary: string; emissive: string };
+  background: string;
+  gain: number;
+  speed: number;
+  instances: Array<{ base: string; params?: Record<string, unknown> }>;
+}
+
+export interface SnapshotPreset {
+  id: number;
+  name: string;
+  palette: { primary: string; emissive: string };
+  background: string;
+  gain: number;
+  speed: number;
+  instances: Array<{ base: string; params?: Record<string, unknown> }>;
+}
 
 export interface ControlSnapshot {
   activePresetId: number;
-  presetCount: number;
+  presets: SnapshotPreset[];
+  favoriteIds: number[];
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -67,9 +94,15 @@ export interface ControlSnapshot {
   isPlaying: boolean;
 }
 
+export interface ImportResult {
+  accepted: string[];
+  rejected: Array<{ id: string; reason: string }>;
+}
+
 export type ControlMessage =
   | { kind: 'hello'; source: 'controls' }
   | { kind: 'snapshot'; snapshot: ControlSnapshot }
+  | { kind: 'importResult'; result: ImportResult }
   | { type: 'command'; command: ControlCommand };
 
 const COMMAND_TYPES: ReadonlySet<string> = new Set([
@@ -106,7 +139,32 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'setZoom',
   'setStrobeHz',
   'uploadTrack',
+  'createScene',
+  'updateScene',
+  'deleteScene',
+  'exportScenes',
+  'importPack',
 ]);
+
+const KNOWN_BASE_IDS = new Set(Object.keys(BASE_CAPABILITIES));
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSceneDraft(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (typeof value['name'] !== 'string' || !value['name']) return false;
+  if (!Array.isArray(value['instances']) || value['instances'].length === 0) {
+    return false;
+  }
+  return value['instances'].every(
+    (entry) =>
+      isRecord(entry) &&
+      typeof entry['base'] === 'string' &&
+      KNOWN_BASE_IDS.has(entry['base']),
+  );
+}
 
 function hasValidPayload(command: Record<string, unknown>): boolean {
   switch (command['type']) {
@@ -134,6 +192,18 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
         command['data'] instanceof ArrayBuffer &&
         command['data'].byteLength > 0
       );
+    case 'createScene':
+      return isSceneDraft(command['draft']);
+    case 'updateScene':
+      return (
+        typeof command['id'] === 'number' && isSceneDraft(command['patch'])
+      );
+    case 'deleteScene':
+      return typeof command['id'] === 'number';
+    case 'exportScenes':
+      return true;
+    case 'importPack':
+      return command['pack'] !== undefined;
     default:
       return true;
   }
@@ -146,6 +216,11 @@ export function isControlMessage(value: unknown): value is ControlMessage {
   if (record['kind'] === 'snapshot') {
     return (
       typeof record['snapshot'] === 'object' && record['snapshot'] !== null
+    );
+  }
+  if (record['kind'] === 'importResult') {
+    return (
+      typeof record['result'] === 'object' && record['result'] !== null
     );
   }
   if (record['type'] === 'command') {
@@ -163,11 +238,24 @@ export function isControlMessage(value: unknown): value is ControlMessage {
 export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
   track: { fileName: string | null; isPlaying: boolean },
-  presetCount: number,
+  presets: ScenePreset[],
+  favoriteIds: number[],
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
-    presetCount,
+    presets: presets.map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      palette: { ...preset.palette },
+      background: preset.background,
+      gain: preset.gain,
+      speed: preset.speed,
+      instances: (preset.instances ?? []).map((instance) => ({
+        base: instance.base,
+        params: { ...(instance.params ?? {}) },
+      })),
+    })),
+    favoriteIds: [...favoriteIds],
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,

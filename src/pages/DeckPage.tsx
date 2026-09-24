@@ -27,7 +27,12 @@ import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import { PLAYLIST, PRESETS, getPreset } from '../scenes/presets';
+import {
+  PLAYLIST,
+  PRESETS,
+  getPreset,
+  type BaseInstance,
+} from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -150,6 +155,56 @@ function executeControlCommand(
     case 'setStrobeHz':
       store.setStrobeRate(command.value);
       break;
+    case 'createScene':
+      store.createScene({
+        name: command.draft.name,
+        palette: { ...command.draft.palette },
+        background: command.draft.background,
+        gain: command.draft.gain,
+        speed: command.draft.speed,
+        scene: 0 as const,
+        instances: command.draft.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'updateScene':
+      store.updateScene(command.id, {
+        name: command.patch.name,
+        palette: { ...command.patch.palette },
+        background: command.patch.background,
+        gain: command.patch.gain,
+        speed: command.patch.speed,
+        instances: command.patch.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'deleteScene':
+      store.deleteScene(command.id);
+      break;
+    case 'exportScenes':
+      store.exportCustomScenes();
+      break;
+    case 'importPack': {
+      const result = store.importScenes(command.pack);
+      try {
+        const channel = new BroadcastChannel(CONTROL_CHANNEL);
+        channel.postMessage({
+          kind: 'importResult',
+          result: {
+            accepted: result.accepted.map((entry) => entry.name),
+            rejected: result.rejected,
+          },
+        });
+        channel.close();
+      } catch {
+        // The popup refreshes from snapshots regardless.
+      }
+      break;
+    }
   }
 }
 
@@ -186,7 +241,8 @@ function DeckPage() {
           snapshot: buildSnapshot(
             state,
             { fileName: current.fileName, isPlaying: current.isPlaying },
-            [...PRESETS, ...state.customPresets].length,
+            [...PRESETS, ...state.customPresets],
+            state.favoriteIds,
           ),
         });
       } catch {

@@ -11,6 +11,20 @@
   margin: 0 auto;
 }
 
+/* Wide second screens share the same sections in columns. */
+@media (min-width: 1024px) {
+  .controls-page {
+    max-width: 1200px;
+  }
+
+  .controls-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+    align-items: start;
+  }
+}
+
 .controls-head {
   display: flex;
   align-items: center;
