@@ -19,6 +19,7 @@ export type ControlCommand =
   | { type: 'hardCut' }
   | { type: 'cycleDuration' }
   | { type: 'stepHue' }
+  | { type: 'setHue'; value: number }
   | { type: 'zoomIn' }
   | { type: 'zoomOut' }
   | { type: 'cycleFxSlot' }
@@ -121,6 +122,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'hardCut',
   'cycleDuration',
   'stepHue',
+  'setHue',
   'zoomIn',
   'zoomOut',
   'cycleFxSlot',
@@ -205,6 +207,7 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       );
     case 'setZoom':
     case 'setStrobeHz':
+    case 'setHue':
       return typeof command['value'] === 'number';
     case 'uploadTrack':
       return (

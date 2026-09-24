@@ -44,6 +44,18 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'setHue', value: 0.5 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setHue', value: 'half' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'setMix', slot: 'bloom' },
       }),
     ).toBe(false);

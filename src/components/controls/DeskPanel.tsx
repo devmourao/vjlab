@@ -4,6 +4,7 @@ import { PRESETS, resolveInstances } from '../../scenes/presets';
 import './ControlsKit.css';
 import { EffectSlotList } from './EffectSlotList';
 import { FlagPills } from './FlagPills';
+import { HueSlider } from './HueSlider';
 import { StrobeControl } from './StrobeControl';
 
 const FRACTAL_SIDES = [10, 8, 6, 5, 12];
@@ -76,17 +77,16 @@ export function DeskPanel() {
       </section>
       <section className="kit-section" aria-label="Strobe">
         <h2>Strobe</h2>
-        <StrobeControl
-          on={strobeOn}
-          mode={strobeMode}
-          hz={strobeRateHz}
-          mix={mixStrobe}
-          onToggle={() => store.toggleStrobe()}
-          onCycleMode={() => store.cycleStrobeMode()}
-          onHz={(value) => store.setStrobeRate(value)}
-          onMix={(value) => store.setFxMix('strobe', value)}
-          onBurst={() => store.fireBurst()}
-        />
+      <StrobeControl
+        on={strobeOn}
+        mode={strobeMode}
+        hz={strobeRateHz}
+        mix={mixStrobe}
+        onToggle={() => store.toggleStrobe()}
+        onCycleMode={() => store.cycleStrobeMode()}
+        onHz={(value) => store.setStrobeRate(value)}
+        onMix={(value) => store.setFxMix('strobe', value)}
+      />
       </section>
       <section className="kit-section" aria-label="Effects">
         <h2>Effects</h2>
@@ -97,9 +97,13 @@ export function DeskPanel() {
           onSelect={(slot: FxSlot) => store.selectFxSlot(slot)}
           onMix={(slot: FxSlot, value: number) => store.setFxMix(slot, value)}
         />
+        <HueSlider
+          value={hueShift}
+          onChange={(value) => store.setHueShift(value)}
+        />
         <div className="kit-row">
-          <button type="button" onClick={() => store.stepHue()}>
-            Global hue · {Math.round(hueShift * 8)}/8
+          <button type="button" onClick={() => store.fireBurst()}>
+            Burst
           </button>
         </div>
       </section>
@@ -129,9 +133,6 @@ export function DeskPanel() {
         <div className="kit-row">
           <button type="button" onClick={() => store.fireText()}>
             Fire text
-          </button>
-          <button type="button" onClick={() => store.fireBurst()}>
-            Burst
           </button>
           <button type="button" onClick={() => store.killAll()}>
             Kill all

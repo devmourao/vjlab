@@ -13,6 +13,7 @@ import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
+import { HueSlider } from '../components/controls/HueSlider';
 import { RemoteQueue } from '../components/controls/RemoteQueue';
 import { ShortcutReference } from '../components/controls/ShortcutReference';
 import { SceneTransport } from '../components/controls/SceneTransport';
@@ -276,7 +277,6 @@ export default function ControlsPage() {
               onCycleMode={() => send({ type: 'cycleStrobeMode' })}
               onHz={(value) => send({ type: 'setStrobeHz', value })}
               onMix={(value) => send({ type: 'setMix', slot: 'strobe', value })}
-              onBurst={() => send({ type: 'fireBurst' })}
             />
           </section>
 
@@ -291,9 +291,13 @@ export default function ControlsPage() {
                 send({ type: 'setMix', slot, value })
               }
             />
+            <HueSlider
+              value={snapshot.hueShift}
+              onChange={(value) => send({ type: 'setHue', value })}
+            />
             <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'stepHue' })}>
-                Global hue · {Math.round(snapshot.hueShift * 8)}/8
+              <button type="button" onClick={() => send({ type: 'fireBurst' })}>
+                Burst
               </button>
             </div>
           </section>

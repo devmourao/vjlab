@@ -38,6 +38,10 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().transitionDuration).not.toBe(first);
     store.stepHue();
     expect(useDirectorStore.getState().hueShift).toBeGreaterThan(0);
+    store.setHueShift(0.5);
+    expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.5);
+    store.setHueShift(1.25);
+    expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.25);
   });
 
   it('zooms within limits and adjusts the selected mix', () => {    const store = useDirectorStore.getState();

@@ -87,6 +87,7 @@ interface DirectorState {
   toggleFavorite: (id: number) => void;
   cycleDuration: () => void;
   stepHue: () => void;
+  setHueShift: (value: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   cycleFxSlot: () => void;
@@ -510,6 +511,8 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   cycleDuration: () =>
     set((s) => ({ transitionDuration: nextDuration(s.transitionDuration) })),
   stepHue: () => set((s) => ({ hueShift: (s.hueShift + 1 / 8) % 1 })),
+  setHueShift: (value) =>
+    set({ hueShift: ((value % 1) + 1) % 1 }),
   setOverlayText: (text: string) =>
     set({ overlayText: text.slice(0, 60) }),
   fireText: () =>

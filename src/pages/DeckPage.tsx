@@ -62,6 +62,9 @@ function executeControlCommand(
     case 'stepHue':
       store.stepHue();
       break;
+    case 'setHue':
+      store.setHueShift(command.value);
+      break;
     case 'zoomIn':
       store.zoomIn();
       break;

@@ -2,8 +2,8 @@ import { STROBE_MAX_HZ, STROBE_MIN_HZ } from '../../director/fx';
 
 /**
  * Shared strobe group: an on/off switch, a mode stepper showing the
- * current color swatch, a speed slider and the burst trigger next to
- * it. Same component on the deck and the second-screen popup.
+ * current color swatch, a speed slider and an intensity slider.
+ * Same component on the deck and the second-screen popup.
  */
 export function StrobeControl({
   on,
@@ -14,7 +14,6 @@ export function StrobeControl({
   onCycleMode,
   onHz,
   onMix,
-  onBurst,
 }: {
   on: boolean;
   mode: string;
@@ -24,7 +23,6 @@ export function StrobeControl({
   onCycleMode: () => void;
   onHz: (value: number) => void;
   onMix: (value: number) => void;
-  onBurst: () => void;
 }) {
   return (
     <div className="kit-group" data-testid="strobe-control">
@@ -49,9 +47,6 @@ export function StrobeControl({
         >
           <span className={`kit-swatch ${mode}`} aria-hidden />
           {mode}
-        </button>
-        <button type="button" onClick={onBurst}>
-          Burst
         </button>
       </div>
       <label className="kit-slider">
