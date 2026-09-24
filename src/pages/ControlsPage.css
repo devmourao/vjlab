@@ -47,7 +47,10 @@
 
 @media (min-width: 1200px) {
   .controls-page {
-    max-width: 1600px;
+    /* Control surface on a full second screen: bleed to the edges. */
+    max-width: none;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
   .controls-sections {
