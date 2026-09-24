@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { BasesExplorer } from './BasesExplorer';
 import './LibraryOverlay.css';
+import { PlaylistManager } from './PlaylistManager';
 import { SceneList } from './SceneList';
 
-type LibraryTab = 'scenes' | 'bases';
+type LibraryTab = 'scenes' | 'playlists' | 'bases';
 
 const TABS: Array<{ id: LibraryTab; label: string }> = [
   { id: 'scenes', label: 'Scenes' },
+  { id: 'playlists', label: 'Playlists' },
   { id: 'bases', label: 'Bases' },
 ];
 
@@ -61,6 +63,7 @@ export function LibraryOverlay() {
         </div>
         <div className="library-body">
           {activeTab === 'scenes' && <SceneList />}
+          {activeTab === 'playlists' && <PlaylistManager />}
           {activeTab === 'bases' && <BasesExplorer />}
         </div>
       </div>

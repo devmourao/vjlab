@@ -1,0 +1,153 @@
+.playlist-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.playlist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
+.playlist-bar button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.playlist-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.playlist-pick,
+.playlist-new,
+.playlist-rename {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.playlist-pick select,
+.playlist-new input,
+.playlist-rename input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 14px;
+}
+
+.playlist-pick select option {
+  color: #000;
+}
+
+.playlist-panes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 700px) {
+  .playlist-panes {
+    grid-template-columns: 1fr 1.4fr;
+  }
+}
+
+.playlist-pane > h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.playlist-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.playlist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.playlist-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.playlist-slot {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #facc15;
+  color: #000;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.playlist-row > button,
+.playlist-actions button {
+  flex-shrink: 0;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.playlist-row > button:disabled,
+.playlist-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.playlist-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.playlist-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #fca5a5;
+}
