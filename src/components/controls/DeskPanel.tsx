@@ -58,9 +58,11 @@ export function DeskPanel() {
         on={strobeOn}
         mode={strobeMode}
         hz={strobeRateHz}
+        mix={mixStrobe}
         onToggle={() => store.toggleStrobe()}
         onCycleMode={() => store.cycleStrobeMode()}
         onHz={(value) => store.setStrobeRate(value)}
+        onMix={(value) => store.setFxMix('strobe', value)}
         onBurst={() => store.fireBurst()}
       />
       <FlagPills

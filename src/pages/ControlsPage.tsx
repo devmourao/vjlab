@@ -222,9 +222,11 @@ export default function ControlsPage() {
               on={snapshot.strobeOn}
               mode={snapshot.strobeMode}
               hz={snapshot.strobeRateHz}
+              mix={snapshot.mixes['strobe'] ?? 0}
               onToggle={() => send({ type: 'toggleStrobe' })}
               onCycleMode={() => send({ type: 'cycleStrobeMode' })}
               onHz={(value) => send({ type: 'setStrobeHz', value })}
+              onMix={(value) => send({ type: 'setMix', slot: 'strobe', value })}
               onBurst={() => send({ type: 'fireBurst' })}
             />
           </section>

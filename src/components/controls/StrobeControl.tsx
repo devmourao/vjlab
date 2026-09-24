@@ -9,17 +9,21 @@ export function StrobeControl({
   on,
   mode,
   hz,
+  mix,
   onToggle,
   onCycleMode,
   onHz,
+  onMix,
   onBurst,
 }: {
   on: boolean;
   mode: string;
   hz: number;
+  mix: number;
   onToggle: () => void;
   onCycleMode: () => void;
   onHz: (value: number) => void;
+  onMix: (value: number) => void;
   onBurst: () => void;
 }) {
   return (
@@ -60,6 +64,18 @@ export function StrobeControl({
           value={hz}
           aria-label="Strobe speed"
           onChange={(event) => onHz(Number(event.target.value))}
+        />
+      </label>
+      <label className="kit-slider">
+        <span>Intensity · {mix.toFixed(2)}</span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={mix}
+          aria-label="Strobe intensity"
+          onChange={(event) => onMix(Number(event.target.value))}
         />
       </label>
     </div>
