@@ -62,6 +62,7 @@ export type ControlCommand =
   | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
   | { type: 'deleteScene'; id: number }
   | { type: 'moveScene'; from: number; to: number }
+  | { type: 'moveFavorite'; from: number; to: number }
   | { type: 'toggleFavorite'; id: number }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
@@ -169,6 +170,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'updateScene',
   'deleteScene',
   'moveScene',
+  'moveFavorite',
   'toggleFavorite',
   'exportScenes',
   'importPack',
@@ -239,6 +241,7 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'toggleFavorite':
       return typeof command['id'] === 'number';
     case 'moveScene':
+    case 'moveFavorite':
       return (
         typeof command['from'] === 'number' &&
         typeof command['to'] === 'number'

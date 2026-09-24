@@ -130,6 +130,18 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'moveFavorite', from: 0, to: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveFavorite', from: 0, to: 'far' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },
       }),
     ).toBe(true);

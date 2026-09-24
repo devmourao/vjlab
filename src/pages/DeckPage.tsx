@@ -229,6 +229,9 @@ function executeControlCommand(
     case 'moveScene':
       store.movePlaylistScene(command.from, command.to);
       break;
+    case 'moveFavorite':
+      store.moveFavorite(command.from, command.to);
+      break;
     case 'toggleFavorite':
       store.toggleFavorite(command.id);
       break;
