@@ -1,12 +1,9 @@
-import {
-  slotFraction,
-  slotRange,
-  type FxSlot,
-} from '../../director/fx';
+import { slotRange, type FxSlot } from '../../director/fx';
+import { MixRow } from './MixRow';
 
 /**
- * Shared effect slots: every row carries its own slider and value bar,
- * and clicking a row selects it. Same component on deck and popup.
+ * Shared effect slots: every row is one MixRow carrying its own slider,
+ * and clicking a row head selects it. Same component on deck and popup.
  * The strobe mix lives with the strobe group, so it is excluded here.
  */
 export function EffectSlotList({
@@ -27,39 +24,22 @@ export function EffectSlotList({
       {slots
         .filter((slot) => slot !== 'strobe')
         .map((slot) => {
-        const value = values[slot] ?? 0;
-        const range = slotRange(slot);
-        return (
-          <div
-            key={slot}
-            className={slot === selected ? 'kit-slot active' : 'kit-slot'}
-          >
-            <button
-              type="button"
-              className="kit-slot-head"
-              aria-pressed={slot === selected}
-              onClick={() => onSelect(slot)}
-            >
-              <span>{slot}</span>
-              <span>{value.toFixed(2)}</span>
-            </button>
-            <div className="kit-bar" aria-hidden>
-              <div
-                style={{
-                  width: `${Math.round(slotFraction(slot, value) * 100)}%`,
-                }}
-              />
-            </div>
-            <input
-              type="range"
+          const value = values[slot] ?? 0;
+          const range = slotRange(slot);
+          return (
+            <MixRow
+              key={slot}
+              name={slot}
+              display={value.toFixed(2)}
               min={range.min}
               max={range.max}
               step={range.step}
               value={value}
-              aria-label={`${slot} mix`}
-              onChange={(event) => onMix(slot, Number(event.target.value))}
+              inputLabel={`${slot} mix`}
+              selected={slot === selected}
+              onSelect={() => onSelect(slot)}
+              onChange={(next) => onMix(slot, next)}
             />
-          </div>
           );
         })}
     </div>

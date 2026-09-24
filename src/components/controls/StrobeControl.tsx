@@ -1,4 +1,5 @@
 import { STROBE_MAX_HZ, STROBE_MIN_HZ } from '../../director/fx';
+import { MixRow } from './MixRow';
 
 /**
  * Shared strobe group: an on/off switch, a mode stepper showing the
@@ -49,30 +50,26 @@ export function StrobeControl({
           {mode}
         </button>
       </div>
-      <label className="kit-slider">
-        <span>Speed · {hz}Hz</span>
-        <input
-          type="range"
-          min={STROBE_MIN_HZ}
-          max={STROBE_MAX_HZ}
-          step={1}
-          value={hz}
-          aria-label="Strobe speed"
-          onChange={(event) => onHz(Number(event.target.value))}
-        />
-      </label>
-      <label className="kit-slider">
-        <span>Intensity · {mix.toFixed(2)}</span>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={mix}
-          aria-label="Strobe intensity"
-          onChange={(event) => onMix(Number(event.target.value))}
-        />
-      </label>
+      <MixRow
+        name="Speed"
+        display={`${hz}Hz`}
+        min={STROBE_MIN_HZ}
+        max={STROBE_MAX_HZ}
+        step={1}
+        value={hz}
+        inputLabel="Strobe speed"
+        onChange={onHz}
+      />
+      <MixRow
+        name="Intensity"
+        display={mix.toFixed(2)}
+        min={0}
+        max={1}
+        step={0.01}
+        value={mix}
+        inputLabel="Strobe intensity"
+        onChange={onMix}
+      />
     </div>
   );
 }

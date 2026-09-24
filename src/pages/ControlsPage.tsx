@@ -14,6 +14,7 @@ import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
 import { HueSlider } from '../components/controls/HueSlider';
+import { MixRow } from '../components/controls/MixRow';
 import { RemoteQueue } from '../components/controls/RemoteQueue';
 import { ShortcutReference } from '../components/controls/ShortcutReference';
 import { SceneTransport } from '../components/controls/SceneTransport';
@@ -250,20 +251,16 @@ export default function ControlsPage() {
 
           <section className="controls-section" aria-label="Stage">
             <h2>Stage</h2>
-            <label className="kit-slider">
-              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
-              <input
-                type="range"
-                min={ZOOM_MIN}
-                max={ZOOM_MAX}
-                step={0.01}
-                value={snapshot.zoomTarget}
-                aria-label="Stage zoom"
-                onChange={(event) =>
-                  send({ type: 'setZoom', value: Number(event.target.value) })
-                }
-              />
-            </label>
+            <MixRow
+              name="Stage zoom"
+              display={`${snapshot.zoomTarget.toFixed(2)}x`}
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              step={0.01}
+              value={snapshot.zoomTarget}
+              inputLabel="Stage zoom"
+              onChange={(value) => send({ type: 'setZoom', value })}
+            />
           </section>
 
           <section className="controls-section" aria-label="Strobe">

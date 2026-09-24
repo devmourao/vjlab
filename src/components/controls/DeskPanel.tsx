@@ -5,6 +5,7 @@ import './ControlsKit.css';
 import { EffectSlotList } from './EffectSlotList';
 import { FlagPills } from './FlagPills';
 import { HueSlider } from './HueSlider';
+import { MixRow } from './MixRow';
 import { StrobeControl } from './StrobeControl';
 
 const FRACTAL_SIDES = [10, 8, 6, 5, 12];
@@ -56,18 +57,16 @@ export function DeskPanel() {
     <div className="desk-panel" data-testid="desk-panel">
       <section className="kit-section" aria-label="Stage">
         <h2>Stage</h2>
-        <label className="kit-slider">
-          <span>Stage zoom · {zoomTarget.toFixed(2)}x</span>
-          <input
-            type="range"
-            min={ZOOM_MIN}
-            max={ZOOM_MAX}
-            step={0.01}
-            value={zoomTarget}
-            aria-label="Stage zoom"
-            onChange={(event) => store.setZoomTarget(Number(event.target.value))}
-          />
-        </label>
+        <MixRow
+          name="Stage zoom"
+          display={`${zoomTarget.toFixed(2)}x`}
+          min={ZOOM_MIN}
+          max={ZOOM_MAX}
+          step={0.01}
+          value={zoomTarget}
+          inputLabel="Stage zoom"
+          onChange={(value) => store.setZoomTarget(value)}
+        />
         {resolveInstances(preset).some((inst) => inst.base === 'fractal') && (
           <p className="kit-note" data-testid="fractal-hud">
             Fractal {FRACTAL_SIDES[fractalShape]}p · inner {fractalInner.toFixed(2)}x · Z{' '}
