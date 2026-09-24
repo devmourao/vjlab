@@ -11,26 +11,22 @@
   margin: 0 auto;
 }
 
-/* Second-screen stages: the same sections reflow from one column
-   (phone / narrow popup) to two (tablet / half screen) to three
-   (full second screen). Named areas pack short cards beside tall ones
-   so no column holds a single short card with void below it. */
+/* Second-screen stages: sections flow into dense masonry columns
+   (one, two, then three) so short and tall cards pack without the
+   row-stretch voids a grid leaves behind. Canonical order reads
+   top to bottom, left to right. */
+.controls-sections {
+  display: block;
+}
+
 @media (min-width: 700px) {
   .controls-page {
     max-width: 1080px;
   }
 
   .controls-sections {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      'track scenes'
-      'strobe scenes'
-      'stage effects'
-      'overlay flags'
-      'guide guide';
-    gap: 0 20px;
-    align-items: start;
+    columns: 2;
+    column-gap: 20px;
   }
 
   .controls-section[aria-label='Guide'] .shortcut-ref {
@@ -54,48 +50,12 @@
   }
 
   .controls-sections {
-    grid-template-columns: 1fr 1.2fr 1fr;
-    grid-template-areas:
-      'track scenes stage'
-      'strobe scenes effects'
-      'overlay flags guide';
+    columns: 3;
   }
 
   .controls-section[aria-label='Guide'] .shortcut-ref {
     display: flex;
   }
-}
-
-.controls-section[aria-label='Track'] {
-  grid-area: track;
-}
-
-.controls-section[aria-label='Scenes'] {
-  grid-area: scenes;
-}
-
-.controls-section[aria-label='Stage'] {
-  grid-area: stage;
-}
-
-.controls-section[aria-label='Strobe'] {
-  grid-area: strobe;
-}
-
-.controls-section[aria-label='Effects'] {
-  grid-area: effects;
-}
-
-.controls-section[aria-label='Flags'] {
-  grid-area: flags;
-}
-
-.controls-section[aria-label='Overlay and actions'] {
-  grid-area: overlay;
-}
-
-.controls-section[aria-label='Guide'] {
-  grid-area: guide;
 }
 
 .controls-head {
@@ -131,11 +91,12 @@
 }
 
 .controls-section {
-  margin-top: 16px;
+  margin: 0 0 16px;
   padding: 14px 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
+  break-inside: avoid;
 }
 
 .controls-section[aria-label='Track'] {
