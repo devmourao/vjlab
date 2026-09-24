@@ -227,7 +227,7 @@ function executeControlCommand(
       store.deleteScene(command.id);
       break;
     case 'moveScene':
-      store.reorderScenes(command.from, command.to);
+      store.movePlaylistScene(command.from, command.to);
       break;
     case 'toggleFavorite':
       store.toggleFavorite(command.id);
@@ -296,7 +296,6 @@ function DeckPage() {
               error: current.error,
             },
             [...PRESETS, ...state.customPresets],
-            state.favoriteIds,
           ),
         });
       } catch {

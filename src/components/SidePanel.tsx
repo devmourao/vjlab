@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
-import { useDirectorStore } from '../director/directorStore';
+import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
 import { DeskPanel } from './controls/DeskPanel';
 import { SceneTransport } from './controls/SceneTransport';
@@ -25,6 +25,7 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
 export function SidePanel({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<PanelTab>('track');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
+  const playlist = useActivePlaylist();
 
   return (
     <div className="side-panel" data-testid="side-panel">
@@ -47,7 +48,15 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
         {activeTab === 'track' && <AudioPanel engine={engine} />}
         {activeTab === 'scenes' && (
           <>
-            <SceneList manage={false} />
+            <SceneList
+              manage={false}
+              sceneOrder={playlist.sceneIds}
+              favoriteIds={playlist.favoriteIds}
+              ops={{
+                onMove: (from, to) =>
+                  useDirectorStore.getState().movePlaylistScene(from, to),
+              }}
+            />
             <SceneTransport
               durationLabel={`${transitionDuration.toFixed(1)}s`}
               onPrev={() => useDirectorStore.getState().prevPreset()}

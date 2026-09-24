@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { toggleInterfaceVisibility } from '../director/controlChannel';
-import { useDirectorStore } from '../director/directorStore';
+import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
 import { DeskPanel } from './controls/DeskPanel';
@@ -26,6 +26,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<SheetTab>('audio');
   const [size, setSize] = useState<SheetSize>('mini');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
+  const playlist = useActivePlaylist();
 
   const cycleSize = () => {
     const next = SIZES[(SIZES.indexOf(size) + 1) % SIZES.length];
@@ -101,7 +102,15 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           {activeTab === 'audio' && <AudioPanel engine={engine} />}
           {activeTab === 'scenes' && (
             <>
-              <SceneList manage={false} />
+              <SceneList
+                manage={false}
+                sceneOrder={playlist.sceneIds}
+                favoriteIds={playlist.favoriteIds}
+                ops={{
+                  onMove: (from, to) =>
+                    useDirectorStore.getState().movePlaylistScene(from, to),
+                }}
+              />
               <SceneTransport
                 durationLabel={`${transitionDuration.toFixed(1)}s`}
                 onPrev={() => useDirectorStore.getState().prevPreset()}

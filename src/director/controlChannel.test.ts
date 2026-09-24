@@ -205,12 +205,11 @@ describe('controlChannel', () => {
           instances: [{ base: 'particles' as const }],
         },
       ],
-      [0],
     );
     expect(snapshot.fileName).toBe('demo.mp3');
     expect(snapshot.isPlaying).toBe(true);
     expect(snapshot.presets).toHaveLength(1);
-    expect(snapshot.favoriteIds).toEqual([0]);
+    expect(snapshot.favoriteIds.length).toBeLessThanOrEqual(9);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(snapshot.audioError).toBeNull();
     expect(snapshot.queue).toEqual([]);

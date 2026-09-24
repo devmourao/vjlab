@@ -1,6 +1,10 @@
 import { BASE_CAPABILITIES } from '../scenes/bases';
 import type { ScenePreset } from '../scenes/presets';
-import { useDirectorStore, type PanelMode } from './directorStore';
+import {
+  selectActivePlaylist,
+  useDirectorStore,
+  type PanelMode,
+} from './directorStore';
 
 /**
  * Second-screen control protocol.
@@ -278,7 +282,6 @@ export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
   track: { fileName: string | null; isPlaying: boolean; error?: string | null },
   presets: ScenePreset[],
-  favoriteIds: number[],
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
@@ -294,8 +297,8 @@ export function buildSnapshot(
         params: { ...(instance.params ?? {}) },
       })),
     })),
-    favoriteIds: [...favoriteIds],
-    sceneOrder: [...state.sceneOrder],
+    favoriteIds: [...selectActivePlaylist(state).favoriteIds],
+    sceneOrder: [...selectActivePlaylist(state).sceneIds],
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,
