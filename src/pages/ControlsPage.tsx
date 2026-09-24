@@ -112,6 +112,26 @@ export default function ControlsPage() {
         >
           {snapshot ? 'Linked' : 'Waiting'}
         </span>
+        {snapshot && (
+          <button
+            type="button"
+            data-testid="controls-stage-toggle"
+            title={
+              snapshot.panelMode === 'hidden'
+                ? 'Show the main-screen interface'
+                : 'Hide the main-screen interface (stage only)'
+            }
+            onClick={() =>
+              send(
+                snapshot.panelMode === 'hidden'
+                  ? { type: 'setPanelMode', mode: 'detached' }
+                  : { type: 'setPanelMode', mode: 'hidden' },
+              )
+            }
+          >
+            {snapshot.panelMode === 'hidden' ? 'Show UI' : 'Hide UI'}
+          </button>
+        )}
       </header>
 
       {!snapshot && (

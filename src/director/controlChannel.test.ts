@@ -4,6 +4,7 @@ import {
   isControlMessage,
   resolveDetachmentToggle,
   resolveVisibilityToggle,
+  toggleInterfaceVisibility,
 } from './controlChannel';
 import { useDirectorStore } from './directorStore';
 
@@ -169,6 +170,16 @@ describe('controlChannel', () => {
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });
+  });
+
+  it('hides the stage without closing the popup path', () => {
+    useDirectorStore.getState().setPanelMode('detached');
+    toggleInterfaceVisibility();
+    expect(useDirectorStore.getState().panelMode).toBe('hidden');
+    // No popup open in tests, so restore docks the deck panels.
+    toggleInterfaceVisibility();
+    expect(useDirectorStore.getState().panelMode).toBe('docked');
+    useDirectorStore.getState().setPanelMode('docked');
   });
 
   it('splits visibility and detachment into single-purpose toggles', () => {

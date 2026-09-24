@@ -44,7 +44,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           type="button"
           className="sheet-restore"
           data-testid="sheet-restore"
-          onClick={() => useDirectorStore.getState().setPanelMode('docked')}
+          onClick={toggleInterfaceVisibility}
         >
           Show UI
         </button>

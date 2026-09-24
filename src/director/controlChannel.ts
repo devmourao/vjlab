@@ -350,14 +350,27 @@ export function resolveDetachmentToggle(mode: PanelMode): PanelMode {
   return mode === 'detached' ? 'docked' : 'detached';
 }
 
+export function isControlsPopupOpen(): boolean {
+  try {
+    return popupRef !== null && !popupRef.closed;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Button A: hide or show the interface. Never opens a popup and never
- * touches fullscreen, so it is safe at any moment of a performance.
+ * Button A: hide or show the main-screen interface. Never closes the
+ * second-screen popup: the performance use case is a clean stage on the
+ * main screen while control continues from the popup. Restoring from
+ * hidden returns to detached when the popup is still open.
  */
 export function toggleInterfaceVisibility(): void {
   const store = useDirectorStore.getState();
-  if (store.panelMode === 'detached') closeControlsPopup();
-  store.setPanelMode(resolveVisibilityToggle(store.panelMode));
+  if (store.panelMode === 'hidden') {
+    store.setPanelMode(isControlsPopupOpen() ? 'detached' : 'docked');
+    return;
+  }
+  store.setPanelMode('hidden');
 }
 
 /**

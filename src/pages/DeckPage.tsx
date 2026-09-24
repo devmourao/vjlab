@@ -17,6 +17,7 @@ import { TransitionOverlay } from '../components/TransitionOverlay';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
+  closeControlsPopup,
   isControlMessage,
   type ControlCommand,
 } from '../director/controlChannel';
@@ -120,14 +121,25 @@ function executeControlCommand(
     case 'killAll':
       store.killAll();
       break;
-    case 'setPanelMode':
-      if ((PANEL_MODES as readonly string[]).includes(command.mode)) {
-        store.setPanelMode(command.mode);
+    case 'setPanelMode': {
+      if (!(PANEL_MODES as readonly string[]).includes(command.mode)) break;
+      const wasDetached = store.panelMode === 'detached';
+      store.setPanelMode(command.mode);
+      // A popup that docks the deck would orphan itself: follow it home.
+      if (wasDetached && command.mode !== 'detached') closeControlsPopup();
+      break;
+    }
+    case 'cyclePanelMode': {
+      const wasDetached = store.panelMode === 'detached';
+      store.cyclePanelMode();
+      if (
+        wasDetached &&
+        useDirectorStore.getState().panelMode !== 'detached'
+      ) {
+        closeControlsPopup();
       }
       break;
-    case 'cyclePanelMode':
-      store.cyclePanelMode();
-      break;
+    }
     case 'togglePlayback':
       void engine.toggle();
       break;
