@@ -193,32 +193,36 @@ describe('directorStore', () => {
     const state = useDirectorStore.getState();
     expect(state.playlists.length).toBeGreaterThan(0);
     const active = selectActivePlaylist(state);
-    expect(active.sceneIds.length).toBeGreaterThan(0);
-    expect(active.favoriteIds.length).toBeLessThanOrEqual(DECK_SIZE);
+    expect(active.entries.length).toBeGreaterThan(0);
+    expect(
+      active.entries.every(
+        (entry) =>
+          typeof entry.key === 'string' && typeof entry.sceneId === 'number',
+      ),
+    ).toBe(true);
   });
 
-  it('caps the quick-access deck and reorders it', () => {
+  it('pins occurrences into the ten-slot deck and back out', () => {
     const api = useDirectorStore.getState();
     const previousActive = api.activePlaylistId;
     api.createPlaylist('Deck test');
     const id = useDirectorStore.getState().activePlaylistId;
-    for (let scene = 0; scene < DECK_SIZE + 1; scene += 1) {
-      api.toggleFavorite(scene);
+    for (let scene = 0; scene < DECK_SIZE + 2; scene += 1) {
+      api.addSceneToPlaylist(id, scene % 6);
     }
-    let deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
-    expect(deck).toHaveLength(DECK_SIZE);
-    expect(deck).not.toContain(DECK_SIZE);
-    api.moveFavorite(0, DECK_SIZE - 1);
-    deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
-    expect(deck[DECK_SIZE - 1]).toBe(0);
-    api.toggleFavorite(0);
-    deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
-    expect(deck).not.toContain(0);
+    let entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    const lastKey = entries[entries.length - 1].key;
+    api.pinScene(lastKey);
+    entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    expect(entries[DECK_SIZE - 1].key).toBe(lastKey);
+    api.pinScene(lastKey);
+    entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    expect(entries[entries.length - 1].key).toBe(lastKey);
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
-  it('manages playlist membership and execution order', () => {
+  it('manages playlist membership with duplicates and execution order', () => {
     const api = useDirectorStore.getState();
     const previousActive = api.activePlaylistId;
     api.createPlaylist('Order test');
@@ -226,14 +230,21 @@ describe('directorStore', () => {
     api.addSceneToPlaylist(id, 0);
     api.addSceneToPlaylist(id, 1);
     api.addSceneToPlaylist(id, 0);
-    let scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
-    expect(scenes).toEqual([0, 1]);
-    api.movePlaylistScene(0, 1);
-    scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
-    expect(scenes).toEqual([1, 0]);
-    api.removeSceneFromPlaylist(id, 1);
-    scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
-    expect(scenes).toEqual([0]);
+    let scenes = selectActivePlaylist(useDirectorStore.getState()).entries.map(
+      (entry) => entry.sceneId,
+    );
+    expect(scenes).toEqual([0, 1, 0]);
+    api.movePlaylistScene(0, 2);
+    scenes = selectActivePlaylist(useDirectorStore.getState()).entries.map(
+      (entry) => entry.sceneId,
+    );
+    expect(scenes).toEqual([1, 0, 0]);
+    const victim = selectActivePlaylist(useDirectorStore.getState()).entries[0].key;
+    api.removeSceneFromPlaylist(id, victim);
+    scenes = selectActivePlaylist(useDirectorStore.getState()).entries.map(
+      (entry) => entry.sceneId,
+    );
+    expect(scenes).toEqual([0, 0]);
     api.renamePlaylist(id, 'Renamed');
     expect(selectActivePlaylist(useDirectorStore.getState()).name).toBe('Renamed');
     api.deletePlaylist(id);

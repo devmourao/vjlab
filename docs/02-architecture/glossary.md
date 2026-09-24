@@ -29,6 +29,15 @@ full-screen overlay above the living Stage, from the deck or remotely
 from the Console popup. The Scenes console section stays lean: list
 plus transport only.
 
+## Playlist and deck
+
+A playlist is an ordered sequence of scene occurrences; the same scene
+may appear more than once. Positions 1-10 form the quick-access deck
+and map to Digit1-Digit9 and Digit0, so position IS the shortcut:
+arrows renumber shortcuts, and starring pins the occurrence into the
+deck (unstarring drops it past position 10). Console lists collapse to
+the deck with a full-list toggle.
+
 ## Guide
 
 Help. The interactive drawer and first-run tour live on the deck; the

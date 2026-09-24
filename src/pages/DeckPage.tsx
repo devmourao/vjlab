@@ -151,7 +151,7 @@ function executeControlCommand(
       store.addSceneToPlaylist(command.playlistId, command.sceneId);
       break;
     case 'playlistRemoveScene':
-      store.removeSceneFromPlaylist(command.playlistId, command.sceneId);
+      store.removeSceneFromPlaylist(command.playlistId, command.key);
       break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
@@ -237,11 +237,8 @@ function executeControlCommand(
     case 'moveScene':
       store.movePlaylistScene(command.from, command.to);
       break;
-    case 'moveFavorite':
-      store.moveFavorite(command.from, command.to);
-      break;
-    case 'toggleFavorite':
-      store.toggleFavorite(command.id);
+    case 'pinScene':
+      store.pinScene(command.key);
       break;
     case 'exportScenes':
       store.exportCustomScenes();
@@ -281,8 +278,8 @@ function DeckPage() {
     getPreset(activePresetId);
   const playlist = useActivePlaylist();
   const execOrder =
-    playlist.sceneIds.length > 0
-      ? playlist.sceneIds
+    playlist.entries.length > 0
+      ? playlist.entries.map((entry) => entry.sceneId)
       : allPresets.map((entry) => entry.id);
   const orderIndex = execOrder.indexOf(activePresetId);
   const engineRef = useRef(engine);

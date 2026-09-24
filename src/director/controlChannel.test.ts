@@ -130,13 +130,13 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'moveFavorite', from: 0, to: 2 },
+        command: { type: 'pinScene', key: 'e3' },
       }),
     ).toBe(true);
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'moveFavorite', from: 0, to: 'far' },
+        command: { type: 'pinScene', key: 7 },
       }),
     ).toBe(false);
     expect(
@@ -154,7 +154,7 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'playlistRemoveScene', playlistId: 'main', sceneId: 2 },
+        command: { type: 'playlistRemoveScene', playlistId: 'main', key: 'e2' },
       }),
     ).toBe(true);
     expect(
@@ -178,7 +178,7 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'toggleFavorite', id: 3 },
+        command: { type: 'moveScene', from: 3, to: 1 },
       }),
     ).toBe(true);
     expect(
@@ -190,7 +190,7 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'toggleFavorite', id: 'three' },
+        command: { type: 'moveScene', from: 3, to: 'top' },
       }),
     ).toBe(false);
     expect(
@@ -251,7 +251,12 @@ describe('controlChannel', () => {
     expect(snapshot.fileName).toBe('demo.mp3');
     expect(snapshot.isPlaying).toBe(true);
     expect(snapshot.presets).toHaveLength(1);
-    expect(snapshot.favoriteIds.length).toBeLessThanOrEqual(9);
+    expect(snapshot.favoriteIds.length).toBeLessThanOrEqual(10);
+    expect(
+      snapshot.entries.every(
+        (entry) => typeof entry.key === 'string' && typeof entry.sceneId === 'number',
+      ),
+    ).toBe(true);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(snapshot.audioError).toBeNull();
     expect(snapshot.queue).toEqual([]);

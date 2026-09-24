@@ -4,6 +4,7 @@ import {
   toggleInterfaceVisibility,
 } from './controlChannel';
 import {
+  DECK_SIZE,
   liveRefs,
   selectActivePlaylist,
   useDirectorStore,
@@ -36,14 +37,23 @@ export function useKeyboardDesk() {
         case 'Digit6':
         case 'Digit7':
         case 'Digit8':
-        case 'Digit9': {
-          const index = Number(event.code.slice(5)) - 1;
-          const playlist = selectActivePlaylist(store);
-          const fav = playlist.favoriteIds[index];
-          const ordered = playlist.sceneIds[index];
-          const fallback = index;
-          const target = fav ?? ordered ?? fallback;
-          store.requestDissolve(target);
+        case 'Digit9':
+        case 'Digit0':
+        case 'Numpad1':
+        case 'Numpad2':
+        case 'Numpad3':
+        case 'Numpad4':
+        case 'Numpad5':
+        case 'Numpad6':
+        case 'Numpad7':
+        case 'Numpad8':
+        case 'Numpad9':
+        case 'Numpad0': {
+          // Position maps the keypad: 1-9 to slots 1-9, 0 to slot 10.
+          const digit = Number(event.code.slice(-1));
+          const index = digit === 0 ? DECK_SIZE - 1 : digit - 1;
+          const slot = selectActivePlaylist(store).entries[index];
+          if (slot) store.requestDissolve(slot.sceneId);
           break;
         }
         case 'KeyN': {
@@ -109,7 +119,7 @@ export function useKeyboardDesk() {
         case 'KeyJ':
           store.toggleBeatFlash();
           break;
-        case 'Digit0':
+        case 'KeyK':
           store.toggleFxBypass();
           break;
         case 'KeyI':

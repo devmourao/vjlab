@@ -51,7 +51,7 @@ export type ControlCommand =
   | { type: 'replayTour' }
   | { type: 'switchPlaylist'; id: string }
   | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
-  | { type: 'playlistRemoveScene'; playlistId: string; sceneId: number }
+  | { type: 'playlistRemoveScene'; playlistId: string; key: string }
   | { type: 'togglePlayback' }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
@@ -65,8 +65,7 @@ export type ControlCommand =
   | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
   | { type: 'deleteScene'; id: number }
   | { type: 'moveScene'; from: number; to: number }
-  | { type: 'moveFavorite'; from: number; to: number }
-  | { type: 'toggleFavorite'; id: number }
+  | { type: 'pinScene'; key: string }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -96,11 +95,17 @@ export interface SnapshotPlaylist {
   deckCount: number;
 }
 
+export interface SnapshotEntry {
+  key: string;
+  sceneId: number;
+}
+
 export interface ControlSnapshot {
   activePresetId: number;
   presets: SnapshotPreset[];
   favoriteIds: number[];
   sceneOrder: number[];
+  entries: SnapshotEntry[];
   playlists: SnapshotPlaylist[];
   activePlaylistId: string;
   strobeOn: boolean;
@@ -185,8 +190,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'updateScene',
   'deleteScene',
   'moveScene',
-  'moveFavorite',
-  'toggleFavorite',
+  'pinScene',
   'exportScenes',
   'importPack',
 ]);
@@ -253,18 +257,22 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
         typeof command['id'] === 'number' && isSceneDraft(command['patch'])
       );
     case 'deleteScene':
-    case 'toggleFavorite':
       return typeof command['id'] === 'number';
     case 'switchPlaylist':
       return typeof command['id'] === 'string';
+    case 'pinScene':
+      return typeof command['key'] === 'string';
     case 'playlistAddScene':
-    case 'playlistRemoveScene':
       return (
         typeof command['playlistId'] === 'string' &&
         typeof command['sceneId'] === 'number'
       );
+    case 'playlistRemoveScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['key'] === 'string'
+      );
     case 'moveScene':
-    case 'moveFavorite':
       return (
         typeof command['from'] === 'number' &&
         typeof command['to'] === 'number'
@@ -323,13 +331,19 @@ export function buildSnapshot(
         params: { ...(instance.params ?? {}) },
       })),
     })),
-    favoriteIds: [...selectActivePlaylist(state).favoriteIds],
-    sceneOrder: [...selectActivePlaylist(state).sceneIds],
+    favoriteIds: selectActivePlaylist(state)
+      .entries.slice(0, 10)
+      .map((entry) => entry.sceneId),
+    sceneOrder: selectActivePlaylist(state).entries.map((entry) => entry.sceneId),
+    entries: selectActivePlaylist(state).entries.map((entry) => ({
+      key: entry.key,
+      sceneId: entry.sceneId,
+    })),
     playlists: state.playlists.map((entry) => ({
       id: entry.id,
       name: entry.name,
-      sceneCount: entry.sceneIds.length,
-      deckCount: entry.favoriteIds.length,
+      sceneCount: entry.entries.length,
+      deckCount: Math.min(entry.entries.length, 10),
     })),
     activePlaylistId: state.activePlaylistId,
     strobeOn: state.strobeOn,

@@ -18,8 +18,6 @@ import { MixRow } from '../components/controls/MixRow';
 import { RemoteQueue } from '../components/controls/RemoteQueue';
 import { GuideTeaser } from '../components/GuideTeaser';
 import '../components/GuideTeaser.css';
-import { DeckStrip } from '../components/controls/DeckStrip';
-import '../components/controls/DeckStrip.css';
 import { SceneTransport } from '../components/controls/SceneTransport';
 import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
@@ -193,17 +191,6 @@ export default function ControlsPage() {
                 ))}
               </select>
             </label>
-            <DeckStrip
-              slots={snapshot.favoriteIds.map((id) => ({
-                id,
-                name:
-                  snapshot.presets.find((preset) => preset.id === id)?.name ??
-                  `#${id}`,
-              }))}
-              activeId={snapshot.activePresetId}
-              onSelect={(id) => send({ type: 'dissolve', id })}
-              onMove={(from, to) => send({ type: 'moveFavorite', from, to })}
-            />
             <SceneList
               manage={false}
               items={snapshot.presets.map(
@@ -216,13 +203,12 @@ export default function ControlsPage() {
                   })),
                 }),
               )}
-              favoriteIds={snapshot.favoriteIds}
-              sceneOrder={snapshot.sceneOrder}
+              entries={snapshot.entries}
               activeId={snapshot.activePresetId}
               onSelect={(id) => send({ type: 'dissolve', id })}
               ops={{
                 onMove: (from, to) => send({ type: 'moveScene', from, to }),
-                onToggleFavorite: (id) => send({ type: 'toggleFavorite', id }),
+                onPin: (key) => send({ type: 'pinScene', key }),
               }}
             />
             <div className="controls-row">

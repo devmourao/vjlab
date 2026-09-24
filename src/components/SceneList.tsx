@@ -1,14 +1,25 @@
 import { useRef, useState } from 'react';
-import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
+import {
+  DECK_SIZE,
+  useDirectorStore,
+  type PlaylistEntry,
+} from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
 
+/** Entries per console page before the full-list toggle. Matches the deck. */
+export const SCENE_PAGE_SIZE = 10;
+
 /**
- * Single source for the scene selection list, shared by the side panel
- * and the bottom sheet. Pointer-friendly companion to keyboard presets.
+ * Single source for scene rows. Two modes:
+ * - entries mode (console, deck and popup): occurrence rows in playlist
+ *   order with position badges; the top DECK_SIZE map to Digit1-Digit0.
+ *   Starring pins the occurrence into the deck by position.
+ * - library mode (no entries): every preset in library order with the
+ *   CRUD chrome; pinning lives in the Playlists tab.
  */
 function useAllPresets() {
   const customPresets = useDirectorStore((s) => s.customPresets);
@@ -16,9 +27,9 @@ function useAllPresets() {
 }
 
 export interface SceneListOps {
-  onRemove?: (id: number) => void;
+  onRemove?: (key: string) => void;
   onMove?: (from: number, to: number) => void;
-  onToggleFavorite?: (id: number) => void;
+  onPin?: (key: string) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -28,21 +39,33 @@ export interface SceneListOps {
   importReport?: string | null;
 }
 
+interface SceneRow {
+  key: string;
+  preset: ScenePreset;
+  position: number | null;
+}
+
+function keyLabel(index: number): string {
+  if (index < DECK_SIZE - 1) return `${index + 1}`;
+  if (index === DECK_SIZE - 1) return '0';
+  return '';
+}
+
 export function SceneList({
   items,
-  favoriteIds: favoriteOverride,
-  sceneOrder: orderOverride,
+  entries,
   activeId: activeOverride,
   onSelect,
   manage = true,
+  pageSize = SCENE_PAGE_SIZE,
   ops = {},
 }: {
   items?: ScenePreset[];
-  favoriteIds?: number[];
-  sceneOrder?: number[];
+  entries?: PlaylistEntry[];
   activeId?: number;
   onSelect?: (id: number) => void;
   manage?: boolean;
+  pageSize?: number;
   ops?: SceneListOps;
 } = {}) {
   const storeActive = useDirectorStore((s) => s.activePresetId);
@@ -50,19 +73,37 @@ export function SceneList({
   // popup-local one, so the highlight follows the stage.
   const activePresetId = activeOverride ?? storeActive;
   const storeOrder = useDirectorStore((s) => s.sceneOrder);
-  // Remote callers (second-screen popup) mirror the deck order instead of
-  // the popup-local one, so both windows list scenes identically.
-  const sceneOrder = orderOverride ?? storeOrder;
-  const activePlaylist = useActivePlaylist();
-  const storeFavorites = activePlaylist.favoriteIds;
   const storePresets = useAllPresets();
   const all = items ?? storePresets;
-  const ordered = sceneOrder
-    .map((id) => all.find((preset) => preset.id === id))
-    .filter((entry): entry is ScenePreset => Boolean(entry));
-  const missing = all.filter((preset) => !sceneOrder.includes(preset.id));
-  const presets = [...ordered, ...missing];
-  const favorites = new Set(favoriteOverride ?? storeFavorites);
+  const byId = new Map(all.map((preset) => [preset.id, preset]));
+
+  let rows: SceneRow[];
+  if (entries) {
+    rows = entries
+      .map((entry, index): SceneRow | null => {
+        const preset = byId.get(entry.sceneId);
+        if (!preset) return null;
+        return { key: entry.key, preset, position: index };
+      })
+      .filter((row): row is SceneRow => row !== null);
+  } else {
+    const ordered = storeOrder
+      .map((id) => byId.get(id))
+      .filter((entry): entry is ScenePreset => Boolean(entry));
+    const missing = all.filter(
+      (preset) => !storeOrder.includes(preset.id),
+    );
+    rows = [...ordered, ...missing].map((preset) => ({
+      key: `lib-${preset.id}`,
+      preset,
+      position: null,
+    }));
+  }
+
+  const [expanded, setExpanded] = useState(false);
+  const collapsible = !manage && entries && rows.length > pageSize;
+  const visible = collapsible && !expanded ? rows.slice(0, pageSize) : rows;
+
   const select =
     onSelect ?? ((id: number) => useDirectorStore.getState().requestDissolve(id));
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
@@ -71,6 +112,10 @@ export function SceneList({
   const remoteSave = ops.onSaveDraft ?? null;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
+  const pin = (key: string) => {
+    if (ops.onPin) ops.onPin(key);
+    else useDirectorStore.getState().pinScene(key);
+  };
 
   const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -127,38 +172,68 @@ export function SceneList({
       )}
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
-        {presets.map((preset, index) => (
-          <li key={preset.id} className="scene-row">
+        {visible.map((row, visibleIndex) => {
+          const { key, preset, position } = row;
+          const inDeck = position !== null && position < DECK_SIZE;
+          const libraryIndex = rows.findIndex((entry) => entry.key === key);
+          return (
+          <li key={key} className="scene-row">
             <button
               type="button"
               className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
               data-testid={`scene-button-${preset.id}`}
               onClick={() => select(preset.id)}
             >
+              {position !== null && (
+                <span
+                  className={inDeck ? 'scene-pos deck' : 'scene-pos'}
+                  title={
+                    inDeck
+                      ? `Shortcut ${keyLabel(position)} · position ${position + 1}`
+                      : `Position ${position + 1} (no shortcut)`
+                  }
+                  aria-hidden
+                >
+                  {position + 1}
+                </span>
+              )}
               <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
               <strong>{preset.name}</strong>
-              {favorites.has(preset.id) && (
-                <span className="scene-fav" title="Favorite" aria-hidden>
+              {inDeck && (
+                <span className="scene-fav" title="Pinned to deck" aria-hidden>
                   ★
                 </span>
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
             </button>
             <div className="scene-item-actions">
-              <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
-                ↑
-              </button>
-              <button type="button" disabled={index === presets.length - 1} onClick={() => (ops.onMove ? ops.onMove(index, index + 1) : useDirectorStore.getState().reorderScenes(index, index + 1))} data-testid={`down-scene-${preset.id}`}>
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => (ops.onToggleFavorite ? ops.onToggleFavorite(preset.id) : useDirectorStore.getState().toggleFavorite(preset.id))}
-                data-testid={`fav-scene-${preset.id}`}
-                title={favorites.has(preset.id) ? 'Unfavorite' : 'Favorite'}
-              >
-                {favorites.has(preset.id) ? '★' : '☆'}
-              </button>
+              {position !== null ? (
+                <>
+                  <button type="button" disabled={position === 0} onClick={() => (ops.onMove ? ops.onMove(position, position - 1) : useDirectorStore.getState().movePlaylistScene(position, position - 1))} data-testid={`up-scene-${key}`}>
+                    ↑
+                  </button>
+                  <button type="button" disabled={position === rows.length - 1} onClick={() => (ops.onMove ? ops.onMove(position, position + 1) : useDirectorStore.getState().movePlaylistScene(position, position + 1))} data-testid={`down-scene-${key}`}>
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pin(key)}
+                    data-testid={`fav-scene-${key}`}
+                    title={inDeck ? 'Unpin from deck' : 'Pin to deck'}
+                  >
+                    {inDeck ? '★' : '☆'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" disabled={visibleIndex === 0} onClick={() => useDirectorStore.getState().reorderScenes(libraryIndex, libraryIndex - 1)} data-testid={`up-scene-${key}`}>
+                    ↑
+                  </button>
+                  <button type="button" disabled={visibleIndex === visible.length - 1} onClick={() => useDirectorStore.getState().reorderScenes(libraryIndex, libraryIndex + 1)} data-testid={`down-scene-${key}`}>
+                    ↓
+                  </button>
+                </>
+              )}
               {manage && !isNative(preset.id) && (
                 <>
                   <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
@@ -168,7 +243,7 @@ export function SceneList({
                     type="button"
                     onClick={() =>
                       ops.onRemove
-                        ? ops.onRemove(preset.id)
+                        ? ops.onRemove(key)
                         : useDirectorStore.getState().deleteScene(preset.id)
                     }
                     data-testid={`delete-scene-${preset.id}`}
@@ -179,8 +254,19 @@ export function SceneList({
               )}
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
+      {collapsible && (
+        <button
+          type="button"
+          className="scene-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? 'Show less' : `Show full list (${rows.length - pageSize} more)`}
+        </button>
+      )}
       {manage && editing !== undefined && (
         <SceneEditor
           preset={editing ?? undefined}

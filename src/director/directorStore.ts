@@ -87,14 +87,13 @@ interface DirectorState {
   playMedia: (id: string) => void;
   reorderScenes: (from: number, to: number) => void;
   movePlaylistScene: (from: number, to: number) => void;
-  toggleFavorite: (id: number) => void;
-  moveFavorite: (from: number, to: number) => void;
+  pinScene: (key: string) => void;
   createPlaylist: (name: string) => void;
   renamePlaylist: (id: string, name: string) => void;
   deletePlaylist: (id: string) => void;
   setActivePlaylist: (id: string) => void;
   addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
-  removeSceneFromPlaylist: (playlistId: string, sceneId: number) => void;
+  removeSceneFromPlaylist: (playlistId: string, key: string) => void;
   cycleDuration: () => void;
   stepHue: () => void;
   setHueShift: (value: number) => void;
@@ -253,30 +252,52 @@ function readFavorites(): number[] {
   }
 }
 
-/** Quick-access deck size: positions map to Digit1-Digit9. */
-export const DECK_SIZE = 9;
+/**
+ * Quick-access deck size: playlist positions 1-10 map to Digit1-Digit9
+ * and Digit0. Position IS the shortcut; starring pins into the deck.
+ */
+export const DECK_SIZE = 10;
+
+export interface PlaylistEntry {
+  key: string;
+  sceneId: number;
+}
 
 export interface ScenePlaylist {
   id: string;
   name: string;
-  /** Execution order for Next/Prev/Cut and the console list. */
-  sceneIds: number[];
-  /** Ordered quick-access deck, capped at DECK_SIZE. */
-  favoriteIds: number[];
+  /** Execution order; duplicates allowed, position maps to shortcuts. */
+  entries: PlaylistEntry[];
 }
 
 const PLAYLISTS_KEY = 'vjlab.playlists.v1';
 const ACTIVE_PLAYLIST_KEY = 'vjlab.activePlaylist.v1';
 
-function sanitizePlaylistIds(ids: unknown, valid: Set<number>): number[] {
+function sanitizeEntries(ids: unknown, valid: Set<number>): PlaylistEntry[] {
   if (!Array.isArray(ids)) return [];
-  const seen = new Set<number>();
+  const entries: PlaylistEntry[] = [];
+  const seenKeys = new Set<string>();
+  let counter = 0;
   for (const entry of ids) {
-    if (typeof entry === 'number' && valid.has(entry) && !seen.has(entry)) {
-      seen.add(entry);
+    if (typeof entry !== 'object' || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    if (typeof record['sceneId'] !== 'number' || !valid.has(record['sceneId'])) {
+      continue;
     }
+    let key = typeof record['key'] === 'string' ? record['key'] : '';
+    if (!key || seenKeys.has(key)) key = `e${counter}`;
+    counter += 1;
+    seenKeys.add(key);
+    entries.push({ key, sceneId: record['sceneId'] });
   }
-  return [...seen];
+  return entries;
+}
+
+function sanitizeLegacyIds(ids: unknown, valid: Set<number>): number[] {
+  if (!Array.isArray(ids)) return [];
+  return ids.filter(
+    (entry): entry is number => typeof entry === 'number' && valid.has(entry),
+  );
 }
 
 function writePlaylists(playlists: ScenePlaylist[], activeId: string): void {
@@ -289,32 +310,45 @@ function writePlaylists(playlists: ScenePlaylist[], activeId: string): void {
   }
 }
 
+function entriesFromLegacy(
+  order: unknown,
+  favorites: unknown,
+  valid: Set<number>,
+): PlaylistEntry[] {
+  const cleanOrder = sanitizeLegacyIds(order, valid);
+  const cleanFavs = sanitizeLegacyIds(favorites, valid).slice(0, DECK_SIZE);
+  const rest = cleanOrder.filter((id) => !cleanFavs.includes(id));
+  return [...cleanFavs, ...rest].map((sceneId, index) => ({
+    key: `e${index}`,
+    sceneId,
+  }));
+}
+
 function readPlaylists(
   custom: ScenePreset[],
   legacyOrder: number[],
   legacyFavorites: number[],
 ): { playlists: ScenePlaylist[]; activeId: string } {
   const valid = new Set(allPresets(custom).map((entry) => entry.id));
-  const fallback = (): { playlists: ScenePlaylist[]; activeId: string } => {
-    const main: ScenePlaylist = {
-      id: 'main',
-      name: 'Main',
-      sceneIds: legacyOrder.filter((id) => valid.has(id)),
-      favoriteIds: legacyFavorites.filter((id) => valid.has(id)).slice(0, DECK_SIZE),
-    };
-    if (main.sceneIds.length === 0) {
-      main.sceneIds = allPresets(custom).map((entry) => entry.id);
-    }
-    if (main.favoriteIds.length === 0) {
-      main.favoriteIds = main.sceneIds.slice(0, DECK_SIZE);
-    }
-    writePlaylists([main], main.id);
+  const cleanupLegacyKeys = () => {
     try {
       window.localStorage.removeItem(SCENE_ORDER_KEY);
       window.localStorage.removeItem(FAVORITES_KEY);
     } catch {
       // Ignore
     }
+  };
+  const fallback = (): { playlists: ScenePlaylist[]; activeId: string } => {
+    let entries = entriesFromLegacy(legacyOrder, legacyFavorites, valid);
+    if (entries.length === 0) {
+      entries = allPresets(custom).map((entry, index) => ({
+        key: `e${index}`,
+        sceneId: entry.id,
+      }));
+    }
+    const main: ScenePlaylist = { id: 'main', name: 'Main', entries };
+    writePlaylists([main], main.id);
+    cleanupLegacyKeys();
     return { playlists: [main], activeId: main.id };
   };
   try {
@@ -327,16 +361,25 @@ function readPlaylists(
     for (const entry of parsed) {
       if (typeof entry !== 'object' || entry === null) continue;
       const record = entry as Record<string, unknown>;
-      if (typeof record['id'] !== 'string' || typeof record['name'] !== 'string') continue;
-      const sceneIds = sanitizePlaylistIds(record['sceneIds'], valid);
-      if (sceneIds.length === 0) continue;
+      if (typeof record['id'] !== 'string' || typeof record['name'] !== 'string') {
+        continue;
+      }
+      let entries: PlaylistEntry[];
+      if (Array.isArray(record['entries'])) {
+        entries = sanitizeEntries(record['entries'], valid);
+      } else {
+        // v1 shape: favorites lead, then the remaining order.
+        entries = entriesFromLegacy(
+          record['sceneIds'],
+          record['favoriteIds'],
+          valid,
+        );
+      }
+      if (entries.length === 0) continue;
       playlists.push({
         id: record['id'],
         name: (record['name'] as string).slice(0, 40) || 'Untitled',
-        sceneIds,
-        favoriteIds: sanitizePlaylistIds(record['favoriteIds'], valid)
-          .filter((id) => sceneIds.includes(id))
-          .slice(0, DECK_SIZE),
+        entries,
       });
     }
     if (playlists.length === 0) return fallback();
@@ -344,12 +387,7 @@ function readPlaylists(
     const activeId = playlists.some((entry) => entry.id === storedActive)
       ? (storedActive as string)
       : playlists[0].id;
-    try {
-      window.localStorage.removeItem(SCENE_ORDER_KEY);
-      window.localStorage.removeItem(FAVORITES_KEY);
-    } catch {
-      // Ignore
-    }
+    cleanupLegacyKeys();
     return { playlists, activeId };
   } catch {
     return fallback();
@@ -371,7 +409,7 @@ export function playlistOrder(state: {
   sceneOrder: number[];
   customPresets: ScenePreset[];
 }): number[] {
-  const ids = selectActivePlaylist(state).sceneIds;
+  const ids = selectActivePlaylist(state).entries.map((entry) => entry.sceneId);
   if (ids.length > 0) return ids;
   return state.sceneOrder.length > 0
     ? state.sceneOrder
@@ -387,8 +425,11 @@ export function selectActivePlaylist(state: {
   const found = state.playlists.find((entry) => entry.id === state.activePlaylistId);
   if (found) return found;
   if (state.playlists.length > 0) return state.playlists[0];
-  const ids = [...state.sceneOrder];
-  return { id: 'main', name: 'Main', sceneIds: ids, favoriteIds: ids.slice(0, DECK_SIZE) };
+  const entries = [...state.sceneOrder].map((sceneId, index) => ({
+    key: `e${index}`,
+    sceneId,
+  }));
+  return { id: 'main', name: 'Main', entries };
 }
 
 const tourSeenInitial = readTourSeen();
@@ -515,7 +556,13 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const active = selectActivePlaylist(state);
     const nextPlaylists = state.playlists.map((entry) =>
       entry.id === active.id
-        ? { ...entry, sceneIds: [...entry.sceneIds, created.id] }
+        ? {
+            ...entry,
+            entries: [
+              ...entry.entries,
+              { key: `e${Date.now().toString(36)}`, sceneId: created.id },
+            ],
+          }
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
@@ -540,8 +587,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writeSceneOrder(nextOrder);
     const nextPlaylists = state.playlists.map((entry) => ({
       ...entry,
-      sceneIds: entry.sceneIds.filter((scene) => scene !== id),
-      favoriteIds: entry.favoriteIds.filter((scene) => scene !== id),
+      entries: entry.entries.filter((scene) => scene.sceneId !== id),
     }));
     writePlaylists(nextPlaylists, state.activePlaylistId);
     const stillExists = findPreset(nextCustom, state.activePresetId);
@@ -586,11 +632,18 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       const nextOrder = [...state.sceneOrder, ...accepted.map((entry) => entry.id)];
       writeSceneOrder(nextOrder);
       const active = selectActivePlaylist(state);
+      const stamp = Date.now().toString(36);
       const nextPlaylists = state.playlists.map((entry) =>
         entry.id === active.id
           ? {
               ...entry,
-              sceneIds: [...entry.sceneIds, ...accepted.map((scene) => scene.id)],
+              entries: [
+                ...entry.entries,
+                ...accepted.map((scene, index) => ({
+                  key: `e${stamp}${index}`,
+                  sceneId: scene.id,
+                })),
+              ],
             }
           : entry,
       );
@@ -672,42 +725,34 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   movePlaylistScene: (from, to) => {
     const state = get();
     const active = selectActivePlaylist(state);
-    const ids = [...active.sceneIds];
-    if (from < 0 || from >= ids.length || to < 0 || to >= ids.length) return;
-    const [moved] = ids.splice(from, 1);
-    ids.splice(to, 0, moved);
-    const nextPlaylists = state.playlists.map((entry) =>
-      entry.id === active.id ? { ...entry, sceneIds: ids } : entry,
-    );
-    writePlaylists(nextPlaylists, state.activePlaylistId);
-    set({ playlists: nextPlaylists });
-  },
-  toggleFavorite: (id) => {
-    const state = get();
-    const active = selectActivePlaylist(state);
-    let next: number[];
-    if (active.favoriteIds.includes(id)) {
-      next = active.favoriteIds.filter((entry) => entry !== id);
-    } else if (active.favoriteIds.length >= DECK_SIZE) {
+    const entries = [...active.entries];
+    if (from < 0 || from >= entries.length || to < 0 || to >= entries.length) {
       return;
-    } else {
-      next = [...active.favoriteIds, id];
     }
+    const [moved] = entries.splice(from, 1);
+    entries.splice(to, 0, moved);
     const nextPlaylists = state.playlists.map((entry) =>
-      entry.id === active.id ? { ...entry, favoriteIds: next } : entry,
+      entry.id === active.id ? { ...entry, entries } : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
   },
-  moveFavorite: (from, to) => {
+  pinScene: (key) => {
+    // Starring pins the occurrence into the deck (position DECK_SIZE);
+    // unstarring drops it past the deck, at the end of the list.
     const state = get();
     const active = selectActivePlaylist(state);
-    const ids = [...active.favoriteIds];
-    if (from < 0 || from >= ids.length || to < 0 || to >= ids.length) return;
-    const [moved] = ids.splice(from, 1);
-    ids.splice(to, 0, moved);
+    const index = active.entries.findIndex((entry) => entry.key === key);
+    if (index < 0) return;
+    const entries = [...active.entries];
+    const [moved] = entries.splice(index, 1);
+    const target =
+      index < DECK_SIZE
+        ? entries.length
+        : Math.min(DECK_SIZE - 1, entries.length);
+    entries.splice(target, 0, moved);
     const nextPlaylists = state.playlists.map((entry) =>
-      entry.id === active.id ? { ...entry, favoriteIds: ids } : entry,
+      entry.id === active.id ? { ...entry, entries } : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
@@ -718,8 +763,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const next: ScenePlaylist = {
       id: `pl-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`,
       name: clean,
-      sceneIds: [],
-      favoriteIds: [],
+      entries: [],
     };
     const nextPlaylists = [...state.playlists, next];
     writePlaylists(nextPlaylists, next.id);
@@ -754,21 +798,26 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const state = get();
     if (!findPreset(state.customPresets, sceneId)) return;
     const nextPlaylists = state.playlists.map((entry) =>
-      entry.id === playlistId && !entry.sceneIds.includes(sceneId)
-        ? { ...entry, sceneIds: [...entry.sceneIds, sceneId] }
+      entry.id === playlistId
+        ? {
+            ...entry,
+            entries: [
+              ...entry.entries,
+              { key: `e${Date.now().toString(36)}${entry.entries.length}`, sceneId },
+            ],
+          }
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
   },
-  removeSceneFromPlaylist: (playlistId, sceneId) => {
+  removeSceneFromPlaylist: (playlistId, key) => {
     const state = get();
     const nextPlaylists = state.playlists.map((entry) =>
       entry.id === playlistId
         ? {
             ...entry,
-            sceneIds: entry.sceneIds.filter((scene) => scene !== sceneId),
-            favoriteIds: entry.favoriteIds.filter((scene) => scene !== sceneId),
+            entries: entry.entries.filter((scene) => scene.key !== key),
           }
         : entry,
     );
@@ -954,7 +1003,7 @@ export const transitionRef = {
 };
 
 export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [
-  { key: '1–9', action: 'Dissolve deck slot (playlist favorites)' },
+  { key: '1–0', action: 'Dissolve deck position (playlist top 10)' },
   { key: 'N / P', action: 'Dissolve next / previous in playlist' },
   { key: 'X', action: 'Hard cut to next preset' },
   { key: 'Y', action: 'Cycle transition duration' },
@@ -971,7 +1020,7 @@ export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [
   { key: 'V', action: 'Toggle VHS glitch' },
   { key: 'C', action: 'Toggle RGB split' },
   { key: 'J', action: 'Toggle beat flash' },
-  { key: '0', action: 'Bypass all post-processing' },
+  { key: 'K', action: 'Bypass all post-processing' },
   { key: 'I', action: 'Toggle About panel' },
   { key: 'L', action: 'Toggle lite mode' },
   { key: 'S', action: 'Kill all effects' },

@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import {
-  DECK_SIZE,
-  useDirectorStore,
-} from '../director/directorStore';
+import { DECK_SIZE, useDirectorStore } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import './PlaylistManager.css';
 
 /**
  * Library tab managing playlists: create, rename, delete and switch,
- * plus membership (library on the left, playlist on the right).
- * Playlist arrows reorder execution; stars pin the nine-slot deck.
+ * plus membership (library on the left, playlist sequence on the right).
+ * Positions 1-DECK_SIZE map to Digit1-Digit0; starring pins the
+ * occurrence into the deck by position.
  */
 export function PlaylistManager() {
   const playlists = useDirectorStore((s) => s.playlists);
@@ -25,7 +23,6 @@ export function PlaylistManager() {
   if (!active) return null;
   const library = [...PRESETS, ...customPresets];
   const names = new Map(library.map((preset) => [preset.id, preset.name]));
-  const deckFull = active.favoriteIds.length >= DECK_SIZE;
 
   const create = () => {
     if (!draft.trim()) return;
@@ -45,7 +42,7 @@ export function PlaylistManager() {
           >
             {playlists.map((entry) => (
               <option key={entry.id} value={entry.id}>
-                {entry.name} ({entry.sceneIds.length})
+                {entry.name} ({entry.entries.length})
               </option>
             ))}
           </select>
@@ -109,78 +106,73 @@ export function PlaylistManager() {
         <div className="playlist-pane">
           <h3>Library · {library.length}</h3>
           <ul className="playlist-rows">
-            {library.map((preset) => {
-              const included = active.sceneIds.includes(preset.id);
-              return (
-                <li key={preset.id} className="playlist-row">
-                  <span className="playlist-name">{preset.name}</span>
-                  <button
-                    type="button"
-                    disabled={included}
-                    title={included ? 'Already in playlist' : 'Add to playlist'}
-                    onClick={() => store.addSceneToPlaylist(active.id, preset.id)}
-                  >
-                    +
-                  </button>
-                </li>
-              );
-            })}
+            {library.map((preset) => (
+              <li key={preset.id} className="playlist-row">
+                <span className="playlist-name">{preset.name}</span>
+                <button
+                  type="button"
+                  title="Append to playlist (duplicates allowed)"
+                  onClick={() => store.addSceneToPlaylist(active.id, preset.id)}
+                >
+                  +
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
         <div className="playlist-pane">
           <h3>
-            {active.name} · {active.sceneIds.length} · deck{' '}
-            {active.favoriteIds.length}/{DECK_SIZE}
+            {active.name} · {active.entries.length} · deck{' '}
+            {Math.min(active.entries.length, DECK_SIZE)}/{DECK_SIZE}
           </h3>
-          {deckFull && (
-            <p className="playlist-hint">Deck full — unstar a slot to pin another.</p>
-          )}
           <ul className="playlist-rows">
-            {active.sceneIds.map((id, index) => {
-              const favIndex = active.favoriteIds.indexOf(id);
+            {active.entries.map((entry, index) => {
+              const inDeck = index < DECK_SIZE;
               return (
-                <li key={id} className="playlist-row">
-                  {favIndex >= 0 && (
-                    <span className="playlist-slot" title={`Deck slot ${favIndex + 1}`}>
-                      {favIndex + 1}
-                    </span>
-                  )}
-                  <span className="playlist-name">{names.get(id) ?? `#${id}`}</span>
+                <li key={entry.key} className="playlist-row">
+                  <span
+                    className={inDeck ? 'playlist-slot' : 'playlist-slot dim'}
+                    title={
+                      inDeck
+                        ? `Shortcut ${index === DECK_SIZE - 1 ? '0' : index + 1}`
+                        : `Position ${index + 1} (no shortcut)`
+                    }
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="playlist-name">
+                    {names.get(entry.sceneId) ?? `#${entry.sceneId}`}
+                  </span>
                   <div className="playlist-actions">
                     <button
                       type="button"
                       disabled={index === 0}
-                      title="Move up in execution order"
+                      title="Move up (renumbers shortcuts)"
                       onClick={() => store.movePlaylistScene(index, index - 1)}
                     >
                       ↑
                     </button>
                     <button
                       type="button"
-                      disabled={index === active.sceneIds.length - 1}
-                      title="Move down in execution order"
+                      disabled={index === active.entries.length - 1}
+                      title="Move down (renumbers shortcuts)"
                       onClick={() => store.movePlaylistScene(index, index + 1)}
                     >
                       ↓
                     </button>
                     <button
                       type="button"
-                      disabled={favIndex < 0 && deckFull}
-                      title={
-                        favIndex >= 0
-                          ? 'Unpin from deck'
-                          : deckFull
-                            ? 'Deck full'
-                            : 'Pin to deck'
-                      }
-                      onClick={() => store.toggleFavorite(id)}
+                      title={inDeck ? 'Unpin from deck' : 'Pin to deck'}
+                      onClick={() => store.pinScene(entry.key)}
                     >
-                      {favIndex >= 0 ? '★' : '☆'}
+                      {inDeck ? '★' : '☆'}
                     </button>
                     <button
                       type="button"
-                      title="Remove from playlist"
-                      onClick={() => store.removeSceneFromPlaylist(active.id, id)}
+                      title="Remove this occurrence"
+                      onClick={() =>
+                        store.removeSceneFromPlaylist(active.id, entry.key)
+                      }
                     >
                       ✕
                     </button>
