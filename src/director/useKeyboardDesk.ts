@@ -113,6 +113,7 @@ export function useKeyboardDesk() {
         case 'Escape':
           if (store.aboutOpen) store.toggleAbout();
           if (store.helpOpen) store.setHelpOpen(false);
+          if (store.libraryOpen) store.setLibraryOpen(false);
           break;
         case 'Space':
           event.preventDefault();
@@ -146,6 +147,9 @@ export function useKeyboardDesk() {
           break;
         case 'KeyA':
           store.toggleAutoPilot();
+          break;
+        case 'KeyM':
+          store.setLibraryOpen(!store.libraryOpen);
           break;
         case 'KeyQ':
           if (store.activePresetId === 5) {

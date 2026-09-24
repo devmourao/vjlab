@@ -7,6 +7,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
 import { AboutPanel } from '../components/Identity';
+import { LibraryOverlay } from '../components/LibraryOverlay';
 import { PlayerBar } from '../components/PlayerBar';
 import { SidePanel } from '../components/SidePanel';
 import { StrobeOverlay } from '../components/StrobeOverlay';
@@ -132,6 +133,15 @@ function executeControlCommand(
       if (wasDetached && command.mode !== 'detached') closeControlsPopup();
       break;
     }
+    case 'openLibrary':
+      store.setLibraryOpen(true);
+      break;
+    case 'closeLibrary':
+      store.setLibraryOpen(false);
+      break;
+    case 'showGuide':
+      store.setHelpOpen(true);
+      break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
       store.cyclePanelMode();
@@ -349,6 +359,7 @@ function DeckPage() {
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
+      <LibraryOverlay />
       <GuideDrawer />
       <TourOverlay />
       <EmptyState engine={engine} />

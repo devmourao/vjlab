@@ -116,6 +116,15 @@ describe('controlChannel', () => {
       isControlMessage({ type: 'command', command: { type: 'exportScenes' } }),
     ).toBe(true);
     expect(
+      isControlMessage({ type: 'command', command: { type: 'openLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'closeLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'showGuide' } }),
+    ).toBe(true);
+    expect(
       isControlMessage({
         type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },

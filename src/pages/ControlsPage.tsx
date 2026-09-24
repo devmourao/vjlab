@@ -22,25 +22,8 @@ import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
 import './ControlsPage.css';
 
-function formatImportResult(result: {
-  accepted: string[];
-  rejected: Array<{ id: string; reason: string }>;
-}): string {
-  const lines: string[] = [];
-  if (result.accepted.length > 0) {
-    lines.push(`Accepted: ${result.accepted.join(', ')}`);
-  }
-  if (result.rejected.length > 0) {
-    lines.push(
-      `Rejected: ${result.rejected.map((entry) => `${entry.id} (${entry.reason})`).join('; ')}`,
-    );
-  }
-  return lines.join(' | ') || 'No scenes found';
-}
-
 function useControlDeck() {
   const [snapshot, setSnapshot] = useState<ControlSnapshot | null>(null);
-  const [importReport, setImportReport] = useState<string | null>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
   const seenRef = useRef(false);
 
@@ -61,8 +44,6 @@ function useControlDeck() {
       if (message.kind === 'snapshot') {
         seenRef.current = true;
         setSnapshot(message.snapshot);
-      } else if (message.kind === 'importResult') {
-        setImportReport(formatImportResult(message.result));
       }
     };
     sayHello();
@@ -85,11 +66,11 @@ function useControlDeck() {
     }
   };
 
-  return { snapshot, importReport, send };
+  return { snapshot, send };
 }
 
 export default function ControlsPage() {
-  const { snapshot, importReport, send } = useControlDeck();
+  const { snapshot, send } = useControlDeck();
   const [overlayDraft, setOverlayDraft] = useState('VJ LAB');
 
   const onOverlay = (event: ChangeEvent<HTMLInputElement>) => {
@@ -194,6 +175,7 @@ export default function ControlsPage() {
           <section className="controls-section" aria-label="Scenes">
             <h2>Scenes</h2>
             <SceneList
+              manage={false}
               items={snapshot.presets.map(
                 (preset): ScenePreset => ({
                   ...preset,
@@ -208,39 +190,12 @@ export default function ControlsPage() {
               sceneOrder={snapshot.sceneOrder}
               activeId={snapshot.activePresetId}
               onSelect={(id) => send({ type: 'dissolve', id })}
-              ops={{
-                onRemove: (id) => send({ type: 'deleteScene', id }),
-                onMove: (from, to) => send({ type: 'moveScene', from, to }),
-                onToggleFavorite: (id) => send({ type: 'toggleFavorite', id }),
-                onExport: () => send({ type: 'exportScenes' }),
-                onImport: (file) => {
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    try {
-                      send({
-                        type: 'importPack',
-                        pack: JSON.parse(String(reader.result)),
-                      });
-                    } catch {
-                      // Malformed JSON never leaves the popup.
-                    }
-                  };
-                  reader.readAsText(file);
-                },
-                onSaveDraft: (draft, editingId) => {
-                  const payload = {
-                    ...draft,
-                    instances: draft.instances ?? [],
-                  };
-                  if (editingId === null) {
-                    send({ type: 'createScene', draft: payload });
-                  } else {
-                    send({ type: 'updateScene', id: editingId, patch: payload });
-                  }
-                },
-                importReport,
-              }}
             />
+            <div className="controls-row">
+              <button type="button" onClick={() => send({ type: 'openLibrary' })}>
+                Manage scenes…
+              </button>
+            </div>
             <SceneTransport
               durationLabel={`${snapshot.transitionDuration.toFixed(1)}s`}
               onPrev={() => send({ type: 'prevPreset' })}
@@ -348,6 +303,11 @@ export default function ControlsPage() {
           <section className="controls-section" aria-label="Guide">
             <h2>Guide</h2>
             <ShortcutReference note="Shortcuts run on the main deck window. The interactive first-run tour lives there too — open the deck Guide tab to replay it." />
+            <div className="controls-row">
+              <button type="button" onClick={() => send({ type: 'showGuide' })}>
+                Open guide on deck
+              </button>
+            </div>
           </section>
           <div className="controls-end" aria-hidden />
         </div>

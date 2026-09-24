@@ -44,6 +44,7 @@ interface DirectorState {
   fxBypassed: boolean;
   aboutOpen: boolean;
   helpOpen: boolean;
+  libraryOpen: boolean;
   tourSeen: boolean;
   tourOpen: boolean;
   liteOn: boolean;
@@ -107,6 +108,7 @@ interface DirectorState {
   toggleAbout: () => void;
   toggleHelp: () => void;
   setHelpOpen: (open: boolean) => void;
+  setLibraryOpen: (open: boolean) => void;
   completeTour: () => void;
   replayTour: () => void;
   closeTour: () => void;
@@ -282,6 +284,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   fxBypassed: false,
   aboutOpen: false,
   helpOpen: false,
+  libraryOpen: false,
   tourSeen: tourSeenInitial,
   tourOpen: !tourSeenInitial,
   liteOn: false,
@@ -540,6 +543,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   toggleAbout: () => set((s) => ({ aboutOpen: !s.aboutOpen })),
   toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),
   setHelpOpen: (open: boolean) => set({ helpOpen: open }),
+  setLibraryOpen: (open: boolean) => set({ libraryOpen: open }),
   completeTour: () => {
     writeTourSeen();
     set({ tourSeen: true, tourOpen: false });
@@ -711,6 +715,7 @@ export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [
   { key: 'D', action: 'Detach controls to second screen (repeat to dock back)' },
   { key: 'G / F11', action: 'Toggle fullscreen output' },
   { key: 'A', action: 'Toggle auto-pilot tour' },
+  { key: 'M', action: 'Toggle scene library' },
   { key: 'Q / W', action: 'Fractal Z rotation +/− (when Fractal active)' },
   { key: '↑/↓ (Fractal)', action: 'Fractal next/prev shape (when Fractal active)' },
 ];

@@ -47,7 +47,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
         {activeTab === 'track' && <AudioPanel engine={engine} />}
         {activeTab === 'scenes' && (
           <>
-            <SceneList />
+            <SceneList manage={false} />
             <SceneTransport
               durationLabel={`${transitionDuration.toFixed(1)}s`}
               onPrev={() => useDirectorStore.getState().prevPreset()}
@@ -55,6 +55,13 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
               onCut={() => useDirectorStore.getState().hardCutNext()}
               onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
             />
+            <button
+              type="button"
+              className="kit-link"
+              onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
+            >
+              Manage scenes…
+            </button>
           </>
         )}
         {activeTab === 'fx' && <DeskPanel />}

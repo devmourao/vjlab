@@ -44,6 +44,14 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.25);
   });
 
+  it('opens and closes the scene library', () => {
+    const store = useDirectorStore.getState();
+    store.setLibraryOpen(true);
+    expect(useDirectorStore.getState().libraryOpen).toBe(true);
+    store.setLibraryOpen(false);
+    expect(useDirectorStore.getState().libraryOpen).toBe(false);
+  });
+
   it('zooms within limits and adjusts the selected mix', () => {    const store = useDirectorStore.getState();
     store.zoomIn();
     expect(useDirectorStore.getState().zoomTarget).toBeGreaterThan(1);

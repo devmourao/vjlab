@@ -41,6 +41,9 @@ export type ControlCommand =
   | { type: 'killAll' }
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
+  | { type: 'openLibrary' }
+  | { type: 'closeLibrary' }
+  | { type: 'showGuide' }
   | { type: 'togglePlayback' }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
@@ -144,6 +147,9 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'killAll',
   'setPanelMode',
   'cyclePanelMode',
+  'openLibrary',
+  'closeLibrary',
+  'showGuide',
   'togglePlayback',
   'playQueueTrack',
   'removeQueueTrack',
