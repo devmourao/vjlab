@@ -13,28 +13,86 @@
 
 /* Second-screen stages: the same sections reflow from one column
    (phone / narrow popup) to two (tablet / half screen) to three
-   (full second screen). Canonical order reads left to right. */
+   (full second screen). Named areas pack short cards beside tall ones
+   so no column holds a single short card with void below it. */
 @media (min-width: 700px) {
   .controls-page {
-    max-width: 980px;
+    max-width: 1080px;
   }
 
   .controls-sections {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      'track scenes'
+      'strobe scenes'
+      'stage effects'
+      'overlay flags'
+      'guide guide';
     gap: 0 20px;
     align-items: start;
+  }
+
+  .controls-section[aria-label='Guide'] .shortcut-ref {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0 20px;
+    align-items: start;
+  }
+
+  .controls-section[aria-label='Guide'] .shortcut-note {
+    grid-column: 1 / -1;
   }
 }
 
 @media (min-width: 1200px) {
   .controls-page {
-    max-width: 1440px;
+    max-width: 1600px;
   }
 
   .controls-sections {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    grid-template-areas:
+      'track scenes stage'
+      'strobe scenes effects'
+      'overlay flags guide';
   }
+
+  .controls-section[aria-label='Guide'] .shortcut-ref {
+    display: flex;
+  }
+}
+
+.controls-section[aria-label='Track'] {
+  grid-area: track;
+}
+
+.controls-section[aria-label='Scenes'] {
+  grid-area: scenes;
+}
+
+.controls-section[aria-label='Stage'] {
+  grid-area: stage;
+}
+
+.controls-section[aria-label='Strobe'] {
+  grid-area: strobe;
+}
+
+.controls-section[aria-label='Effects'] {
+  grid-area: effects;
+}
+
+.controls-section[aria-label='Flags'] {
+  grid-area: flags;
+}
+
+.controls-section[aria-label='Overlay and actions'] {
+  grid-area: overlay;
+}
+
+.controls-section[aria-label='Guide'] {
+  grid-area: guide;
 }
 
 .controls-head {
