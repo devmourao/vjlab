@@ -191,6 +191,10 @@ export default function ControlsPage() {
               sceneOrder={snapshot.sceneOrder}
               activeId={snapshot.activePresetId}
               onSelect={(id) => send({ type: 'dissolve', id })}
+              ops={{
+                onMove: (from, to) => send({ type: 'moveScene', from, to }),
+                onToggleFavorite: (id) => send({ type: 'toggleFavorite', id }),
+              }}
             />
             <div className="controls-row">
               <button type="button" onClick={() => send({ type: 'openLibrary' })}>

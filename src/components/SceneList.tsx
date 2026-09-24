@@ -143,7 +143,6 @@ export function SceneList({
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
             </button>
-            {manage && (
             <div className="scene-item-actions">
               <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
                 ↑
@@ -159,7 +158,7 @@ export function SceneList({
               >
                 {favorites.has(preset.id) ? '★' : '☆'}
               </button>
-              {!isNative(preset.id) && (
+              {manage && !isNative(preset.id) && (
                 <>
                   <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
                     Edit
@@ -178,7 +177,6 @@ export function SceneList({
                 </>
               )}
             </div>
-            )}
           </li>
         ))}
       </ul>
