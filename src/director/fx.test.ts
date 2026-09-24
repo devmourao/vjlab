@@ -19,7 +19,6 @@ import {
   slotFraction,
   slotRange,
   strobeIntervalMs,
-  strobeStepsTo,
   zoomRadius,
 } from './fx';
 
@@ -109,15 +108,6 @@ describe('post pass stability', () => {
     expect(GLITCH_DELAY).toEqual([1.5, 3.5]);
     expect(GLITCH_DURATION).toEqual([0.2, 0.6]);
     expect(GLITCH_STRENGTH).toEqual([0.2, 0.5]);
-  });
-});
-
-describe('strobe radio steps', () => {
-  it('reaches any mode with forward cycles only', () => {
-    expect(strobeStepsTo('white', 'white')).toBe(0);
-    expect(strobeStepsTo('white', 'black')).toBe(1);
-    expect(strobeStepsTo('white', 'color')).toBe(2);
-    expect(strobeStepsTo('color', 'white')).toBe(1);
   });
 });
 

@@ -7,6 +7,7 @@ import {
 /**
  * Shared effect slots: every row carries its own slider and value bar,
  * and clicking a row selects it. Same component on deck and popup.
+ * The strobe mix lives with the strobe group, so it is excluded here.
  */
 export function EffectSlotList({
   slots,
@@ -23,7 +24,9 @@ export function EffectSlotList({
 }) {
   return (
     <div className="kit-slots" data-testid="effect-slots">
-      {slots.map((slot) => {
+      {slots
+        .filter((slot) => slot !== 'strobe')
+        .map((slot) => {
         const value = values[slot] ?? 0;
         const range = slotRange(slot);
         return (
@@ -57,8 +60,8 @@ export function EffectSlotList({
               onChange={(event) => onMix(slot, Number(event.target.value))}
             />
           </div>
-        );
-      })}
+          );
+        })}
     </div>
   );
 }

@@ -130,9 +130,6 @@ export function SceneList({
                 </span>
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
-              <span className="scene-sub">
-                {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
-              </span>
             </button>
             {manage && (
             <div className="scene-item-actions">

@@ -62,14 +62,6 @@ export function nextStrobeMode(current: StrobeMode): StrobeMode {
   return STROBE_MODES[(STROBE_MODES.indexOf(current) + 1) % STROBE_MODES.length];
 }
 
-/** Forward steps from one strobe mode to another (radio without a setter). */
-export function strobeStepsTo(current: StrobeMode, target: StrobeMode): number {
-  const from = STROBE_MODES.indexOf(current);
-  const to = STROBE_MODES.indexOf(target);
-  if (from === -1 || to === -1) return 0;
-  return (to - from + STROBE_MODES.length) % STROBE_MODES.length;
-}
-
 /** Effective amount of an effect after its own mix and the master fader. */
 export function applyMix(base: number, mix: number, master: number): number {
   return base * clampMix(mix) * clampMix(master);

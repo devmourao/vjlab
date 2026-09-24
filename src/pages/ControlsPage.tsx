@@ -7,19 +7,13 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
-import {
-  FX_SLOTS,
-  strobeStepsTo,
-  type FxSlot,
-  type StrobeMode,
-} from '../director/fx';
+import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
 import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
 import { StrobeControl } from '../components/controls/StrobeControl';
-import { TransportRows } from '../components/controls/TransportRows';
 import '../components/controls/ControlsKit.css';
 import './ControlsPage.css';
 
@@ -229,16 +223,9 @@ export default function ControlsPage() {
               mode={snapshot.strobeMode}
               hz={snapshot.strobeRateHz}
               onToggle={() => send({ type: 'toggleStrobe' })}
-              onMode={(mode: StrobeMode) => {
-                const steps = strobeStepsTo(
-                  snapshot.strobeMode as StrobeMode,
-                  mode,
-                );
-                for (let i = 0; i < steps; i += 1) {
-                  send({ type: 'cycleStrobeMode' });
-                }
-              }}
+              onCycleMode={() => send({ type: 'cycleStrobeMode' })}
               onHz={(value) => send({ type: 'setStrobeHz', value })}
+              onBurst={() => send({ type: 'fireBurst' })}
             />
           </section>
 
@@ -275,18 +262,29 @@ export default function ControlsPage() {
                 send({ type: 'setMix', slot, value })
               }
             />
+            <div className="controls-row">
+              <button type="button" onClick={() => send({ type: 'stepHue' })}>
+                Global hue · {Math.round(snapshot.hueShift * 8)}/8
+              </button>
+            </div>
           </section>
 
-          <section className="controls-section" aria-label="Color and zoom">
-            <h2>Color and zoom</h2>
-            <TransportRows
-              duration={snapshot.transitionDuration}
-              hue={snapshot.hueShift}
-              zoom={snapshot.zoomTarget}
-              onCycleDuration={() => send({ type: 'cycleDuration' })}
-              onStepHue={() => send({ type: 'stepHue' })}
-              onZoom={(value) => send({ type: 'setZoom', value })}
-            />
+          <section className="controls-section" aria-label="Stage">
+            <h2>Stage</h2>
+            <label className="kit-slider">
+              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
+              <input
+                type="range"
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={0.01}
+                value={snapshot.zoomTarget}
+                aria-label="Stage zoom"
+                onChange={(event) =>
+                  send({ type: 'setZoom', value: Number(event.target.value) })
+                }
+              />
+            </label>
           </section>
 
           <section className="controls-section" aria-label="Overlay and actions">
@@ -303,9 +301,6 @@ export default function ControlsPage() {
             <div className="controls-row">
               <button type="button" onClick={() => send({ type: 'fireText' })}>
                 Fire text
-              </button>
-              <button type="button" onClick={() => send({ type: 'fireBurst' })}>
-                Burst
               </button>
               <button type="button" onClick={() => send({ type: 'killAll' })}>
                 Kill all

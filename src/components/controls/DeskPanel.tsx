@@ -1,16 +1,10 @@
 import { useDirectorStore } from '../../director/directorStore';
-import {
-  FX_SLOTS,
-  strobeStepsTo,
-  type FxSlot,
-  type StrobeMode,
-} from '../../director/fx';
+import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../../director/fx';
 import { PRESETS, resolveInstances } from '../../scenes/presets';
 import './ControlsKit.css';
 import { EffectSlotList } from './EffectSlotList';
 import { FlagPills } from './FlagPills';
 import { StrobeControl } from './StrobeControl';
-import { TransportRows } from './TransportRows';
 
 const FRACTAL_SIDES = [10, 8, 6, 5, 12];
 
@@ -65,14 +59,9 @@ export function DeskPanel() {
         mode={strobeMode}
         hz={strobeRateHz}
         onToggle={() => store.toggleStrobe()}
-        onMode={(mode: StrobeMode) => {
-          const steps = strobeStepsTo(
-            useDirectorStore.getState().strobeMode,
-            mode,
-          );
-          for (let i = 0; i < steps; i += 1) store.cycleStrobeMode();
-        }}
+        onCycleMode={() => store.cycleStrobeMode()}
         onHz={(value) => store.setStrobeRate(value)}
+        onBurst={() => store.fireBurst()}
       />
       <FlagPills
         flags={[
@@ -105,14 +94,26 @@ export function DeskPanel() {
         onSelect={(slot: FxSlot) => store.selectFxSlot(slot)}
         onMix={(slot: FxSlot, value: number) => store.setFxMix(slot, value)}
       />
-      <TransportRows
-        duration={transitionDuration}
-        hue={hueShift}
-        zoom={zoomTarget}
-        onCycleDuration={() => store.cycleDuration()}
-        onStepHue={() => store.stepHue()}
-        onZoom={(value) => store.setZoomTarget(value)}
-      />
+      <div className="kit-row">
+        <button type="button" onClick={() => store.stepHue()}>
+          Global hue · {Math.round(hueShift * 8)}/8
+        </button>
+        <button type="button" onClick={() => store.cycleDuration()}>
+          Duration · {transitionDuration.toFixed(1)}s
+        </button>
+      </div>
+      <label className="kit-slider">
+        <span>Stage zoom · {zoomTarget.toFixed(2)}x</span>
+        <input
+          type="range"
+          min={ZOOM_MIN}
+          max={ZOOM_MAX}
+          step={0.01}
+          value={zoomTarget}
+          aria-label="Stage zoom"
+          onChange={(event) => store.setZoomTarget(Number(event.target.value))}
+        />
+      </label>
       <button
         type="button"
         className="kit-link"

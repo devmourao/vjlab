@@ -1,26 +1,26 @@
-import { STROBE_MAX_HZ, STROBE_MIN_HZ, type StrobeMode } from '../../director/fx';
-
-const MODES: StrobeMode[] = ['white', 'black', 'color'];
+import { STROBE_MAX_HZ, STROBE_MIN_HZ } from '../../director/fx';
 
 /**
- * Shared strobe control: an on/off switch plus a single-choice color
- * radio with visible swatches, then a speed slider. Same component on
- * the deck and the second-screen popup.
+ * Shared strobe group: an on/off switch, a mode stepper showing the
+ * current color swatch, a speed slider and the burst trigger next to
+ * it. Same component on the deck and the second-screen popup.
  */
 export function StrobeControl({
   on,
   mode,
   hz,
   onToggle,
-  onMode,
+  onCycleMode,
   onHz,
+  onBurst,
 }: {
   on: boolean;
   mode: string;
   hz: number;
   onToggle: () => void;
-  onMode: (mode: StrobeMode) => void;
+  onCycleMode: () => void;
   onHz: (value: number) => void;
+  onBurst: () => void;
 }) {
   return (
     <div className="kit-group" data-testid="strobe-control">
@@ -36,29 +36,19 @@ export function StrobeControl({
           <span className="kit-knob" aria-hidden />
           <span>{on ? 'On' : 'Off'}</span>
         </button>
-        <div
-          className="kit-radio-group"
-          role="radiogroup"
-          aria-label="Strobe color"
+        <button
+          type="button"
+          className="kit-mode-step"
+          data-testid="strobe-mode"
+          title="Cycle strobe color"
+          onClick={onCycleMode}
         >
-          {MODES.map((entry) => (
-            <label
-              key={entry}
-              className={
-                mode === entry ? 'kit-radio checked' : 'kit-radio'
-              }
-            >
-              <input
-                type="radio"
-                name="strobe-color"
-                checked={mode === entry}
-                onChange={() => onMode(entry)}
-              />
-              <span className={`kit-swatch ${entry}`} aria-hidden />
-              {entry}
-            </label>
-          ))}
-        </div>
+          <span className={`kit-swatch ${mode}`} aria-hidden />
+          {mode}
+        </button>
+        <button type="button" onClick={onBurst}>
+          Burst
+        </button>
       </div>
       <label className="kit-slider">
         <span>Speed · {hz}Hz</span>

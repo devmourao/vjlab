@@ -47,12 +47,6 @@
   opacity: 0.6;
 }
 
-.scene-sub {
-  margin-left: auto;
-  font-size: 11px;
-  opacity: 0.6;
-}
-
 .scene-library {
   display: flex;
   flex-direction: column;
