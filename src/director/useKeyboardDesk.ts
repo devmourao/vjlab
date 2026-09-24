@@ -3,7 +3,11 @@ import {
   toggleControlsDetachment,
   toggleInterfaceVisibility,
 } from './controlChannel';
-import { liveRefs, useDirectorStore } from './directorStore';
+import {
+  liveRefs,
+  selectActivePlaylist,
+  useDirectorStore,
+} from './directorStore';
 import { PRESETS } from '../scenes/presets';
 
 const CAMERA_STEP = 0.12;
@@ -29,10 +33,14 @@ export function useKeyboardDesk() {
         case 'Digit3':
         case 'Digit4':
         case 'Digit5':
-        case 'Digit6': {
+        case 'Digit6':
+        case 'Digit7':
+        case 'Digit8':
+        case 'Digit9': {
           const index = Number(event.code.slice(5)) - 1;
-          const fav = store.favoriteIds[index];
-          const ordered = store.sceneOrder[index];
+          const playlist = selectActivePlaylist(store);
+          const fav = playlist.favoriteIds[index];
+          const ordered = playlist.sceneIds[index];
           const fallback = index;
           const target = fav ?? ordered ?? fallback;
           store.requestDissolve(target);
@@ -113,6 +121,7 @@ export function useKeyboardDesk() {
         case 'Escape':
           if (store.aboutOpen) store.toggleAbout();
           if (store.helpOpen) store.setHelpOpen(false);
+          if (store.libraryOpen) store.setLibraryOpen(false);
           break;
         case 'Space':
           event.preventDefault();
@@ -146,6 +155,9 @@ export function useKeyboardDesk() {
           break;
         case 'KeyA':
           store.toggleAutoPilot();
+          break;
+        case 'KeyM':
+          store.setLibraryOpen(!store.libraryOpen);
           break;
         case 'KeyQ':
           if (store.activePresetId === 5) {

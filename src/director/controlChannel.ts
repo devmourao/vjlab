@@ -1,6 +1,10 @@
 import { BASE_CAPABILITIES } from '../scenes/bases';
 import type { ScenePreset } from '../scenes/presets';
-import { useDirectorStore, type PanelMode } from './directorStore';
+import {
+  selectActivePlaylist,
+  useDirectorStore,
+  type PanelMode,
+} from './directorStore';
 
 /**
  * Second-screen control protocol.
@@ -41,6 +45,13 @@ export type ControlCommand =
   | { type: 'killAll' }
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
+  | { type: 'openLibrary' }
+  | { type: 'closeLibrary' }
+  | { type: 'showGuide' }
+  | { type: 'replayTour' }
+  | { type: 'switchPlaylist'; id: string }
+  | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
+  | { type: 'playlistRemoveScene'; playlistId: string; sceneId: number }
   | { type: 'togglePlayback' }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
@@ -54,6 +65,7 @@ export type ControlCommand =
   | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
   | { type: 'deleteScene'; id: number }
   | { type: 'moveScene'; from: number; to: number }
+  | { type: 'moveFavorite'; from: number; to: number }
   | { type: 'toggleFavorite'; id: number }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
@@ -77,11 +89,20 @@ export interface SnapshotPreset {
   instances: Array<{ base: string; params?: Record<string, unknown> }>;
 }
 
+export interface SnapshotPlaylist {
+  id: string;
+  name: string;
+  sceneCount: number;
+  deckCount: number;
+}
+
 export interface ControlSnapshot {
   activePresetId: number;
   presets: SnapshotPreset[];
   favoriteIds: number[];
   sceneOrder: number[];
+  playlists: SnapshotPlaylist[];
+  activePlaylistId: string;
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -144,6 +165,13 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'killAll',
   'setPanelMode',
   'cyclePanelMode',
+  'openLibrary',
+  'closeLibrary',
+  'showGuide',
+  'replayTour',
+  'switchPlaylist',
+  'playlistAddScene',
+  'playlistRemoveScene',
   'togglePlayback',
   'playQueueTrack',
   'removeQueueTrack',
@@ -157,6 +185,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'updateScene',
   'deleteScene',
   'moveScene',
+  'moveFavorite',
   'toggleFavorite',
   'exportScenes',
   'importPack',
@@ -226,7 +255,16 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'deleteScene':
     case 'toggleFavorite':
       return typeof command['id'] === 'number';
+    case 'switchPlaylist':
+      return typeof command['id'] === 'string';
+    case 'playlistAddScene':
+    case 'playlistRemoveScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['sceneId'] === 'number'
+      );
     case 'moveScene':
+    case 'moveFavorite':
       return (
         typeof command['from'] === 'number' &&
         typeof command['to'] === 'number'
@@ -270,7 +308,6 @@ export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
   track: { fileName: string | null; isPlaying: boolean; error?: string | null },
   presets: ScenePreset[],
-  favoriteIds: number[],
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
@@ -286,8 +323,15 @@ export function buildSnapshot(
         params: { ...(instance.params ?? {}) },
       })),
     })),
-    favoriteIds: [...favoriteIds],
-    sceneOrder: [...state.sceneOrder],
+    favoriteIds: [...selectActivePlaylist(state).favoriteIds],
+    sceneOrder: [...selectActivePlaylist(state).sceneIds],
+    playlists: state.playlists.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      sceneCount: entry.sceneIds.length,
+      deckCount: entry.favoriteIds.length,
+    })),
+    activePlaylistId: state.activePlaylistId,
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,

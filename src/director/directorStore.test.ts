@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { liveRefs, transitionRef, useDirectorStore } from './directorStore';
+import {
+  DECK_SIZE,
+  liveRefs,
+  selectActivePlaylist,
+  transitionRef,
+  useDirectorStore,
+} from './directorStore';
 
 describe('directorStore', () => {
   it('starts with safe defaults (strobe off)', () => {
@@ -42,6 +48,14 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.5);
     store.setHueShift(1.25);
     expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.25);
+  });
+
+  it('opens and closes the scene library', () => {
+    const store = useDirectorStore.getState();
+    store.setLibraryOpen(true);
+    expect(useDirectorStore.getState().libraryOpen).toBe(true);
+    store.setLibraryOpen(false);
+    expect(useDirectorStore.getState().libraryOpen).toBe(false);
   });
 
   it('zooms within limits and adjusts the selected mix', () => {    const store = useDirectorStore.getState();
@@ -173,6 +187,57 @@ describe('directorStore', () => {
     api.completeTour();
     expect(useDirectorStore.getState().tourOpen).toBe(false);
     expect(useDirectorStore.getState().tourSeen).toBe(true);
+  });
+
+  it('migrates legacy order into a Main playlist', () => {
+    const state = useDirectorStore.getState();
+    expect(state.playlists.length).toBeGreaterThan(0);
+    const active = selectActivePlaylist(state);
+    expect(active.sceneIds.length).toBeGreaterThan(0);
+    expect(active.favoriteIds.length).toBeLessThanOrEqual(DECK_SIZE);
+  });
+
+  it('caps the quick-access deck and reorders it', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Deck test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let scene = 0; scene < DECK_SIZE + 1; scene += 1) {
+      api.toggleFavorite(scene);
+    }
+    let deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
+    expect(deck).toHaveLength(DECK_SIZE);
+    expect(deck).not.toContain(DECK_SIZE);
+    api.moveFavorite(0, DECK_SIZE - 1);
+    deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
+    expect(deck[DECK_SIZE - 1]).toBe(0);
+    api.toggleFavorite(0);
+    deck = selectActivePlaylist(useDirectorStore.getState()).favoriteIds;
+    expect(deck).not.toContain(0);
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('manages playlist membership and execution order', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Order test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    api.addSceneToPlaylist(id, 0);
+    api.addSceneToPlaylist(id, 1);
+    api.addSceneToPlaylist(id, 0);
+    let scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
+    expect(scenes).toEqual([0, 1]);
+    api.movePlaylistScene(0, 1);
+    scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
+    expect(scenes).toEqual([1, 0]);
+    api.removeSceneFromPlaylist(id, 1);
+    scenes = selectActivePlaylist(useDirectorStore.getState()).sceneIds;
+    expect(scenes).toEqual([0]);
+    api.renamePlaylist(id, 'Renamed');
+    expect(selectActivePlaylist(useDirectorStore.getState()).name).toBe('Renamed');
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
   it('sets absolute mix, zoom and strobe values with clamps', () => {

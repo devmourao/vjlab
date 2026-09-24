@@ -116,6 +116,60 @@ describe('controlChannel', () => {
       isControlMessage({ type: 'command', command: { type: 'exportScenes' } }),
     ).toBe(true);
     expect(
+      isControlMessage({ type: 'command', command: { type: 'openLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'closeLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'showGuide' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'replayTour' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveFavorite', from: 0, to: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveFavorite', from: 0, to: 'far' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'switchPlaylist', id: 'main' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistRemoveScene', playlistId: 'main', sceneId: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'switchPlaylist', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 'two' },
+      }),
+    ).toBe(false);
+    expect(
       isControlMessage({
         type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },
@@ -193,17 +247,18 @@ describe('controlChannel', () => {
           instances: [{ base: 'particles' as const }],
         },
       ],
-      [0],
     );
     expect(snapshot.fileName).toBe('demo.mp3');
     expect(snapshot.isPlaying).toBe(true);
     expect(snapshot.presets).toHaveLength(1);
-    expect(snapshot.favoriteIds).toEqual([0]);
+    expect(snapshot.favoriteIds.length).toBeLessThanOrEqual(9);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(snapshot.audioError).toBeNull();
     expect(snapshot.queue).toEqual([]);
     expect(snapshot.mediaIndex).toBeNull();
     expect(Array.isArray(snapshot.sceneOrder)).toBe(true);
+    expect(snapshot.playlists.length).toBeGreaterThan(0);
+    expect(snapshot.activePlaylistId).toBe(snapshot.playlists[0].id);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });

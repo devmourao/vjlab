@@ -44,6 +44,7 @@ interface DirectorState {
   fxBypassed: boolean;
   aboutOpen: boolean;
   helpOpen: boolean;
+  libraryOpen: boolean;
   tourSeen: boolean;
   tourOpen: boolean;
   liteOn: boolean;
@@ -56,7 +57,8 @@ interface DirectorState {
   mediaQueue: Track[];
   mediaIndex: number | null;
   sceneOrder: number[];
-  favoriteIds: number[];
+  playlists: ScenePlaylist[];
+  activePlaylistId: string;
   panelMode: PanelMode;
   autoPilotOn: boolean;
   fractalShape: number;
@@ -84,7 +86,15 @@ interface DirectorState {
   reorderMedia: (from: number, to: number) => void;
   playMedia: (id: string) => void;
   reorderScenes: (from: number, to: number) => void;
+  movePlaylistScene: (from: number, to: number) => void;
   toggleFavorite: (id: number) => void;
+  moveFavorite: (from: number, to: number) => void;
+  createPlaylist: (name: string) => void;
+  renamePlaylist: (id: string, name: string) => void;
+  deletePlaylist: (id: string) => void;
+  setActivePlaylist: (id: string) => void;
+  addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
+  removeSceneFromPlaylist: (playlistId: string, sceneId: number) => void;
   cycleDuration: () => void;
   stepHue: () => void;
   setHueShift: (value: number) => void;
@@ -107,6 +117,7 @@ interface DirectorState {
   toggleAbout: () => void;
   toggleHelp: () => void;
   setHelpOpen: (open: boolean) => void;
+  setLibraryOpen: (open: boolean) => void;
   completeTour: () => void;
   replayTour: () => void;
   closeTour: () => void;
@@ -242,13 +253,142 @@ function readFavorites(): number[] {
   }
 }
 
-function writeFavorites(ids: number[]): void {
+/** Quick-access deck size: positions map to Digit1-Digit9. */
+export const DECK_SIZE = 9;
+
+export interface ScenePlaylist {
+  id: string;
+  name: string;
+  /** Execution order for Next/Prev/Cut and the console list. */
+  sceneIds: number[];
+  /** Ordered quick-access deck, capped at DECK_SIZE. */
+  favoriteIds: number[];
+}
+
+const PLAYLISTS_KEY = 'vjlab.playlists.v1';
+const ACTIVE_PLAYLIST_KEY = 'vjlab.activePlaylist.v1';
+
+function sanitizePlaylistIds(ids: unknown, valid: Set<number>): number[] {
+  if (!Array.isArray(ids)) return [];
+  const seen = new Set<number>();
+  for (const entry of ids) {
+    if (typeof entry === 'number' && valid.has(entry) && !seen.has(entry)) {
+      seen.add(entry);
+    }
+  }
+  return [...seen];
+}
+
+function writePlaylists(playlists: ScenePlaylist[], activeId: string): void {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return;
-    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
+    window.localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
+    window.localStorage.setItem(ACTIVE_PLAYLIST_KEY, activeId);
   } catch {
     // Ignore
   }
+}
+
+function readPlaylists(
+  custom: ScenePreset[],
+  legacyOrder: number[],
+  legacyFavorites: number[],
+): { playlists: ScenePlaylist[]; activeId: string } {
+  const valid = new Set(allPresets(custom).map((entry) => entry.id));
+  const fallback = (): { playlists: ScenePlaylist[]; activeId: string } => {
+    const main: ScenePlaylist = {
+      id: 'main',
+      name: 'Main',
+      sceneIds: legacyOrder.filter((id) => valid.has(id)),
+      favoriteIds: legacyFavorites.filter((id) => valid.has(id)).slice(0, DECK_SIZE),
+    };
+    if (main.sceneIds.length === 0) {
+      main.sceneIds = allPresets(custom).map((entry) => entry.id);
+    }
+    if (main.favoriteIds.length === 0) {
+      main.favoriteIds = main.sceneIds.slice(0, DECK_SIZE);
+    }
+    writePlaylists([main], main.id);
+    try {
+      window.localStorage.removeItem(SCENE_ORDER_KEY);
+      window.localStorage.removeItem(FAVORITES_KEY);
+    } catch {
+      // Ignore
+    }
+    return { playlists: [main], activeId: main.id };
+  };
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return fallback();
+    const raw = window.localStorage.getItem(PLAYLISTS_KEY);
+    if (!raw) return fallback();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) return fallback();
+    const playlists: ScenePlaylist[] = [];
+    for (const entry of parsed) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const record = entry as Record<string, unknown>;
+      if (typeof record['id'] !== 'string' || typeof record['name'] !== 'string') continue;
+      const sceneIds = sanitizePlaylistIds(record['sceneIds'], valid);
+      if (sceneIds.length === 0) continue;
+      playlists.push({
+        id: record['id'],
+        name: (record['name'] as string).slice(0, 40) || 'Untitled',
+        sceneIds,
+        favoriteIds: sanitizePlaylistIds(record['favoriteIds'], valid)
+          .filter((id) => sceneIds.includes(id))
+          .slice(0, DECK_SIZE),
+      });
+    }
+    if (playlists.length === 0) return fallback();
+    const storedActive = window.localStorage.getItem(ACTIVE_PLAYLIST_KEY);
+    const activeId = playlists.some((entry) => entry.id === storedActive)
+      ? (storedActive as string)
+      : playlists[0].id;
+    try {
+      window.localStorage.removeItem(SCENE_ORDER_KEY);
+      window.localStorage.removeItem(FAVORITES_KEY);
+    } catch {
+      // Ignore
+    }
+    return { playlists, activeId };
+  } catch {
+    return fallback();
+  }
+}
+
+/** Reactive active playlist for components. */
+export function useActivePlaylist(): ScenePlaylist {
+  const playlists = useDirectorStore((s) => s.playlists);
+  const activePlaylistId = useDirectorStore((s) => s.activePlaylistId);
+  const sceneOrder = useDirectorStore((s) => s.sceneOrder);
+  return selectActivePlaylist({ playlists, activePlaylistId, sceneOrder });
+}
+
+/** Execution order: active playlist scenes, library order as fallback. */
+export function playlistOrder(state: {
+  playlists: ScenePlaylist[];
+  activePlaylistId: string;
+  sceneOrder: number[];
+  customPresets: ScenePreset[];
+}): number[] {
+  const ids = selectActivePlaylist(state).sceneIds;
+  if (ids.length > 0) return ids;
+  return state.sceneOrder.length > 0
+    ? state.sceneOrder
+    : allPresets(state.customPresets).map((entry) => entry.id);
+}
+
+/** Active playlist with a synthesized fallback that never breaks callers. */
+export function selectActivePlaylist(state: {
+  playlists: ScenePlaylist[];
+  activePlaylistId: string;
+  sceneOrder: number[];
+}): ScenePlaylist {
+  const found = state.playlists.find((entry) => entry.id === state.activePlaylistId);
+  if (found) return found;
+  if (state.playlists.length > 0) return state.playlists[0];
+  const ids = [...state.sceneOrder];
+  return { id: 'main', name: 'Main', sceneIds: ids, favoriteIds: ids.slice(0, DECK_SIZE) };
 }
 
 const tourSeenInitial = readTourSeen();
@@ -257,8 +397,13 @@ const sceneOrderInitial = readSceneOrder(customPresetsInitial);
 const favoriteIdsInitial = (() => {
   const stored = readFavorites();
   if (stored.length > 0) return stored;
-  return sceneOrderInitial.slice(0, 6);
+  return sceneOrderInitial.slice(0, DECK_SIZE);
 })();
+const playlistsInitial = readPlaylists(
+  customPresetsInitial,
+  sceneOrderInitial,
+  favoriteIdsInitial,
+);
 
 export const useDirectorStore = create<DirectorState>((set, get) => ({
   strobeOn: false,
@@ -282,6 +427,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   fxBypassed: false,
   aboutOpen: false,
   helpOpen: false,
+  libraryOpen: false,
   tourSeen: tourSeenInitial,
   tourOpen: !tourSeenInitial,
   liteOn: false,
@@ -294,7 +440,8 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   mediaQueue: [],
   mediaIndex: null,
   sceneOrder: sceneOrderInitial,
-  favoriteIds: favoriteIdsInitial,
+  playlists: playlistsInitial.playlists,
+  activePlaylistId: playlistsInitial.activeId,
   panelMode: 'docked',
   autoPilotOn: true,
   fractalShape: 0,
@@ -325,14 +472,14 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     })),
   nextPreset: () =>
     set((state) => {
-      const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+      const order = playlistOrder(state);
       const index = order.indexOf(state.activePresetId);
       const next = order[(index + 1 + order.length) % order.length];
       return { activePresetId: next };
     }),
   prevPreset: () =>
     set((state) => {
-      const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+      const order = playlistOrder(state);
       const index = order.indexOf(state.activePresetId);
       const prev = order[(index - 1 + order.length) % order.length];
       return { activePresetId: prev };
@@ -351,7 +498,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const state = useDirectorStore.getState();
     transitionRef.active = false;
     transitionRef.swapped = false;
-    const order = state.sceneOrder.length > 0 ? state.sceneOrder : allPresets(state.customPresets).map((entry) => entry.id);
+    const order = playlistOrder(state);
     const index = order.indexOf(state.activePresetId);
     const next = order[(index + 1) % order.length];
     useDirectorStore.getState().setPreset(next);
@@ -365,7 +512,14 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writeCustomPresets(nextCustom);
     const nextOrder = [...state.sceneOrder, created.id];
     writeSceneOrder(nextOrder);
-    set({ customPresets: nextCustom, sceneOrder: nextOrder });
+    const active = selectActivePlaylist(state);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id
+        ? { ...entry, sceneIds: [...entry.sceneIds, created.id] }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ customPresets: nextCustom, sceneOrder: nextOrder, playlists: nextPlaylists });
     return created;
   },
   updateScene: (id, patch) => {
@@ -384,13 +538,17 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writeCustomPresets(nextCustom);
     const nextOrder = state.sceneOrder.filter((entry) => entry !== id);
     writeSceneOrder(nextOrder);
-    const nextFavorites = state.favoriteIds.filter((entry) => entry !== id);
-    if (nextFavorites.length !== state.favoriteIds.length) writeFavorites(nextFavorites);
+    const nextPlaylists = state.playlists.map((entry) => ({
+      ...entry,
+      sceneIds: entry.sceneIds.filter((scene) => scene !== id),
+      favoriteIds: entry.favoriteIds.filter((scene) => scene !== id),
+    }));
+    writePlaylists(nextPlaylists, state.activePlaylistId);
     const stillExists = findPreset(nextCustom, state.activePresetId);
     set({
       customPresets: nextCustom,
       sceneOrder: nextOrder,
-      favoriteIds: nextFavorites,
+      playlists: nextPlaylists,
       activePresetId: stillExists ? state.activePresetId : PRESETS[0].id,
     });
   },
@@ -424,9 +582,20 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     }
     if (accepted.length > 0) {
       writeCustomPresets(custom);
-      const nextOrder = [...get().sceneOrder, ...accepted.map((entry) => entry.id)];
+      const state = get();
+      const nextOrder = [...state.sceneOrder, ...accepted.map((entry) => entry.id)];
       writeSceneOrder(nextOrder);
-      set({ customPresets: custom, sceneOrder: nextOrder });
+      const active = selectActivePlaylist(state);
+      const nextPlaylists = state.playlists.map((entry) =>
+        entry.id === active.id
+          ? {
+              ...entry,
+              sceneIds: [...entry.sceneIds, ...accepted.map((scene) => scene.id)],
+            }
+          : entry,
+      );
+      writePlaylists(nextPlaylists, state.activePlaylistId);
+      set({ customPresets: custom, sceneOrder: nextOrder, playlists: nextPlaylists });
     }
     return { accepted, rejected, headerErrors: [] };
   },
@@ -500,14 +669,112 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       writeSceneOrder(order);
       return { sceneOrder: order };
     }),
-  toggleFavorite: (id) =>
-    set((state) => {
-      const next = state.favoriteIds.includes(id)
-        ? state.favoriteIds.filter((entry) => entry !== id)
-        : [...state.favoriteIds, id];
-      writeFavorites(next);
-      return { favoriteIds: next };
-    }),
+  movePlaylistScene: (from, to) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    const ids = [...active.sceneIds];
+    if (from < 0 || from >= ids.length || to < 0 || to >= ids.length) return;
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id ? { ...entry, sceneIds: ids } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  toggleFavorite: (id) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    let next: number[];
+    if (active.favoriteIds.includes(id)) {
+      next = active.favoriteIds.filter((entry) => entry !== id);
+    } else if (active.favoriteIds.length >= DECK_SIZE) {
+      return;
+    } else {
+      next = [...active.favoriteIds, id];
+    }
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id ? { ...entry, favoriteIds: next } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  moveFavorite: (from, to) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    const ids = [...active.favoriteIds];
+    if (from < 0 || from >= ids.length || to < 0 || to >= ids.length) return;
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id ? { ...entry, favoriteIds: ids } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  createPlaylist: (name) => {
+    const state = get();
+    const clean = name.trim().slice(0, 40) || 'Untitled';
+    const next: ScenePlaylist = {
+      id: `pl-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`,
+      name: clean,
+      sceneIds: [],
+      favoriteIds: [],
+    };
+    const nextPlaylists = [...state.playlists, next];
+    writePlaylists(nextPlaylists, next.id);
+    set({ playlists: nextPlaylists, activePlaylistId: next.id });
+  },
+  renamePlaylist: (id, name) => {
+    const state = get();
+    const clean = name.trim().slice(0, 40);
+    if (!clean) return;
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === id ? { ...entry, name: clean } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  deletePlaylist: (id) => {
+    const state = get();
+    if (state.playlists.length <= 1) return;
+    const nextPlaylists = state.playlists.filter((entry) => entry.id !== id);
+    if (nextPlaylists.length === state.playlists.length) return;
+    const nextActive = state.activePlaylistId === id ? nextPlaylists[0].id : state.activePlaylistId;
+    writePlaylists(nextPlaylists, nextActive);
+    set({ playlists: nextPlaylists, activePlaylistId: nextActive });
+  },
+  setActivePlaylist: (id) => {
+    const state = get();
+    if (!state.playlists.some((entry) => entry.id === id)) return;
+    writePlaylists(state.playlists, id);
+    set({ activePlaylistId: id });
+  },
+  addSceneToPlaylist: (playlistId, sceneId) => {
+    const state = get();
+    if (!findPreset(state.customPresets, sceneId)) return;
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === playlistId && !entry.sceneIds.includes(sceneId)
+        ? { ...entry, sceneIds: [...entry.sceneIds, sceneId] }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  removeSceneFromPlaylist: (playlistId, sceneId) => {
+    const state = get();
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === playlistId
+        ? {
+            ...entry,
+            sceneIds: entry.sceneIds.filter((scene) => scene !== sceneId),
+            favoriteIds: entry.favoriteIds.filter((scene) => scene !== sceneId),
+          }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
   cycleDuration: () =>
     set((s) => ({ transitionDuration: nextDuration(s.transitionDuration) })),
   stepHue: () => set((s) => ({ hueShift: (s.hueShift + 1 / 8) % 1 })),
@@ -540,6 +807,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   toggleAbout: () => set((s) => ({ aboutOpen: !s.aboutOpen })),
   toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),
   setHelpOpen: (open: boolean) => set({ helpOpen: open }),
+  setLibraryOpen: (open: boolean) => set({ libraryOpen: open }),
   completeTour: () => {
     writeTourSeen();
     set({ tourSeen: true, tourOpen: false });
@@ -686,7 +954,7 @@ export const transitionRef = {
 };
 
 export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [
-  { key: '1–6', action: 'Dissolve to preset' },
+  { key: '1–9', action: 'Dissolve deck slot (playlist favorites)' },
   { key: 'N / P', action: 'Dissolve next / previous in playlist' },
   { key: 'X', action: 'Hard cut to next preset' },
   { key: 'Y', action: 'Cycle transition duration' },
@@ -711,6 +979,7 @@ export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [
   { key: 'D', action: 'Detach controls to second screen (repeat to dock back)' },
   { key: 'G / F11', action: 'Toggle fullscreen output' },
   { key: 'A', action: 'Toggle auto-pilot tour' },
+  { key: 'M', action: 'Toggle scene library' },
   { key: 'Q / W', action: 'Fractal Z rotation +/− (when Fractal active)' },
   { key: '↑/↓ (Fractal)', action: 'Fractal next/prev shape (when Fractal active)' },
 ];

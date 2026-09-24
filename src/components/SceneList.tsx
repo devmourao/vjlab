@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useDirectorStore } from '../director/directorStore';
+import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { PresetBuilder } from './PresetBuilder';
@@ -53,7 +53,8 @@ export function SceneList({
   // Remote callers (second-screen popup) mirror the deck order instead of
   // the popup-local one, so both windows list scenes identically.
   const sceneOrder = orderOverride ?? storeOrder;
-  const storeFavorites = useDirectorStore((s) => s.favoriteIds);
+  const activePlaylist = useActivePlaylist();
+  const storeFavorites = activePlaylist.favoriteIds;
   const storePresets = useAllPresets();
   const all = items ?? storePresets;
   const ordered = sceneOrder
@@ -143,7 +144,6 @@ export function SceneList({
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
             </button>
-            {manage && (
             <div className="scene-item-actions">
               <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
                 ↑
@@ -159,7 +159,7 @@ export function SceneList({
               >
                 {favorites.has(preset.id) ? '★' : '☆'}
               </button>
-              {!isNative(preset.id) && (
+              {manage && !isNative(preset.id) && (
                 <>
                   <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
                     Edit
@@ -178,7 +178,6 @@ export function SceneList({
                 </>
               )}
             </div>
-            )}
           </li>
         ))}
       </ul>

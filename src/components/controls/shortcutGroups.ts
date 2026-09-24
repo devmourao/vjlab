@@ -1,8 +1,8 @@
 import { SHORTCUT_MAP } from '../../director/directorStore';
 
-export const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I']);
+export const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I', 'M']);
 export const PERFORM_KEYS = new Set([
-  '1–6',
+  '1–9',
   'N / P',
   'X',
   'Y',

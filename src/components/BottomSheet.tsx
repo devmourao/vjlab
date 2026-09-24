@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { toggleInterfaceVisibility } from '../director/controlChannel';
-import { useDirectorStore } from '../director/directorStore';
+import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
+import { PRESETS } from '../scenes/presets';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
+import { DeckStrip } from './controls/DeckStrip';
+import './controls/DeckStrip.css';
 import { DeskPanel } from './controls/DeskPanel';
 import { SceneTransport } from './controls/SceneTransport';
 import { GuideTeaser } from './GuideTeaser';
@@ -26,6 +29,12 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<SheetTab>('audio');
   const [size, setSize] = useState<SheetSize>('mini');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
+  const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const customPresets = useDirectorStore((s) => s.customPresets);
+  const playlist = useActivePlaylist();
+  const names = new Map(
+    [...PRESETS, ...customPresets].map((preset) => [preset.id, preset.name]),
+  );
 
   const cycleSize = () => {
     const next = SIZES[(SIZES.indexOf(size) + 1) % SIZES.length];
@@ -101,7 +110,24 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           {activeTab === 'audio' && <AudioPanel engine={engine} />}
           {activeTab === 'scenes' && (
             <>
-              <SceneList />
+              <DeckStrip
+                slots={playlist.favoriteIds.map((id) => ({
+                  id,
+                  name: names.get(id) ?? `#${id}`,
+                }))}
+                activeId={activePresetId}
+                onSelect={(id) => useDirectorStore.getState().requestDissolve(id)}
+                onMove={(from, to) => useDirectorStore.getState().moveFavorite(from, to)}
+              />
+              <SceneList
+                manage={false}
+                sceneOrder={playlist.sceneIds}
+                favoriteIds={playlist.favoriteIds}
+                ops={{
+                  onMove: (from, to) =>
+                    useDirectorStore.getState().movePlaylistScene(from, to),
+                }}
+              />
               <SceneTransport
                 durationLabel={`${transitionDuration.toFixed(1)}s`}
                 onPrev={() => useDirectorStore.getState().prevPreset()}
@@ -109,6 +135,13 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
                 onCut={() => useDirectorStore.getState().hardCutNext()}
                 onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
               />
+              <button
+                type="button"
+                className="kit-link"
+                onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
+              >
+                Manage scenes…
+              </button>
             </>
           )}
           {activeTab === 'fx' && <DeskPanel />}
