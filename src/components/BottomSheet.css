@@ -93,8 +93,7 @@
   padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
-.bottom-sheet .audio-panel,
-.bottom-sheet .shortcut-map {
+.bottom-sheet .audio-panel {
   position: static;
   max-width: none;
 }
@@ -120,11 +119,6 @@
 /* One pixel below --shell-bp-tablet. */
 @media (max-width: 767px) {
   .panel-toggle {
-    display: none;
-  }
-
-  .stage-container > .audio-panel,
-  .stage-container > .shortcut-map {
     display: none;
   }
 }

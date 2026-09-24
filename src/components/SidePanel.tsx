@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
+import { useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
+import { DeskPanel } from './controls/DeskPanel';
+import { SceneTransport } from './controls/SceneTransport';
 import { GuideTeaser } from './GuideTeaser';
 import { SceneList } from './SceneList';
-import { ShortcutMap } from './ShortcutMap';
 import './SidePanel.css';
 
 type PanelTab = 'track' | 'scenes' | 'fx' | 'guide';
@@ -22,6 +24,7 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
  */
 export function SidePanel({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<PanelTab>('track');
+  const transitionDuration = useDirectorStore((s) => s.transitionDuration);
 
   return (
     <div className="side-panel" data-testid="side-panel">
@@ -42,8 +45,19 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
       </div>
       <div className="side-content" data-testid="side-content">
         {activeTab === 'track' && <AudioPanel engine={engine} />}
-        {activeTab === 'scenes' && <SceneList />}
-        {activeTab === 'fx' && <ShortcutMap />}
+        {activeTab === 'scenes' && (
+          <>
+            <SceneList />
+            <SceneTransport
+              durationLabel={`${transitionDuration.toFixed(1)}s`}
+              onPrev={() => useDirectorStore.getState().prevPreset()}
+              onNext={() => useDirectorStore.getState().nextPreset()}
+              onCut={() => useDirectorStore.getState().hardCutNext()}
+              onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+            />
+          </>
+        )}
+        {activeTab === 'fx' && <DeskPanel />}
         {activeTab === 'guide' && <GuideTeaser />}
       </div>
     </div>

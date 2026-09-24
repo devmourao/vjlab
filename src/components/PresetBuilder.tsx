@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Canvas } from '@react-three/fiber';
 import { useDirectorStore } from '../director/directorStore';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
-import type { BaseId, BaseInstance } from '../scenes/presets';
+import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
 import { draftToPreset } from '../scenes/presetDraft';
-import { SceneInstances } from '../scenes/SceneInstances';
 import { InstanceParamFields } from './InstanceParamFields';
+import { PreviewStage } from './PreviewStage';
 import './PresetBuilder.css';
 
 const BASE_OPTIONS: BaseId[] = ['particles', 'mesh', 'tunnel', 'fractal'];
@@ -29,7 +28,13 @@ function defaultParamsFor(base: BaseId): Record<string, unknown> {
  * isolated mini stage, tweak schema knobs, then save as a custom scene.
  * The preview never writes to the store — saving is explicit.
  */
-export function PresetBuilder({ onClose }: { onClose: () => void }) {
+export function PresetBuilder({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave?: (draft: Omit<ScenePreset, 'id'>) => void;
+}) {
   const [name, setName] = useState('Built Scene');
   const [primary, setPrimary] = useState('#22d3ee');
   const [emissive, setEmissive] = useState('#0e7490');
@@ -55,9 +60,13 @@ export function PresetBuilder({ onClose }: { onClose: () => void }) {
       setError(result.error);
       return;
     }
-    const store = useDirectorStore.getState();
-    const created = store.createScene(result.preset);
-    store.setPreset(created.id);
+    if (onSave) {
+      onSave(result.preset);
+    } else {
+      const store = useDirectorStore.getState();
+      const created = store.createScene(result.preset);
+      store.setPreset(created.id);
+    }
     onClose();
   };
 
@@ -96,23 +105,13 @@ export function PresetBuilder({ onClose }: { onClose: () => void }) {
 
         <section aria-label="Live preview">
           <h3>2 · Preview</h3>
-          <div className="builder-preview" data-testid="builder-preview">
-            <Canvas dpr={1} camera={{ position: [0, 0, 6] }}>
-              <color attach="background" args={[background]} />
-              <ambientLight intensity={1} />
-              <SceneInstances
-                groupKey="builder-draft"
-                instances={instances}
-                palette={{ primary, emissive }}
-                gain={gain}
-                speed={speed}
-                getMapUrl={(_base, index) => {
-                  const map = instances[index]?.params?.['map'];
-                  return typeof map === 'string' && map.length > 0 ? map : null;
-                }}
-              />
-            </Canvas>
-          </div>
+          <PreviewStage
+            instances={instances}
+            palette={{ primary, emissive }}
+            background={background}
+            gain={gain}
+            speed={speed}
+          />
         </section>
 
         <section aria-label="Assemble">

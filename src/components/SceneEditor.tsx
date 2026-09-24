@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
 import { InstanceParamFields } from './InstanceParamFields';
+import { PreviewStage } from './PreviewStage';
 import { useDirectorStore } from '../director/directorStore';
 import './SceneEditor.css';
 
 interface SceneEditorProps {
   preset?: ScenePreset | null;
   onClose: () => void;
+  onSave?: (draft: Omit<ScenePreset, 'id'>, editingId: number | null) => void;
 }
 
 const BASE_OPTIONS: BaseId[] = ['particles', 'mesh', 'tunnel', 'fractal'];
@@ -30,7 +32,7 @@ function defaultParamsFor(base: BaseId): Record<string, unknown> {
   return { ...host, ...baseParams };
 }
 
-export function SceneEditor({ preset, onClose }: SceneEditorProps) {
+export function SceneEditor({ preset, onClose, onSave }: SceneEditorProps) {
   const isEdit = Boolean(preset);
   const [name, setName] = useState(preset?.name ?? 'New Scene');
   const [primary, setPrimary] = useState(preset?.palette.primary ?? '#ffffff');
@@ -58,7 +60,6 @@ export function SceneEditor({ preset, onClose }: SceneEditorProps) {
       setError('Add at least one base');
       return;
     }
-    const store = useDirectorStore.getState();
     const payload: Omit<ScenePreset, 'id'> = {
       name: name.trim(),
       palette: { primary, emissive },
@@ -68,11 +69,16 @@ export function SceneEditor({ preset, onClose }: SceneEditorProps) {
       scene: 0 as const,
       instances,
     };
-    if (isEdit && preset) {
-      store.updateScene(preset.id, payload);
+    if (onSave) {
+      onSave(payload, isEdit && preset ? preset.id : null);
     } else {
-      const created = store.createScene(payload);
-      store.setPreset(created.id);
+      const store = useDirectorStore.getState();
+      if (isEdit && preset) {
+        store.updateScene(preset.id, payload);
+      } else {
+        const created = store.createScene(payload);
+        store.setPreset(created.id);
+      }
     }
     onClose();
   };
@@ -100,6 +106,13 @@ export function SceneEditor({ preset, onClose }: SceneEditorProps) {
             Close
           </button>
         </div>
+        <PreviewStage
+          instances={instances}
+          palette={{ primary, emissive }}
+          background={background}
+          gain={gain}
+          speed={speed}
+        />
 
         <label className="scene-editor-field">
           <span>Name</span>

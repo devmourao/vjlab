@@ -4,9 +4,10 @@ import { toggleInterfaceVisibility } from '../director/controlChannel';
 import { useDirectorStore } from '../director/directorStore';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
+import { DeskPanel } from './controls/DeskPanel';
+import { SceneTransport } from './controls/SceneTransport';
 import { GuideTeaser } from './GuideTeaser';
 import { SceneList } from './SceneList';
-import { ShortcutMap } from './ShortcutMap';
 
 type SheetTab = 'audio' | 'scenes' | 'fx' | 'guide';
 type SheetSize = 'mini' | 'half' | 'expanded';
@@ -24,6 +25,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
   const panelMode = useDirectorStore((s) => s.panelMode);
   const [activeTab, setActiveTab] = useState<SheetTab>('audio');
   const [size, setSize] = useState<SheetSize>('mini');
+  const transitionDuration = useDirectorStore((s) => s.transitionDuration);
 
   const cycleSize = () => {
     const next = SIZES[(SIZES.indexOf(size) + 1) % SIZES.length];
@@ -42,7 +44,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
           type="button"
           className="sheet-restore"
           data-testid="sheet-restore"
-          onClick={() => useDirectorStore.getState().setPanelMode('docked')}
+          onClick={toggleInterfaceVisibility}
         >
           Show UI
         </button>
@@ -97,8 +99,19 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
       {size !== 'mini' && (
         <div className="sheet-content" data-testid="sheet-content">
           {activeTab === 'audio' && <AudioPanel engine={engine} />}
-          {activeTab === 'scenes' && <SceneList />}
-          {activeTab === 'fx' && <ShortcutMap />}
+          {activeTab === 'scenes' && (
+            <>
+              <SceneList />
+              <SceneTransport
+                durationLabel={`${transitionDuration.toFixed(1)}s`}
+                onPrev={() => useDirectorStore.getState().prevPreset()}
+                onNext={() => useDirectorStore.getState().nextPreset()}
+                onCut={() => useDirectorStore.getState().hardCutNext()}
+                onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+              />
+            </>
+          )}
+          {activeTab === 'fx' && <DeskPanel />}
           {activeTab === 'guide' && <GuideTeaser />}
         </div>
       )}

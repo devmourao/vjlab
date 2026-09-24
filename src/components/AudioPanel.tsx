@@ -26,8 +26,14 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const instanceMaps = useDirectorStore((s) => s.instanceMaps);
   const meshTextureStatus = useDirectorStore((s) => s.meshTextureStatus);
+  // Single uploads join the queue so every playback path stays in sync.
+  // Playback starts here, inside the user gesture autoplay policies require.
   const onFile = (file: File) => {
-    engine.loadFile(file);
+    const store = useDirectorStore.getState();
+    const [created] = store.addMediaTracks([file]);
+    if (!created) return;
+    store.playMedia(created.id);
+    if (created.url) engine.loadUrl(created.url, created.name);
   };
   const track = useMemo(
     () => (engine.fileName ? createTrack(engine.fileName) : null),

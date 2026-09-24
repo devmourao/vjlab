@@ -17,6 +17,7 @@ import { TransitionOverlay } from '../components/TransitionOverlay';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
+  closeControlsPopup,
   isControlMessage,
   type ControlCommand,
 } from '../director/controlChannel';
@@ -27,7 +28,12 @@ import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import { PLAYLIST, PRESETS, getPreset } from '../scenes/presets';
+import {
+  PLAYLIST,
+  PRESETS,
+  getPreset,
+  type BaseInstance,
+} from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -55,6 +61,9 @@ function executeControlCommand(
       break;
     case 'stepHue':
       store.stepHue();
+      break;
+    case 'setHue':
+      store.setHueShift(command.value);
       break;
     case 'zoomIn':
       store.zoomIn();
@@ -115,17 +124,51 @@ function executeControlCommand(
     case 'killAll':
       store.killAll();
       break;
-    case 'setPanelMode':
-      if ((PANEL_MODES as readonly string[]).includes(command.mode)) {
-        store.setPanelMode(command.mode);
+    case 'setPanelMode': {
+      if (!(PANEL_MODES as readonly string[]).includes(command.mode)) break;
+      const wasDetached = store.panelMode === 'detached';
+      store.setPanelMode(command.mode);
+      // A popup that docks the deck would orphan itself: follow it home.
+      if (wasDetached && command.mode !== 'detached') closeControlsPopup();
+      break;
+    }
+    case 'cyclePanelMode': {
+      const wasDetached = store.panelMode === 'detached';
+      store.cyclePanelMode();
+      if (
+        wasDetached &&
+        useDirectorStore.getState().panelMode !== 'detached'
+      ) {
+        closeControlsPopup();
       }
       break;
-    case 'cyclePanelMode':
-      store.cyclePanelMode();
-      break;
+    }
     case 'togglePlayback':
       void engine.toggle();
       break;
+    case 'playQueueTrack': {
+      const track = store.mediaQueue.find((entry) => entry.id === command.id);
+      if (!track) break;
+      store.playMedia(command.id);
+      if (track.url) engine.loadUrl(track.url, track.name);
+      break;
+    }
+    case 'removeQueueTrack':
+      store.removeMediaTrack(command.id);
+      break;
+    case 'moveQueueTrack':
+      store.reorderMedia(command.from, command.to);
+      break;
+    case 'uploadTrack': {
+      // ArrayBuffer clones reliably across same-origin windows; the main
+      // deck owns the resulting object URL, so playback stays local.
+      const file = new File([command.data], command.name, {
+        type: command.mime,
+      });
+      const [created] = store.addMediaTracks([file]);
+      if (created) store.playMedia(created.id);
+      break;
+    }
     case 'setOverlayText':
       store.setOverlayText(command.text);
       break;
@@ -140,6 +183,62 @@ function executeControlCommand(
     case 'setStrobeHz':
       store.setStrobeRate(command.value);
       break;
+    case 'createScene':
+      store.createScene({
+        name: command.draft.name,
+        palette: { ...command.draft.palette },
+        background: command.draft.background,
+        gain: command.draft.gain,
+        speed: command.draft.speed,
+        scene: 0 as const,
+        instances: command.draft.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'updateScene':
+      store.updateScene(command.id, {
+        name: command.patch.name,
+        palette: { ...command.patch.palette },
+        background: command.patch.background,
+        gain: command.patch.gain,
+        speed: command.patch.speed,
+        instances: command.patch.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'deleteScene':
+      store.deleteScene(command.id);
+      break;
+    case 'moveScene':
+      store.reorderScenes(command.from, command.to);
+      break;
+    case 'toggleFavorite':
+      store.toggleFavorite(command.id);
+      break;
+    case 'exportScenes':
+      store.exportCustomScenes();
+      break;
+    case 'importPack': {
+      const result = store.importScenes(command.pack);
+      try {
+        const channel = new BroadcastChannel(CONTROL_CHANNEL);
+        channel.postMessage({
+          kind: 'importResult',
+          result: {
+            accepted: result.accepted.map((entry) => entry.name),
+            rejected: result.rejected,
+          },
+        });
+        channel.close();
+      } catch {
+        // The popup refreshes from snapshots regardless.
+      }
+      break;
+    }
   }
 }
 
@@ -164,10 +263,13 @@ function DeckPage() {
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.
+  // Snapshots are throttled: slider drags fire dozens of store updates
+  // per second, and each snapshot clones the preset list. The popup
+  // echoes drags locally, so it stays smooth on a trailing snapshot.
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(CONTROL_CHANNEL);
-    const sendSnapshot = () => {
+    const postSnapshot = () => {
       try {
         const current = engineRef.current;
         const state = useDirectorStore.getState();
@@ -175,13 +277,39 @@ function DeckPage() {
           kind: 'snapshot',
           snapshot: buildSnapshot(
             state,
-            { fileName: current.fileName, isPlaying: current.isPlaying },
-            [...PRESETS, ...state.customPresets].length,
+            {
+              fileName: current.fileName,
+              isPlaying: current.isPlaying,
+              error: current.error,
+            },
+            [...PRESETS, ...state.customPresets],
+            state.favoriteIds,
           ),
         });
       } catch {
         // A closed popup must never break the deck.
       }
+    };
+    let lastSent = 0;
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const sendSnapshot = () => {
+      const now = Date.now();
+      const elapsed = now - lastSent;
+      if (elapsed >= 66) {
+        lastSent = now;
+        if (pending) {
+          clearTimeout(pending);
+          pending = null;
+        }
+        postSnapshot();
+        return;
+      }
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = null;
+        lastSent = Date.now();
+        postSnapshot();
+      }, 66 - elapsed);
     };
     channel.onmessage = (event: MessageEvent) => {
       const message = event.data;
@@ -197,6 +325,7 @@ function DeckPage() {
     sendSnapshot();
     return () => {
       unsubscribe();
+      if (pending) clearTimeout(pending);
       channel.close();
     };
   }, []);

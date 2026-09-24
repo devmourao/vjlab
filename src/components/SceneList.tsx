@@ -15,26 +15,70 @@ function useAllPresets() {
   return [...PRESETS, ...customPresets];
 }
 
-export function SceneList() {
-  const activePresetId = useDirectorStore((s) => s.activePresetId);
-  const sceneOrder = useDirectorStore((s) => s.sceneOrder);
-  const favoriteIds = useDirectorStore((s) => s.favoriteIds);
-  const all = useAllPresets();
+export interface SceneListOps {
+  onRemove?: (id: number) => void;
+  onMove?: (from: number, to: number) => void;
+  onToggleFavorite?: (id: number) => void;
+  onExport?: () => void;
+  onImport?: (file: File) => void;
+  onSaveDraft?: (
+    draft: Omit<ScenePreset, 'id'>,
+    editingId: number | null,
+  ) => void;
+  importReport?: string | null;
+}
+
+export function SceneList({
+  items,
+  favoriteIds: favoriteOverride,
+  sceneOrder: orderOverride,
+  activeId: activeOverride,
+  onSelect,
+  manage = true,
+  ops = {},
+}: {
+  items?: ScenePreset[];
+  favoriteIds?: number[];
+  sceneOrder?: number[];
+  activeId?: number;
+  onSelect?: (id: number) => void;
+  manage?: boolean;
+  ops?: SceneListOps;
+} = {}) {
+  const storeActive = useDirectorStore((s) => s.activePresetId);
+  // Remote callers mirror the deck's active scene instead of the
+  // popup-local one, so the highlight follows the stage.
+  const activePresetId = activeOverride ?? storeActive;
+  const storeOrder = useDirectorStore((s) => s.sceneOrder);
+  // Remote callers (second-screen popup) mirror the deck order instead of
+  // the popup-local one, so both windows list scenes identically.
+  const sceneOrder = orderOverride ?? storeOrder;
+  const storeFavorites = useDirectorStore((s) => s.favoriteIds);
+  const storePresets = useAllPresets();
+  const all = items ?? storePresets;
   const ordered = sceneOrder
     .map((id) => all.find((preset) => preset.id === id))
     .filter((entry): entry is ScenePreset => Boolean(entry));
   const missing = all.filter((preset) => !sceneOrder.includes(preset.id));
   const presets = [...ordered, ...missing];
-  const favorites = new Set(favoriteIds);
+  const favorites = new Set(favoriteOverride ?? storeFavorites);
+  const select =
+    onSelect ?? ((id: number) => useDirectorStore.getState().requestDissolve(id));
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
+  const remoteSave = ops.onSaveDraft ?? null;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
 
   const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (ops.onImport) {
+      ops.onImport(file);
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -55,6 +99,7 @@ export function SceneList() {
 
   return (
     <div className="scene-library" data-testid="scene-library">
+      {manage && (
       <div className="scene-library-actions">
         <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
           Builder
@@ -62,7 +107,15 @@ export function SceneList() {
         <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
           Create
         </button>
-        <button type="button" onClick={() => useDirectorStore.getState().exportCustomScenes()} data-testid="export-scenes">
+        <button
+          type="button"
+          onClick={() =>
+            ops.onExport
+              ? ops.onExport()
+              : useDirectorStore.getState().exportCustomScenes()
+          }
+          data-testid="export-scenes"
+        >
           Export
         </button>
         <label className="scene-import">
@@ -70,7 +123,8 @@ export function SceneList() {
           <input ref={fileRef} type="file" accept="application/json" onChange={onImport} hidden />
         </label>
       </div>
-      {report && <p className="scene-report" data-testid="import-report">{report}</p>}
+      )}
+      {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
         {presets.map((preset, index) => (
           <li key={preset.id} className="scene-row">
@@ -78,7 +132,7 @@ export function SceneList() {
               type="button"
               className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
               data-testid={`scene-button-${preset.id}`}
-              onClick={() => useDirectorStore.getState().requestDissolve(preset.id)}
+              onClick={() => select(preset.id)}
             >
               <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
               <strong>{preset.name}</strong>
@@ -88,20 +142,18 @@ export function SceneList() {
                 </span>
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
-              <span className="scene-sub">
-                {preset.gain.toFixed(1)}x · {preset.speed.toFixed(1)}x
-              </span>
             </button>
+            {manage && (
             <div className="scene-item-actions">
-              <button type="button" disabled={index === 0} onClick={() => useDirectorStore.getState().reorderScenes(index, index - 1)} data-testid={`up-scene-${preset.id}`}>
+              <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
                 ↑
               </button>
-              <button type="button" disabled={index === presets.length - 1} onClick={() => useDirectorStore.getState().reorderScenes(index, index + 1)} data-testid={`down-scene-${preset.id}`}>
+              <button type="button" disabled={index === presets.length - 1} onClick={() => (ops.onMove ? ops.onMove(index, index + 1) : useDirectorStore.getState().reorderScenes(index, index + 1))} data-testid={`down-scene-${preset.id}`}>
                 ↓
               </button>
               <button
                 type="button"
-                onClick={() => useDirectorStore.getState().toggleFavorite(preset.id)}
+                onClick={() => (ops.onToggleFavorite ? ops.onToggleFavorite(preset.id) : useDirectorStore.getState().toggleFavorite(preset.id))}
                 data-testid={`fav-scene-${preset.id}`}
                 title={favorites.has(preset.id) ? 'Unfavorite' : 'Favorite'}
               >
@@ -114,7 +166,11 @@ export function SceneList() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => useDirectorStore.getState().deleteScene(preset.id)}
+                    onClick={() =>
+                      ops.onRemove
+                        ? ops.onRemove(preset.id)
+                        : useDirectorStore.getState().deleteScene(preset.id)
+                    }
                     data-testid={`delete-scene-${preset.id}`}
                   >
                     Delete
@@ -122,13 +178,37 @@ export function SceneList() {
                 </>
               )}
             </div>
+            )}
           </li>
         ))}
       </ul>
-      {editing !== undefined && (
-        <SceneEditor preset={editing ?? undefined} onClose={() => setEditing(undefined)} />
+      {manage && editing !== undefined && (
+        <SceneEditor
+          preset={editing ?? undefined}
+          onClose={() => setEditing(undefined)}
+          onSave={
+            remoteSave
+              ? (draft, editingId) =>
+                  remoteSave({ ...draft, instances: draft.instances ?? [] }, editingId)
+              : undefined
+          }
+        />
       )}
-      {building && <PresetBuilder onClose={() => setBuilding(false)} />}
+      {manage && building && (
+        <PresetBuilder
+          onClose={() => setBuilding(false)}
+          onSave={
+            remoteSave
+              ? (draft) => remoteSave({ ...draft, instances: draft.instances ?? [] }, null)
+              : undefined
+          }
+        />
+      )}
+      {manage && ops.importReport && (
+        <p className="scene-report" data-testid="import-report-remote">
+          {ops.importReport}
+        </p>
+      )}
     </div>
   );
 }
