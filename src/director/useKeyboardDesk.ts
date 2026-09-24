@@ -33,10 +33,14 @@ export function useKeyboardDesk() {
         case 'Digit3':
         case 'Digit4':
         case 'Digit5':
-        case 'Digit6': {
+        case 'Digit6':
+        case 'Digit7':
+        case 'Digit8':
+        case 'Digit9': {
           const index = Number(event.code.slice(5)) - 1;
-          const fav = selectActivePlaylist(store).favoriteIds[index];
-          const ordered = store.sceneOrder[index];
+          const playlist = selectActivePlaylist(store);
+          const fav = playlist.favoriteIds[index];
+          const ordered = playlist.sceneIds[index];
           const fallback = index;
           const target = fav ?? ordered ?? fallback;
           store.requestDissolve(target);
