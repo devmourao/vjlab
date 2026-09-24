@@ -202,9 +202,12 @@ export default function ControlsPage() {
                 }),
               )}
               favoriteIds={snapshot.favoriteIds}
+              sceneOrder={snapshot.sceneOrder}
               onSelect={(id) => send({ type: 'dissolve', id })}
               ops={{
                 onRemove: (id) => send({ type: 'deleteScene', id }),
+                onMove: (from, to) => send({ type: 'moveScene', from, to }),
+                onToggleFavorite: (id) => send({ type: 'toggleFavorite', id }),
                 onExport: () => send({ type: 'exportScenes' }),
                 onImport: (file) => {
                   const reader = new FileReader();

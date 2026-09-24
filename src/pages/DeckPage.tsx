@@ -210,6 +210,12 @@ function executeControlCommand(
     case 'deleteScene':
       store.deleteScene(command.id);
       break;
+    case 'moveScene':
+      store.reorderScenes(command.from, command.to);
+      break;
+    case 'toggleFavorite':
+      store.toggleFavorite(command.id);
+      break;
     case 'exportScenes':
       store.exportCustomScenes();
       break;

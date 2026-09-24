@@ -52,6 +52,8 @@ export type ControlCommand =
   | { type: 'createScene'; draft: SceneDraftPayload }
   | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
   | { type: 'deleteScene'; id: number }
+  | { type: 'moveScene'; from: number; to: number }
+  | { type: 'toggleFavorite'; id: number }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -78,6 +80,7 @@ export interface ControlSnapshot {
   activePresetId: number;
   presets: SnapshotPreset[];
   favoriteIds: number[];
+  sceneOrder: number[];
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -151,6 +154,8 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'createScene',
   'updateScene',
   'deleteScene',
+  'moveScene',
+  'toggleFavorite',
   'exportScenes',
   'importPack',
 ]);
@@ -216,7 +221,13 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
         typeof command['id'] === 'number' && isSceneDraft(command['patch'])
       );
     case 'deleteScene':
+    case 'toggleFavorite':
       return typeof command['id'] === 'number';
+    case 'moveScene':
+      return (
+        typeof command['from'] === 'number' &&
+        typeof command['to'] === 'number'
+      );
     case 'exportScenes':
       return true;
     case 'importPack':
@@ -273,6 +284,7 @@ export function buildSnapshot(
       })),
     })),
     favoriteIds: [...favoriteIds],
+    sceneOrder: [...state.sceneOrder],
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,

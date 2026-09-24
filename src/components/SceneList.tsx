@@ -17,6 +17,8 @@ function useAllPresets() {
 
 export interface SceneListOps {
   onRemove?: (id: number) => void;
+  onMove?: (from: number, to: number) => void;
+  onToggleFavorite?: (id: number) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -29,18 +31,23 @@ export interface SceneListOps {
 export function SceneList({
   items,
   favoriteIds: favoriteOverride,
+  sceneOrder: orderOverride,
   onSelect,
   manage = true,
   ops = {},
 }: {
   items?: ScenePreset[];
   favoriteIds?: number[];
+  sceneOrder?: number[];
   onSelect?: (id: number) => void;
   manage?: boolean;
   ops?: SceneListOps;
 } = {}) {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
-  const sceneOrder = useDirectorStore((s) => s.sceneOrder);
+  const storeOrder = useDirectorStore((s) => s.sceneOrder);
+  // Remote callers (second-screen popup) mirror the deck order instead of
+  // the popup-local one, so both windows list scenes identically.
+  const sceneOrder = orderOverride ?? storeOrder;
   const storeFavorites = useDirectorStore((s) => s.favoriteIds);
   const storePresets = useAllPresets();
   const all = items ?? storePresets;
@@ -133,15 +140,15 @@ export function SceneList({
             </button>
             {manage && (
             <div className="scene-item-actions">
-              <button type="button" disabled={index === 0} onClick={() => useDirectorStore.getState().reorderScenes(index, index - 1)} data-testid={`up-scene-${preset.id}`}>
+              <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
                 ↑
               </button>
-              <button type="button" disabled={index === presets.length - 1} onClick={() => useDirectorStore.getState().reorderScenes(index, index + 1)} data-testid={`down-scene-${preset.id}`}>
+              <button type="button" disabled={index === presets.length - 1} onClick={() => (ops.onMove ? ops.onMove(index, index + 1) : useDirectorStore.getState().reorderScenes(index, index + 1))} data-testid={`down-scene-${preset.id}`}>
                 ↓
               </button>
               <button
                 type="button"
-                onClick={() => useDirectorStore.getState().toggleFavorite(preset.id)}
+                onClick={() => (ops.onToggleFavorite ? ops.onToggleFavorite(preset.id) : useDirectorStore.getState().toggleFavorite(preset.id))}
                 data-testid={`fav-scene-${preset.id}`}
                 title={favorites.has(preset.id) ? 'Unfavorite' : 'Favorite'}
               >

@@ -106,6 +106,30 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'moveScene', from: 1, to: 0 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'toggleFavorite', id: 3 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'moveScene', from: 1, to: 'top' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'toggleFavorite', id: 'three' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'playQueueTrack', id: 'track-1' },
       }),
     ).toBe(true);
@@ -167,6 +191,7 @@ describe('controlChannel', () => {
     expect(snapshot.audioError).toBeNull();
     expect(snapshot.queue).toEqual([]);
     expect(snapshot.mediaIndex).toBeNull();
+    expect(Array.isArray(snapshot.sceneOrder)).toBe(true);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });
