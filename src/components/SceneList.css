@@ -7,11 +7,18 @@
   list-style: none;
 }
 
+.scene-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .scene-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -20,6 +27,14 @@
   color: #fff;
   cursor: pointer;
   text-align: left;
+}
+
+.scene-item > strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .scene-item.active {
@@ -79,25 +94,28 @@
   margin: 0;
 }
 
-.scene-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .scene-item-actions {
   display: flex;
-  gap: 6px;
-  justify-content: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .scene-item-actions button {
+  min-width: 36px;
   min-height: 44px;
-  padding: 8px 14px;
+  padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   font-size: 12px;
   cursor: pointer;
+}
+
+/* Narrow panels keep one row per scene: the native badge is redundant
+   there (custom scenes already show Edit/Delete actions). */
+@media (max-width: 560px) {
+  .scene-badge-native {
+    display: none;
+  }
 }
