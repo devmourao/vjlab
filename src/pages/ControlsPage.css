@@ -11,17 +11,29 @@
   margin: 0 auto;
 }
 
-/* Wide second screens share the same sections in columns. */
-@media (min-width: 1024px) {
+/* Second-screen stages: the same sections reflow from one column
+   (phone / narrow popup) to two (tablet / half screen) to three
+   (full second screen). Canonical order reads left to right. */
+@media (min-width: 700px) {
   .controls-page {
-    max-width: 1200px;
+    max-width: 980px;
   }
 
   .controls-sections {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 24px;
+    gap: 0 20px;
     align-items: start;
+  }
+}
+
+@media (min-width: 1200px) {
+  .controls-page {
+    max-width: 1440px;
+  }
+
+  .controls-sections {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 }
 
