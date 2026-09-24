@@ -14,6 +14,7 @@ import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
 import { RemoteQueue } from '../components/controls/RemoteQueue';
+import { ShortcutReference } from '../components/controls/ShortcutReference';
 import { SceneTransport } from '../components/controls/SceneTransport';
 import { StrobeControl } from '../components/controls/StrobeControl';
 import '../components/controls/ControlsKit.css';
@@ -338,6 +339,11 @@ export default function ControlsPage() {
                 Kill all
               </button>
             </div>
+          </section>
+
+          <section className="controls-section" aria-label="Guide">
+            <h2>Guide</h2>
+            <ShortcutReference note="Shortcuts run on the main deck window. The interactive first-run tour lives there too — open the deck Guide tab to replay it." />
           </section>
           <div className="controls-end" aria-hidden />
         </div>

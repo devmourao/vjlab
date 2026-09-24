@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { SHORTCUT_MAP, useDirectorStore } from '../director/directorStore';
+import { useDirectorStore } from '../director/directorStore';
+import {
+  EFFECTS_KEYS,
+  PERFORM_KEYS,
+  START_KEYS,
+  rowsFor,
+} from './controls/shortcutGroups';
 import './GuideDrawer.css';
 
 type GuideTab = 'start' | 'perform' | 'effects' | 'tips';
@@ -10,37 +16,6 @@ const TABS: Array<{ id: GuideTab; label: string }> = [
   { id: 'effects', label: 'Effects' },
   { id: 'tips', label: 'Tips' },
 ];
-
-const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I']);
-const PERFORM_KEYS = new Set([
-  '1–6',
-  'N / P',
-  'X',
-  'Y',
-  'T',
-  'B',
-  'Arrows',
-  '+ / -',
-  'Q / W',
-  '↑/↓ (Fractal)',
-]);
-const EFFECTS_KEYS = new Set([
-  'H',
-  'E / ]',
-  'R / F',
-  ', / .',
-  'Space',
-  'O',
-  'V',
-  'C',
-  'J',
-  '0',
-  'S',
-]);
-
-function rowsFor(keys: Set<string>) {
-  return SHORTCUT_MAP.filter((row) => keys.has(row.key));
-}
 
 export function GuideDrawer() {
   const helpOpen = useDirectorStore((s) => s.helpOpen);
