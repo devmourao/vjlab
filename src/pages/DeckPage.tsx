@@ -22,19 +22,18 @@ import {
   isControlMessage,
   type ControlCommand,
 } from '../director/controlChannel';
-import { useDirectorStore, type PanelMode } from '../director/directorStore';
+import {
+  useActivePlaylist,
+  useDirectorStore,
+  type PanelMode,
+} from '../director/directorStore';
 import { useAutoPilot } from '../director/useAutoPilot';
 import { useKeyboardDesk } from '../director/useKeyboardDesk';
 import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import {
-  PLAYLIST,
-  PRESETS,
-  getPreset,
-  type BaseInstance,
-} from '../scenes/presets';
+import { PRESETS, getPreset, type BaseInstance } from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -280,7 +279,12 @@ function DeckPage() {
   const preset =
     allPresets.find((entry) => entry.id === activePresetId) ??
     getPreset(activePresetId);
-  const orderIndex = allPresets.findIndex((entry) => entry.id === activePresetId);
+  const playlist = useActivePlaylist();
+  const execOrder =
+    playlist.sceneIds.length > 0
+      ? playlist.sceneIds
+      : allPresets.map((entry) => entry.id);
+  const orderIndex = execOrder.indexOf(activePresetId);
   const engineRef = useRef(engine);
   useEffect(() => {
     engineRef.current = engine;
@@ -381,7 +385,7 @@ function DeckPage() {
         <PlayerBar engine={engine} />
       )}
       <div className="scene-badge" data-testid="scene-name">
-        {preset.name} · {orderIndex + 1}/{allPresets.length} · playlist {PLAYLIST.length}
+        {preset.name} · {orderIndex + 1}/{execOrder.length} · {playlist.name}
         {liteOn ? ' · LITE' : ''}
         {panelMode !== 'docked' ? ` · ${panelMode.toUpperCase()}` : ''}
         {autoPilotOn ? ' · AUTO' : ''}
