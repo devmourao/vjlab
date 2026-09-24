@@ -32,6 +32,7 @@ export function SceneList({
   items,
   favoriteIds: favoriteOverride,
   sceneOrder: orderOverride,
+  activeId: activeOverride,
   onSelect,
   manage = true,
   ops = {},
@@ -39,11 +40,15 @@ export function SceneList({
   items?: ScenePreset[];
   favoriteIds?: number[];
   sceneOrder?: number[];
+  activeId?: number;
   onSelect?: (id: number) => void;
   manage?: boolean;
   ops?: SceneListOps;
 } = {}) {
-  const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const storeActive = useDirectorStore((s) => s.activePresetId);
+  // Remote callers mirror the deck's active scene instead of the
+  // popup-local one, so the highlight follows the stage.
+  const activePresetId = activeOverride ?? storeActive;
   const storeOrder = useDirectorStore((s) => s.sceneOrder);
   // Remote callers (second-screen popup) mirror the deck order instead of
   // the popup-local one, so both windows list scenes identically.

@@ -206,6 +206,7 @@ export default function ControlsPage() {
               )}
               favoriteIds={snapshot.favoriteIds}
               sceneOrder={snapshot.sceneOrder}
+              activeId={snapshot.activePresetId}
               onSelect={(id) => send({ type: 'dissolve', id })}
               ops={{
                 onRemove: (id) => send({ type: 'deleteScene', id }),
