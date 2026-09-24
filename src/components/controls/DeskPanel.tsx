@@ -95,10 +95,12 @@ export function DeskPanel() {
           selected={selectedFx}
           onSelect={(slot: FxSlot) => store.selectFxSlot(slot)}
           onMix={(slot: FxSlot, value: number) => store.setFxMix(slot, value)}
-        />
-        <HueSlider
-          value={hueShift}
-          onChange={(value) => store.setHueShift(value)}
+          trailing={
+            <HueSlider
+              value={hueShift}
+              onChange={(value) => store.setHueShift(value)}
+            />
+          }
         />
         <div className="kit-row">
           <button type="button" onClick={() => store.fireBurst()}>

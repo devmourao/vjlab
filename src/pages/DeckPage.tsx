@@ -263,10 +263,13 @@ function DeckPage() {
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.
+  // Snapshots are throttled: slider drags fire dozens of store updates
+  // per second, and each snapshot clones the preset list. The popup
+  // echoes drags locally, so it stays smooth on a trailing snapshot.
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(CONTROL_CHANNEL);
-    const sendSnapshot = () => {
+    const postSnapshot = () => {
       try {
         const current = engineRef.current;
         const state = useDirectorStore.getState();
@@ -287,6 +290,27 @@ function DeckPage() {
         // A closed popup must never break the deck.
       }
     };
+    let lastSent = 0;
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const sendSnapshot = () => {
+      const now = Date.now();
+      const elapsed = now - lastSent;
+      if (elapsed >= 66) {
+        lastSent = now;
+        if (pending) {
+          clearTimeout(pending);
+          pending = null;
+        }
+        postSnapshot();
+        return;
+      }
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = null;
+        lastSent = Date.now();
+        postSnapshot();
+      }, 66 - elapsed);
+    };
     channel.onmessage = (event: MessageEvent) => {
       const message = event.data;
       if (!isControlMessage(message)) return;
@@ -301,6 +325,7 @@ function DeckPage() {
     sendSnapshot();
     return () => {
       unsubscribe();
+      if (pending) clearTimeout(pending);
       channel.close();
     };
   }, []);

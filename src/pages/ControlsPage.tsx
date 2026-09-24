@@ -287,10 +287,12 @@ export default function ControlsPage() {
               onMix={(slot: FxSlot, value: number) =>
                 send({ type: 'setMix', slot, value })
               }
-            />
-            <HueSlider
-              value={snapshot.hueShift}
-              onChange={(value) => send({ type: 'setHue', value })}
+              trailing={
+                <HueSlider
+                  value={snapshot.hueShift}
+                  onChange={(value) => send({ type: 'setHue', value })}
+                />
+              }
             />
             <div className="controls-row">
               <button type="button" onClick={() => send({ type: 'fireBurst' })}>
