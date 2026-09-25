@@ -67,3 +67,12 @@ edit the registry, then sync this file.
 | axis.z.plus | KeyQ | Stage | Q / W |
 | axis.z.minus | KeyW | Stage | Q / W |
 | dialogs.close | Escape | System | — |
+
+## Gamepad
+
+Standard-layout buttons fire the same action ids; no defaults ship
+(explicit opt-in from the Library Keys tab). Bindings persist in
+`vjlab.padBindings.v1`. Indices follow the W3C standard mapping:
+0 Bottom, 1 Right, 2 Left, 3 Top, 4 LB, 5 RB, 6 LT, 7 RT, 8 Select,
+9 Start, 10 L3, 11 R3, 12–15 Up/Down/Left/Right, 16 Center. Axes stay
+reserved for a continuous-controls pass.

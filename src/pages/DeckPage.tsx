@@ -16,6 +16,7 @@ import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
 import { ACTIONS } from '../director/actionRegistry';
+import { useGamepadPoll } from '../director/gamepad';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
@@ -283,6 +284,11 @@ function DeckPage() {
   const engine = useAudioEngine();
   useKeyboardDesk();
   useAutoPilot();
+  useGamepadPoll((index) => {
+    const state = useDirectorStore.getState();
+    const action = ACTIONS.find((entry) => state.padBindings[entry.id] === index);
+    action?.run();
+  });
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const customPresets = useDirectorStore((s) => s.customPresets);
   const liteOn = useDirectorStore((s) => s.liteOn);

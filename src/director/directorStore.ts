@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { createTrack, type Track } from '../audio/track';
 import { readBindings, writeBindings, type Bindings } from './bindings';
+import {
+  readPadBindings,
+  writePadBindings,
+  type PadBindings,
+} from './gamepad';
 import { exportScenesPack, validatePack } from '../packs/packFormat';
 import { PRESETS, type ScenePreset } from '../scenes/presets';
 import {
@@ -123,6 +128,10 @@ interface DirectorState {
   bindings: Bindings;
   setBinding: (id: string, code: string) => void;
   resetBindings: () => void;
+  padBindings: PadBindings;
+  setPadBinding: (id: string, button: number) => void;
+  clearPadBinding: (id: string) => void;
+  resetPadBindings: () => void;
   /** Console section order; JSON array, sync-ready for a future backend. */
   sectionOrder: string[];
   moveSection: (from: number, to: number) => void;
@@ -516,6 +525,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   helpOpen: false,
   libraryOpen: false,
   bindings: readBindings(),
+  padBindings: readPadBindings(),
   sectionOrder: readSectionOrder(),
   tourSeen: tourSeenInitial,
   tourOpen: !tourSeenInitial,
@@ -955,6 +965,24 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writeBindings({});
     set({ bindings: {} });
   },
+  setPadBinding: (id, button) =>
+    set((state) => {
+      const next = { ...state.padBindings, [id]: button };
+      writePadBindings(next);
+      return { padBindings: next };
+    }),
+  resetPadBindings: () => {
+    writePadBindings({});
+    set({ padBindings: {} });
+  },
+  clearPadBinding: (id) =>
+    set((state) => {
+      if (!(id in state.padBindings)) return {};
+      const next = { ...state.padBindings };
+      delete next[id];
+      writePadBindings(next);
+      return { padBindings: next };
+    }),
   moveSection: (from, to) =>
     set((state) => {
       const order = moveOrderItem(state.sectionOrder, from, to);
