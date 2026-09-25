@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createTrack } from '../audio/track';
 import {
   DECK_SIZE,
   liveRefs,
@@ -287,6 +288,24 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().activeEntryKey).toBe(keys[0]);
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('steps the media queue without wrapping at the ends', () => {
+    const api = useDirectorStore.getState();
+    useDirectorStore.setState({
+      mediaQueue: [createTrack('a'), createTrack('b'), createTrack('c')],
+      mediaIndex: 1,
+    });
+    expect(api.stepMedia(1)?.name).toBe('c');
+    expect(useDirectorStore.getState().mediaIndex).toBe(2);
+    // No wrap-around: stepping past the last track is a no-op.
+    expect(api.stepMedia(1)).toBeNull();
+    expect(useDirectorStore.getState().mediaIndex).toBe(2);
+    expect(api.stepMedia(-1)?.name).toBe('b');
+    expect(api.stepMedia(-1)?.name).toBe('a');
+    expect(api.stepMedia(-1)).toBeNull();
+    expect(useDirectorStore.getState().mediaIndex).toBe(0);
+    useDirectorStore.setState({ mediaQueue: [], mediaIndex: null });
   });
 
   it('sets absolute mix, zoom and strobe values with clamps', () => {

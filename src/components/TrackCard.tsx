@@ -11,10 +11,16 @@ interface TrackCardProps {
   queueLabel?: string | null;
   position?: number;
   duration?: number;
+  canPrev?: boolean;
+  canNext?: boolean;
   onTogglePlayback?: () => void;
+  // Upload affordance for the hero (empty-state) variant only: queue
+  // sections own their Add buttons everywhere else.
   onLoadFile?: (file: File) => void;
   onSeek?: (seconds: number) => void;
   onSkip?: (delta: number) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
 export function TrackCard({
@@ -24,10 +30,14 @@ export function TrackCard({
   queueLabel,
   position,
   duration,
+  canPrev,
+  canNext,
   onTogglePlayback,
   onLoadFile,
   onSeek,
   onSkip,
+  onPrev,
+  onNext,
 }: TrackCardProps) {
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,31 +61,20 @@ export function TrackCard({
           {track ? (isPlaying ? 'Playing' : 'Paused') : 'Local files only'}
         </span>
       </div>
-      <div className="track-actions">
-        {track && onTogglePlayback && (
-          <button
-            type="button"
-            className="track-button"
-            data-testid="track-toggle"
-            onClick={onTogglePlayback}
-          >
-            {isPlaying ? 'Pause' : 'Play'}
-          </button>
-        )}
-        {onLoadFile && (
-          <label className="track-button upload">
-            Add
-            <input
-              type="file"
-              accept=".mp3,audio/*"
-              onChange={onFile}
-              hidden
-            />
-          </label>
-        )}
-      </div>
-      {hasTimeline && (
-        <div className="track-timeline">
+      {track && (
+        <div className="track-actions">
+          {onPrev && (
+            <button
+              type="button"
+              className="track-button"
+              data-testid="track-prev"
+              aria-label="Previous track"
+              disabled={!canPrev}
+              onClick={onPrev}
+            >
+              ⏮
+            </button>
+          )}
           {onSkip && (
             <button
               type="button"
@@ -86,6 +85,55 @@ export function TrackCard({
               −10s
             </button>
           )}
+          {onTogglePlayback && (
+            <button
+              type="button"
+              className="track-button"
+              data-testid="track-toggle"
+              onClick={onTogglePlayback}
+            >
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+          )}
+          {onSkip && (
+            <button
+              type="button"
+              className="track-button small"
+              aria-label="Forward 10 seconds"
+              onClick={() => onSkip(10)}
+            >
+              +10s
+            </button>
+          )}
+          {onNext && (
+            <button
+              type="button"
+              className="track-button"
+              data-testid="track-next"
+              aria-label="Next track"
+              disabled={!canNext}
+              onClick={onNext}
+            >
+              ⏭
+            </button>
+          )}
+        </div>
+      )}
+      {!track && onLoadFile && (
+        <div className="track-actions">
+          <label className="track-button upload">
+            Add
+            <input
+              type="file"
+              accept=".mp3,audio/*"
+              onChange={onFile}
+              hidden
+            />
+          </label>
+        </div>
+      )}
+      {hasTimeline && (
+        <div className="track-timeline">
           <span className="track-time">{formatTrackTime(position)}</span>
           {onSeek && (
             <input
@@ -100,16 +148,6 @@ export function TrackCard({
             />
           )}
           <span className="track-time">{formatTrackTime(duration)}</span>
-          {onSkip && (
-            <button
-              type="button"
-              className="track-button small"
-              aria-label="Forward 10 seconds"
-              onClick={() => onSkip(10)}
-            >
-              +10s
-            </button>
-          )}
         </div>
       )}
     </div>

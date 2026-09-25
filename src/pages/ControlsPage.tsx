@@ -182,9 +182,28 @@ export default function ControlsPage() {
               variant="status"
               position={snapshot.position}
               duration={snapshot.duration}
+              canPrev={snapshot.mediaIndex !== null && snapshot.mediaIndex > 0}
+              canNext={
+                snapshot.mediaIndex !== null &&
+                snapshot.mediaIndex < snapshot.queue.length - 1
+              }
               onTogglePlayback={() => send({ type: 'togglePlayback' })}
               onSeek={(value) => send({ type: 'seekTrack', value })}
               onSkip={(delta) => send({ type: 'skipTrack', delta })}
+              onPrev={() => {
+                const target =
+                  snapshot.mediaIndex === null
+                    ? undefined
+                    : snapshot.queue[snapshot.mediaIndex - 1];
+                if (target) send({ type: 'playQueueTrack', id: target.id });
+              }}
+              onNext={() => {
+                const target =
+                  snapshot.mediaIndex === null
+                    ? undefined
+                    : snapshot.queue[snapshot.mediaIndex + 1];
+                if (target) send({ type: 'playQueueTrack', id: target.id });
+              }}
             />
                   {snapshot.audioError ? (
                     <p className="controls-error" data-testid="controls-audio-error">
@@ -197,27 +216,17 @@ export default function ControlsPage() {
                     onPlay={(id) => send({ type: 'playQueueTrack', id })}
                     onMove={(from, to) => send({ type: 'moveQueueTrack', from, to })}
                     onRemove={(id) => send({ type: 'removeQueueTrack', id })}
+                    onAdd={(file) => {
+                      void file.arrayBuffer().then((data) =>
+                        send({
+                          type: 'uploadTrack',
+                          name: file.name,
+                          mime: file.type || 'audio/mpeg',
+                          data,
+                        }),
+                      );
+                    }}
                   />
-                  <label className="controls-upload">
-                    <span>Add audio to queue</span>
-                    <input
-                      type="file"
-                      accept=".mp3,audio/*"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        void file.arrayBuffer().then((data) =>
-                          send({
-                            type: 'uploadTrack',
-                            name: file.name,
-                            mime: file.type || 'audio/mpeg',
-                            data,
-                          }),
-                        );
-                        event.target.value = '';
-                      }}
-                    />
-                  </label>
                   <p className="controls-hint">
                     Files sent here join the deck queue; if silent, press Play.
                   </p>

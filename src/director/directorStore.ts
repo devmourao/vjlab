@@ -93,6 +93,7 @@ interface DirectorState {
   removeMediaTrack: (id: string) => void;
   reorderMedia: (from: number, to: number) => void;
   playMedia: (id: string) => void;
+  stepMedia: (delta: 1 | -1) => Track | null;
   reorderScenes: (from: number, to: number) => void;
   movePlaylistScene: (from: number, to: number) => void;
   pinScene: (key: string) => void;
@@ -796,6 +797,17 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       if (index === -1) return {};
       return { mediaIndex: index };
     }),
+  // Queue transport step without wrap-around: out-of-range steps are
+  // no-ops so live VJs never jump from last to first by accident.
+  stepMedia: (delta) => {
+    const { mediaQueue, mediaIndex } = get();
+    if (mediaIndex === null) return null;
+    const target = mediaIndex + delta;
+    const track = mediaQueue[target];
+    if (!track) return null;
+    set({ mediaIndex: target });
+    return track;
+  },
   reorderScenes: (from, to) =>
     set((state) => {
       const order = [...state.sceneOrder];

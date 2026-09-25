@@ -86,6 +86,11 @@
   color: #000;
 }
 
+.track-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .track-card.hero .track-timeline {
   width: 100%;
 }

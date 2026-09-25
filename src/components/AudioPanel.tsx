@@ -25,14 +25,13 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const instanceMaps = useDirectorStore((s) => s.instanceMaps);
   const meshTextureStatus = useDirectorStore((s) => s.meshTextureStatus);
-  // Single uploads join the queue so every playback path stays in sync.
-  // Playback starts here, inside the user gesture autoplay policies require.
-  const onFile = (file: File) => {
-    const store = useDirectorStore.getState();
-    const [created] = store.addMediaTracks([file]);
-    if (!created) return;
-    store.playMedia(created.id);
-    if (created.url) engine.loadUrl(created.url, created.name);
+  const mediaQueue = useDirectorStore((s) => s.mediaQueue);
+  const mediaIndex = useDirectorStore((s) => s.mediaIndex);
+  // Queue transport: stepping loads the target track URL into the engine.
+  // Uploads live in MediaQueue below, not in the player card.
+  const stepTrack = (delta: 1 | -1) => {
+    const next = useDirectorStore.getState().stepMedia(delta);
+    if (next?.url) engine.loadUrl(next.url, next.name);
   };
   const track = useMemo(
     () => (engine.fileName ? createTrack(engine.fileName) : null),
@@ -86,10 +85,13 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
         variant="row"
         position={engine.position}
         duration={engine.duration}
+        canPrev={mediaIndex !== null && mediaIndex > 0}
+        canNext={mediaIndex !== null && mediaIndex < mediaQueue.length - 1}
         onTogglePlayback={() => void engine.toggle()}
-        onLoadFile={onFile}
         onSeek={(seconds) => engine.seekTo(seconds)}
         onSkip={(delta) => engine.skipBy(delta)}
+        onPrev={() => stepTrack(-1)}
+        onNext={() => stepTrack(1)}
       />
       <MediaQueue engine={engine} />
       {engine.error ? <p className="audio-error">{engine.error}</p> : null}
