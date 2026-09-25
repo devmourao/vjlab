@@ -54,6 +54,8 @@ export type ControlCommand =
   | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
   | { type: 'playlistRemoveScene'; playlistId: string; key: string }
   | { type: 'togglePlayback' }
+  | { type: 'seekTrack'; value: number }
+  | { type: 'skipTrack'; delta: number }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
   | { type: 'moveQueueTrack'; from: number; to: number }
@@ -128,6 +130,8 @@ export interface ControlSnapshot {
   fileName: string | null;
   isPlaying: boolean;
   audioError: string | null;
+  position: number;
+  duration: number;
   queue: Array<{ id: string; name: string }>;
   mediaIndex: number | null;
 }
@@ -181,6 +185,8 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'playlistAddScene',
   'playlistRemoveScene',
   'togglePlayback',
+  'seekTrack',
+  'skipTrack',
   'playQueueTrack',
   'removeQueueTrack',
   'moveQueueTrack',
@@ -249,7 +255,10 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'setZoom':
     case 'setStrobeHz':
     case 'setHue':
+    case 'seekTrack':
       return typeof command['value'] === 'number';
+    case 'skipTrack':
+      return typeof command['delta'] === 'number';
     case 'uploadTrack':
       return (
         typeof command['name'] === 'string' &&
@@ -324,7 +333,13 @@ export function isControlMessage(value: unknown): value is ControlMessage {
 
 export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
-  track: { fileName: string | null; isPlaying: boolean; error?: string | null },
+  track: {
+    fileName: string | null;
+    isPlaying: boolean;
+    error?: string | null;
+    position?: number;
+    duration?: number;
+  },
   presets: ScenePreset[],
 ): ControlSnapshot {
   return {
@@ -382,6 +397,8 @@ export function buildSnapshot(
     fileName: track.fileName,
     isPlaying: track.isPlaying,
     audioError: track.error ?? null,
+    position: track.position ?? 0,
+    duration: track.duration ?? 0,
     queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
     mediaIndex: state.mediaIndex,
   };

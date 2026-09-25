@@ -45,6 +45,7 @@ export function DeskPanel() {
   const colorSaturation = useDirectorStore((s) => s.colorSaturation);
   const colorContrast = useDirectorStore((s) => s.colorContrast);
   const hueShift = useDirectorStore((s) => s.hueShift);
+  const overlayText = useDirectorStore((s) => s.overlayText);
   const zoomTarget = useDirectorStore((s) => s.zoomTarget);
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const customPresets = useDirectorStore((s) => s.customPresets);
@@ -164,15 +165,29 @@ export function DeskPanel() {
           )}
           {sectionId === 'overlay' && (
             <>
+              <label className="kit-field">
+                <span>Overlay text (T)</span>
+                <input
+                  type="text"
+                  maxLength={60}
+                  value={overlayText}
+                  placeholder="VJ LAB"
+                  onChange={(event) => store.setOverlayText(event.target.value)}
+                />
+              </label>
               <div className="kit-row">
                 <button type="button" onClick={() => store.fireText()}>
                   Fire text
                 </button>
-                <button type="button" onClick={() => store.killAll()}>
-                  Kill all
-                </button>
               </div>
-              <p className="kit-note">Overlay text lives in the Track tab.</p>
+              <button
+                type="button"
+                className="kit-panic"
+                title="Reset every effect instantly (S)"
+                onClick={() => store.killAll()}
+              >
+                Kill all
+              </button>
             </>
           )}
         </section>

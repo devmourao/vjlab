@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import type { Track } from '../audio/track';
+import { formatTrackTime, type Track } from '../audio/track';
 import './TrackCard.css';
 
 export type TrackCardVariant = 'hero' | 'row' | 'status';
@@ -9,8 +9,12 @@ interface TrackCardProps {
   isPlaying: boolean;
   variant: TrackCardVariant;
   queueLabel?: string | null;
+  position?: number;
+  duration?: number;
   onTogglePlayback?: () => void;
   onLoadFile?: (file: File) => void;
+  onSeek?: (seconds: number) => void;
+  onSkip?: (delta: number) => void;
 }
 
 export function TrackCard({
@@ -18,14 +22,23 @@ export function TrackCard({
   isPlaying,
   variant,
   queueLabel,
+  position,
+  duration,
   onTogglePlayback,
   onLoadFile,
+  onSeek,
+  onSkip,
 }: TrackCardProps) {
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && onLoadFile) onLoadFile(file);
     event.target.value = '';
   };
+  const hasTimeline =
+    track !== null &&
+    position !== undefined &&
+    duration !== undefined &&
+    duration > 0;
 
   return (
     <div className={`track-card ${variant}`} data-testid="track-card">
@@ -51,7 +64,7 @@ export function TrackCard({
         )}
         {onLoadFile && (
           <label className="track-button upload">
-            {track ? 'Change' : 'Load track'}
+            Add
             <input
               type="file"
               accept=".mp3,audio/*"
@@ -61,6 +74,44 @@ export function TrackCard({
           </label>
         )}
       </div>
+      {hasTimeline && (
+        <div className="track-timeline">
+          {onSkip && (
+            <button
+              type="button"
+              className="track-button small"
+              aria-label="Back 10 seconds"
+              onClick={() => onSkip(-10)}
+            >
+              −10s
+            </button>
+          )}
+          <span className="track-time">{formatTrackTime(position)}</span>
+          {onSeek && (
+            <input
+              type="range"
+              className="track-scrub"
+              min={0}
+              max={duration}
+              step={0.1}
+              value={Math.min(position, duration)}
+              aria-label="Seek in track"
+              onChange={(event) => onSeek(Number(event.target.value))}
+            />
+          )}
+          <span className="track-time">{formatTrackTime(duration)}</span>
+          {onSkip && (
+            <button
+              type="button"
+              className="track-button small"
+              aria-label="Forward 10 seconds"
+              onClick={() => onSkip(10)}
+            >
+              +10s
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

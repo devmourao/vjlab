@@ -176,12 +176,16 @@ export default function ControlsPage() {
               </div>
               {sectionId === 'track' && (
                 <>
-                  <TrackCard
-                    track={track}
-                    isPlaying={snapshot.isPlaying}
-                    variant="status"
-                    onTogglePlayback={() => send({ type: 'togglePlayback' })}
-                  />
+            <TrackCard
+              track={track}
+              isPlaying={snapshot.isPlaying}
+              variant="status"
+              position={snapshot.position}
+              duration={snapshot.duration}
+              onTogglePlayback={() => send({ type: 'togglePlayback' })}
+              onSeek={(value) => send({ type: 'seekTrack', value })}
+              onSkip={(delta) => send({ type: 'skipTrack', delta })}
+            />
                   {snapshot.audioError ? (
                     <p className="controls-error" data-testid="controls-audio-error">
                       {snapshot.audioError}
@@ -195,7 +199,7 @@ export default function ControlsPage() {
                     onRemove={(id) => send({ type: 'removeQueueTrack', id })}
                   />
                   <label className="controls-upload">
-                    <span>Load audio here</span>
+                    <span>Add audio to queue</span>
                     <input
                       type="file"
                       accept=".mp3,audio/*"
@@ -345,7 +349,7 @@ export default function ControlsPage() {
               {sectionId === 'overlay' && (
                 <>
                   <label className="controls-overlay stacked">
-                    <span>Overlay text</span>
+                    <span>Overlay text (T)</span>
                     <input
                       type="text"
                       maxLength={60}
@@ -357,10 +361,15 @@ export default function ControlsPage() {
                     <button type="button" onClick={() => send({ type: 'fireText' })}>
                       Fire text
                     </button>
-                    <button type="button" onClick={() => send({ type: 'killAll' })}>
-                      Kill all
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    className="controls-panic"
+                    title="Reset every effect instantly (S)"
+                    onClick={() => send({ type: 'killAll' })}
+                  >
+                    Kill all
+                  </button>
                 </>
               )}
               {sectionId === 'guide' && (

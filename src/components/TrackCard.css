@@ -80,3 +80,30 @@
   border-color: transparent;
   color: #000;
 }
+
+.track-timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.track-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.track-scrub {
+  flex: 1;
+  min-width: 0;
+  accent-color: #22d3ee;
+  cursor: pointer;
+}
+
+.track-button.small {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 12px;
+}

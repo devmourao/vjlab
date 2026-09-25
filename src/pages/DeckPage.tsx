@@ -184,6 +184,12 @@ function executeControlCommand(
     case 'togglePlayback':
       void engine.toggle();
       break;
+    case 'seekTrack':
+      engine.seekTo(command.value);
+      break;
+    case 'skipTrack':
+      engine.skipBy(command.delta);
+      break;
     case 'playQueueTrack': {
       const track = store.mediaQueue.find((entry) => entry.id === command.id);
       if (!track) break;
@@ -331,6 +337,8 @@ function DeckPage() {
               fileName: current.fileName,
               isPlaying: current.isPlaying,
               error: current.error,
+              position: current.position,
+              duration: current.duration,
             },
             [...PRESETS, ...state.customPresets],
           ),

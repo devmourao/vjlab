@@ -22,7 +22,6 @@ function activeMeshKeys(): string[] {
 }
 
 export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
-  const overlayText = useDirectorStore((s) => s.overlayText);
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const instanceMaps = useDirectorStore((s) => s.instanceMaps);
   const meshTextureStatus = useDirectorStore((s) => s.meshTextureStatus);
@@ -85,8 +84,12 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
         track={track}
         isPlaying={engine.isPlaying}
         variant="row"
+        position={engine.position}
+        duration={engine.duration}
         onTogglePlayback={() => void engine.toggle()}
         onLoadFile={onFile}
+        onSeek={(seconds) => engine.seekTo(seconds)}
+        onSkip={(delta) => engine.skipBy(delta)}
       />
       <MediaQueue engine={engine} />
       {engine.error ? <p className="audio-error">{engine.error}</p> : null}
@@ -118,18 +121,6 @@ export function AudioPanel({ engine }: { engine: AudioEngineApi }) {
             ) : null}
           </>
         )}
-      </label>
-      <label className="audio-panel-row">
-        <span>Overlay (T)</span>
-        <input
-          type="text"
-          maxLength={60}
-          value={overlayText}
-          placeholder="VJ LAB"
-          onChange={(event) =>
-            useDirectorStore.getState().setOverlayText(event.target.value)
-          }
-        />
       </label>
       <div className="spectrum-bars" data-testid="spectrum-bars">
         <div className="spectrum-row">
