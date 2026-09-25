@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { OWNER_META, SITE_META } from '../config/siteMeta';
-import { SHORTCUT_MAP } from '../director/directorStore';
+import { deriveShortcutMap } from '../director/actionRegistry';
 import { PRESETS } from '../scenes/presets';
 import './LandingPage.css';
 
-const TEASER_SHORTCUTS = SHORTCUT_MAP.slice(0, 6);
+const TEASER_SHORTCUTS = deriveShortcutMap().slice(0, 6);
 
 export default function LandingPage() {
   return (

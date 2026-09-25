@@ -1,4 +1,9 @@
-import { SHORTCUT_MAP } from '../../director/directorStore';
+import {
+  deriveShortcutMap,
+  type GuideRow,
+} from '../../director/actionRegistry';
+
+const SHORTCUT_MAP: GuideRow[] = deriveShortcutMap();
 
 export const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I', 'M']);
 export const PERFORM_KEYS = new Set([
