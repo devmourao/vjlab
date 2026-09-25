@@ -7,7 +7,6 @@ import {
   selectActivePlaylist,
   useDirectorStore,
 } from './directorStore';
-import { PRESETS } from '../scenes/presets';
 
 const CAMERA_STEP = 0.12;
 const FRACTAL_PRESET_ID = 5;
@@ -47,18 +46,7 @@ function dissolveAt(index: number): void {
   else store.requestDissolve(index);
 }
 
-function playlistOrLibrary(): number[] {
-  const store = useDirectorStore.getState();
-  const all = [...PRESETS, ...store.customPresets];
-  return all.map((preset) => preset.id);
-}
 
-function stepPlaylist(direction: 1 | -1): void {
-  const store = useDirectorStore.getState();
-  const ids = playlistOrLibrary();
-  const index = ids.findIndex((id) => id === store.activePresetId);
-  store.requestDissolve(ids[(index + direction + ids.length) % ids.length]);
-}
 
 function fractalActive(): boolean {
   return useDirectorStore.getState().activePresetId === FRACTAL_PRESET_ID;
@@ -91,8 +79,8 @@ export const ACTIONS: ActionDef[] = [
   { id: 'deck.slot.8.pad', label: 'Dissolve deck position 8', category: 'Deck', code: 'Numpad8', run: () => dissolveAt(7) },
   { id: 'deck.slot.9.pad', label: 'Dissolve deck position 9', category: 'Deck', code: 'Numpad9', run: () => dissolveAt(8) },
   { id: 'deck.slot.10.pad', label: 'Dissolve deck position 10', category: 'Deck', code: 'Numpad0', run: () => dissolveAt(9) },
-  { id: 'scene.next', label: 'Dissolve next in playlist', category: 'Scenes', code: 'KeyN', guide: 'N / P', run: () => stepPlaylist(1) },
-  { id: 'scene.prev', label: 'Dissolve previous in playlist', category: 'Scenes', code: 'KeyP', guide: 'N / P', run: () => stepPlaylist(-1) },
+  { id: 'scene.next', label: 'Dissolve next in playlist', category: 'Scenes', code: 'KeyN', guide: 'N / P', run: () => useDirectorStore.getState().nextPreset() },
+  { id: 'scene.prev', label: 'Dissolve previous in playlist', category: 'Scenes', code: 'KeyP', guide: 'N / P', run: () => useDirectorStore.getState().prevPreset() },
   { id: 'scene.cut', label: 'Hard cut to next preset', category: 'Scenes', code: 'KeyX', guide: 'X', run: () => useDirectorStore.getState().hardCutNext() },
   { id: 'scene.duration', label: 'Cycle transition duration', category: 'Scenes', code: 'KeyY', guide: 'Y', run: () => useDirectorStore.getState().cycleDuration() },
   { id: 'overlay.fire', label: 'Fire text overlay', category: 'Overlay', code: 'KeyT', guide: 'T', run: () => useDirectorStore.getState().fireText() },

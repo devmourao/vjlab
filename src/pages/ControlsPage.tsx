@@ -237,6 +237,20 @@ export default function ControlsPage() {
                       ))}
                     </select>
                   </label>
+                  <div className="scene-sticky">
+                    <SceneTransport
+                      durationLabel={`${snapshot.transitionDuration.toFixed(1)}s`}
+                      onPrev={() => send({ type: 'prevPreset' })}
+                      onNext={() => send({ type: 'nextPreset' })}
+                      onCut={() => send({ type: 'hardCut' })}
+                      onCycleDuration={() => send({ type: 'cycleDuration' })}
+                    />
+                    <div className="controls-row">
+                      <button type="button" onClick={() => send({ type: 'openLibrary' })}>
+                        Manage scenes…
+                      </button>
+                    </div>
+                  </div>
                   <SceneList
                     manage={false}
                     items={snapshot.presets.map(
@@ -257,18 +271,6 @@ export default function ControlsPage() {
                       onMove: (from, to) => send({ type: 'moveScene', from, to }),
                       onPin: (key) => send({ type: 'pinScene', key }),
                     }}
-                  />
-                  <div className="controls-row">
-                    <button type="button" onClick={() => send({ type: 'openLibrary' })}>
-                      Manage scenes…
-                    </button>
-                  </div>
-                  <SceneTransport
-                    durationLabel={`${snapshot.transitionDuration.toFixed(1)}s`}
-                    onPrev={() => send({ type: 'prevPreset' })}
-                    onNext={() => send({ type: 'nextPreset' })}
-                    onCut={() => send({ type: 'hardCut' })}
-                    onCycleDuration={() => send({ type: 'cycleDuration' })}
                   />
                 </>
               )}

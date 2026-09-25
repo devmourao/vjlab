@@ -48,6 +48,22 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
         {activeTab === 'track' && <AudioPanel engine={engine} />}
         {activeTab === 'scenes' && (
           <>
+            <div className="scene-sticky">
+              <SceneTransport
+                durationLabel={`${transitionDuration.toFixed(1)}s`}
+                onPrev={() => useDirectorStore.getState().prevPreset()}
+                onNext={() => useDirectorStore.getState().nextPreset()}
+                onCut={() => useDirectorStore.getState().hardCutNext()}
+                onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+              />
+              <button
+                type="button"
+                className="kit-link"
+                onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
+              >
+                Manage scenes…
+              </button>
+            </div>
             <SceneList
               manage={false}
               entries={playlist.entries}
@@ -56,20 +72,6 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
                   useDirectorStore.getState().movePlaylistScene(from, to),
               }}
             />
-            <SceneTransport
-              durationLabel={`${transitionDuration.toFixed(1)}s`}
-              onPrev={() => useDirectorStore.getState().prevPreset()}
-              onNext={() => useDirectorStore.getState().nextPreset()}
-              onCut={() => useDirectorStore.getState().hardCutNext()}
-              onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
-            />
-            <button
-              type="button"
-              className="kit-link"
-              onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
-            >
-              Manage scenes…
-            </button>
           </>
         )}
         {activeTab === 'fx' && <DeskPanel />}
