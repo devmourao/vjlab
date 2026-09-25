@@ -123,6 +123,10 @@ interface DirectorState {
   bindings: Bindings;
   setBinding: (id: string, code: string) => void;
   resetBindings: () => void;
+  /** Console section order; JSON array, sync-ready for a future backend. */
+  sectionOrder: string[];
+  moveSection: (from: number, to: number) => void;
+  resetSectionOrder: () => void;
   completeTour: () => void;
   replayTour: () => void;
   closeTour: () => void;
@@ -263,6 +267,15 @@ function readFavorites(): number[] {
  * and Digit0. Position IS the shortcut; starring pins into the deck.
  */
 export const DECK_SIZE = 10;
+
+import {
+  moveOrderItem,
+  readSectionOrder,
+  SECTION_IDS,
+  writeSectionOrder,
+} from './sectionLayout';
+
+export { SECTION_IDS };
 
 export interface PlaylistEntry {
   key: string;
@@ -503,6 +516,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   helpOpen: false,
   libraryOpen: false,
   bindings: readBindings(),
+  sectionOrder: readSectionOrder(),
   tourSeen: tourSeenInitial,
   tourOpen: !tourSeenInitial,
   liteOn: false,
@@ -940,6 +954,17 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   resetBindings: () => {
     writeBindings({});
     set({ bindings: {} });
+  },
+  moveSection: (from, to) =>
+    set((state) => {
+      const order = moveOrderItem(state.sectionOrder, from, to);
+      if (order === state.sectionOrder) return {};
+      writeSectionOrder(order);
+      return { sectionOrder: order };
+    }),
+  resetSectionOrder: () => {
+    writeSectionOrder([...SECTION_IDS]);
+    set({ sectionOrder: [...SECTION_IDS] });
   },
   completeTour: () => {
     writeTourSeen();

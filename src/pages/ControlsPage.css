@@ -151,11 +151,17 @@
 }
 
 .controls-section h2 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.6;
+}
+
+.controls-section .section-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .controls-track {

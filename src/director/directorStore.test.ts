@@ -51,6 +51,15 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().hueShift).toBeCloseTo(0.25);
   });
 
+  it('reorders console sections within bounds', () => {
+    const api = useDirectorStore.getState();
+    const before = [...api.sectionOrder];
+    api.moveSection(0, 2);
+    expect(useDirectorStore.getState().sectionOrder[2]).toBe(before[0]);
+    api.resetSectionOrder();
+    expect(useDirectorStore.getState().sectionOrder[0]).toBe('track');
+  });
+
   it('opens and closes the scene library', () => {
     const store = useDirectorStore.getState();
     store.setLibraryOpen(true);
