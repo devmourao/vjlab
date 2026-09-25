@@ -76,6 +76,11 @@
   opacity: 1;
 }
 
+.scene-pos[draggable='true'],
+.scene-swatch[draggable='true'] {
+  cursor: grab;
+}
+
 .scene-toggle {
   width: 100%;
   min-height: 44px;

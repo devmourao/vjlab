@@ -6,6 +6,7 @@ import {
 } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
+import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
@@ -186,8 +187,19 @@ export function SceneList({
             position !== null && activeKey
               ? key === activeKey
               : preset.id === activePresetId;
+          const orderIndex = position ?? libraryIndex;
+          const moveRow =
+            ops.onMove ??
+            ((from: number, to: number) =>
+              position !== null
+                ? useDirectorStore.getState().movePlaylistScene(from, to)
+                : useDirectorStore.getState().reorderScenes(from, to));
           return (
-          <li key={key} className="scene-row">
+          <li
+            key={key}
+            className="scene-row"
+            {...sectionDropProps(orderIndex, moveRow)}
+          >
             <button
               type="button"
               className={highlighted ? 'scene-item active' : 'scene-item'}
@@ -199,15 +211,23 @@ export function SceneList({
                   className={inDeck ? 'scene-pos deck' : 'scene-pos'}
                   title={
                     inDeck
-                      ? `Shortcut ${keyLabel(position)} · position ${position + 1}`
-                      : `Position ${position + 1} (no shortcut)`
+                      ? `Shortcut ${keyLabel(position)} · position ${position + 1} — drag to reorder`
+                      : `Position ${position + 1} (no shortcut) — drag to reorder`
                   }
-                  aria-hidden
+                  draggable
+                  {...rowDragStart(orderIndex)}
                 >
                   {position + 1}
                 </span>
               )}
-              <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
+              <span
+                className="scene-swatch"
+                style={{ background: preset.palette.primary }}
+                aria-hidden
+                title={position === null ? 'Drag to reorder' : undefined}
+                draggable={position === null}
+                {...(position === null ? rowDragStart(orderIndex) : {})}
+              />
               <strong>{preset.name}</strong>
               {inDeck && (
                 <span className="scene-fav" title="Pinned to deck" aria-hidden>

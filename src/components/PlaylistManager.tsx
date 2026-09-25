@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DECK_SIZE, useDirectorStore } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
+import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
 import './PlaylistManager.css';
 
 /**
@@ -129,14 +130,22 @@ export function PlaylistManager() {
             {active.entries.map((entry, index) => {
               const inDeck = index < DECK_SIZE;
               return (
-                <li key={entry.key} className="playlist-row">
+                <li
+                  key={entry.key}
+                  className="playlist-row"
+                  {...sectionDropProps(index, (from, to) =>
+                    store.movePlaylistScene(from, to),
+                  )}
+                >
                   <span
                     className={inDeck ? 'playlist-slot' : 'playlist-slot dim'}
                     title={
                       inDeck
-                        ? `Shortcut ${index === DECK_SIZE - 1 ? '0' : index + 1}`
-                        : `Position ${index + 1} (no shortcut)`
+                        ? `Shortcut ${index === DECK_SIZE - 1 ? '0' : index + 1} — drag to reorder`
+                        : `Position ${index + 1} (no shortcut) — drag to reorder`
                     }
+                    draggable
+                    {...rowDragStart(index)}
                   >
                     {index + 1}
                   </span>
