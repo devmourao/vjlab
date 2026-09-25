@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createTrack, type Track } from '../audio/track';
+import { readBindings, writeBindings, type Bindings } from './bindings';
 import { exportScenesPack, validatePack } from '../packs/packFormat';
 import { PRESETS, type ScenePreset } from '../scenes/presets';
 import {
@@ -119,6 +120,9 @@ interface DirectorState {
   toggleHelp: () => void;
   setHelpOpen: (open: boolean) => void;
   setLibraryOpen: (open: boolean) => void;
+  bindings: Bindings;
+  setBinding: (id: string, code: string) => void;
+  resetBindings: () => void;
   completeTour: () => void;
   replayTour: () => void;
   closeTour: () => void;
@@ -498,6 +502,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   aboutOpen: false,
   helpOpen: false,
   libraryOpen: false,
+  bindings: readBindings(),
   tourSeen: tourSeenInitial,
   tourOpen: !tourSeenInitial,
   liteOn: false,
@@ -926,6 +931,16 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),
   setHelpOpen: (open: boolean) => set({ helpOpen: open }),
   setLibraryOpen: (open: boolean) => set({ libraryOpen: open }),
+  setBinding: (id, code) =>
+    set((state) => {
+      const next = { ...state.bindings, [id]: code };
+      writeBindings(next);
+      return { bindings: next };
+    }),
+  resetBindings: () => {
+    writeBindings({});
+    set({ bindings: {} });
+  },
   completeTour: () => {
     writeTourSeen();
     set({ tourSeen: true, tourOpen: false });

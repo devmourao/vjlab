@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
-import { buildKeymap } from './actionRegistry';
-
-const keymap = buildKeymap();
+import { ACTIONS } from './actionRegistry';
+import { keyCapture, resolveKeymap } from './bindings';
+import { useDirectorStore } from './directorStore';
 
 export function useKeyboardDesk() {
+  const bindings = useDirectorStore((s) => s.bindings);
+
   useEffect(() => {
+    const keymap = resolveKeymap(ACTIONS, bindings);
     const onKeyDown = (event: KeyboardEvent) => {
+      if (keyCapture.active) return;
       // Shortcuts must not fire while typing in a field.
       const target = event.target as HTMLElement | null;
       if (
@@ -24,5 +28,5 @@ export function useKeyboardDesk() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [bindings]);
 }
