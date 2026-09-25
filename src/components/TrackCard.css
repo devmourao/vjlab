@@ -15,15 +15,20 @@
   font-size: 20px;
 }
 
-.track-card.row {
-  flex-direction: row;
-  justify-content: space-between;
+.track-card.row,
+.track-card.status {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .track-card.status {
-  flex-direction: row;
-  justify-content: space-between;
   font-size: 13px;
+}
+
+.track-card.row .track-actions,
+.track-card.status .track-actions {
+  flex-wrap: wrap;
 }
 
 .track-info {
@@ -81,11 +86,14 @@
   color: #000;
 }
 
+.track-card.hero .track-timeline {
+  width: 100%;
+}
+
 .track-timeline {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
 }
 
 .track-time {
