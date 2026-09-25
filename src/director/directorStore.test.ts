@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DECK_SIZE,
   liveRefs,
+  positionIndex,
   selectActivePlaylist,
   transitionRef,
   useDirectorStore,
@@ -247,6 +248,34 @@ describe('directorStore', () => {
     expect(scenes).toEqual([0, 0]);
     api.renamePlaylist(id, 'Renamed');
     expect(selectActivePlaylist(useDirectorStore.getState()).name).toBe('Renamed');
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('tracks the playing occurrence and advances by position', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Cursor test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    api.addSceneToPlaylist(id, 0);
+    api.addSceneToPlaylist(id, 1);
+    api.addSceneToPlaylist(id, 0);
+    const keys = selectActivePlaylist(useDirectorStore.getState()).entries.map(
+      (entry) => entry.key,
+    );
+    api.setPreset(1);
+    transitionRef.active = false;
+    api.requestDissolve(0, keys[2]);
+    // Pending target stashes the key; the stage cursor is untouched.
+    expect(transitionRef.toKey).toBe(keys[2]);
+    expect(useDirectorStore.getState().activeEntryKey).not.toBe(keys[2]);
+    api.setPreset(transitionRef.to, transitionRef.toKey);
+    expect(useDirectorStore.getState().activeEntryKey).toBe(keys[2]);
+    expect(positionIndex(useDirectorStore.getState())).toBe(2);
+    api.nextPreset();
+    // Positional advance wraps to the first occurrence; an id lookup
+    // would have landed on the middle entry instead.
+    expect(useDirectorStore.getState().activeEntryKey).toBe(keys[0]);
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });

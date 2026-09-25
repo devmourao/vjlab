@@ -59,6 +59,8 @@ interface DirectorState {
   sceneOrder: number[];
   playlists: ScenePlaylist[];
   activePlaylistId: string;
+  /** Occurrence key playing on stage; null falls back to scene matching. */
+  activeEntryKey: string | null;
   panelMode: PanelMode;
   autoPilotOn: boolean;
   fractalShape: number;
@@ -67,10 +69,10 @@ interface DirectorState {
   toggleStrobe: () => void;
   fireBurst: () => void;
   killAll: () => void;
-  setPreset: (id: number) => void;
+  setPreset: (id: number, key?: string | null) => void;
   nextPreset: () => void;
   prevPreset: () => void;
-  requestDissolve: (id: number) => void;
+  requestDissolve: (id: number, key?: string | null) => void;
   hardCutNext: () => void;
   createScene: (preset: Omit<ScenePreset, 'id'>) => ScenePreset;
   updateScene: (id: number, patch: Partial<Omit<ScenePreset, 'id'>>) => void;
@@ -394,6 +396,22 @@ function readPlaylists(
   }
 }
 
+/** Position cursor: active entry key first, scene id fallback, -1. */
+export function positionIndex(state: {
+  playlists: ScenePlaylist[];
+  activePlaylistId: string;
+  sceneOrder: number[];
+  activeEntryKey: string | null;
+  activePresetId: number;
+}): number {
+  const entries = selectActivePlaylist(state).entries;
+  if (state.activeEntryKey) {
+    const byKey = entries.findIndex((entry) => entry.key === state.activeEntryKey);
+    if (byKey >= 0) return byKey;
+  }
+  return entries.findIndex((entry) => entry.sceneId === state.activePresetId);
+}
+
 /** Reactive active playlist for components. */
 export function useActivePlaylist(): ScenePlaylist {
   const playlists = useDirectorStore((s) => s.playlists);
@@ -445,6 +463,17 @@ const playlistsInitial = readPlaylists(
   sceneOrderInitial,
   favoriteIdsInitial,
 );
+const activeEntryKeyInitial = (() => {
+  const active =
+    playlistsInitial.playlists.find(
+      (entry) => entry.id === playlistsInitial.activeId,
+    ) ?? playlistsInitial.playlists[0];
+  return (
+    active?.entries.find((entry) => entry.sceneId === 0)?.key ??
+    active?.entries[0]?.key ??
+    null
+  );
+})();
 
 export const useDirectorStore = create<DirectorState>((set, get) => ({
   strobeOn: false,
@@ -483,6 +512,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   sceneOrder: sceneOrderInitial,
   playlists: playlistsInitial.playlists,
   activePlaylistId: playlistsInitial.activeId,
+  activeEntryKey: activeEntryKeyInitial,
   panelMode: 'docked',
   autoPilotOn: true,
   fractalShape: 0,
@@ -507,29 +537,38 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       fxBypassed: false,
     });
   },
-  setPreset: (id: number) =>
+  setPreset: (id: number, key: string | null = null) =>
     set((state) => ({
       activePresetId: normalizeId(state.customPresets, id),
+      activeEntryKey: key,
     })),
   nextPreset: () =>
     set((state) => {
-      const order = playlistOrder(state);
-      const index = order.indexOf(state.activePresetId);
-      const next = order[(index + 1 + order.length) % order.length];
-      return { activePresetId: next };
+      const entries = selectActivePlaylist(state).entries;
+      if (entries.length === 0) return {};
+      const cursor = positionIndex(state);
+      const next = entries[(cursor + 1 + entries.length) % entries.length];
+      return { activePresetId: next.sceneId, activeEntryKey: next.key };
     }),
   prevPreset: () =>
     set((state) => {
-      const order = playlistOrder(state);
-      const index = order.indexOf(state.activePresetId);
-      const prev = order[(index - 1 + order.length) % order.length];
-      return { activePresetId: prev };
+      const entries = selectActivePlaylist(state).entries;
+      if (entries.length === 0) return {};
+      const cursor = positionIndex(state);
+      const prev =
+        entries[(cursor - 1 + entries.length) % entries.length];
+      return { activePresetId: prev.sceneId, activeEntryKey: prev.key };
     }),
-  requestDissolve: (id: number) => {
+  requestDissolve: (id: number, key: string | null = null) => {
     const state = useDirectorStore.getState();
     const target = normalizeId(state.customPresets, id);
     if (target === state.activePresetId || transitionRef.active) return;
     if (!findPreset(state.customPresets, target)) return;
+    const entries = selectActivePlaylist(state).entries;
+    transitionRef.toKey =
+      (key && entries.some((entry) => entry.key === key && entry.sceneId === target)
+        ? key
+        : entries.find((entry) => entry.sceneId === target)?.key) ?? null;
     transitionRef.active = true;
     transitionRef.swapped = false;
     transitionRef.start = performance.now();
@@ -539,10 +578,12 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     const state = useDirectorStore.getState();
     transitionRef.active = false;
     transitionRef.swapped = false;
-    const order = playlistOrder(state);
-    const index = order.indexOf(state.activePresetId);
-    const next = order[(index + 1) % order.length];
-    useDirectorStore.getState().setPreset(next);
+    const entries = selectActivePlaylist(state).entries;
+    if (entries.length === 0) return;
+    const cursor = positionIndex(state);
+    const next = entries[(cursor + 1) % entries.length];
+    set({ activeEntryKey: next.key });
+    useDirectorStore.getState().setPreset(next.sceneId);
   },
   createScene: (preset) => {
     const state = get();
@@ -591,11 +632,24 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     }));
     writePlaylists(nextPlaylists, state.activePlaylistId);
     const stillExists = findPreset(nextCustom, state.activePresetId);
+    const nextActive = selectActivePlaylist({
+      ...state,
+      playlists: nextPlaylists,
+    });
+    const keyKept =
+      stillExists &&
+      nextActive.entries.some((entry) => entry.key === state.activeEntryKey)
+        ? state.activeEntryKey
+        : (nextActive.entries.find((entry) => entry.sceneId === state.activePresetId)
+            ?.key ??
+          nextActive.entries[0]?.key ??
+          null);
     set({
       customPresets: nextCustom,
       sceneOrder: nextOrder,
       playlists: nextPlaylists,
       activePresetId: stillExists ? state.activePresetId : PRESETS[0].id,
+      activeEntryKey: stillExists ? keyKept : (nextActive.entries[0]?.key ?? null),
     });
   },
   importScenes: (packFile) => {
@@ -767,7 +821,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     };
     const nextPlaylists = [...state.playlists, next];
     writePlaylists(nextPlaylists, next.id);
-    set({ playlists: nextPlaylists, activePlaylistId: next.id });
+    set({ playlists: nextPlaylists, activePlaylistId: next.id, activeEntryKey: null });
   },
   renamePlaylist: (id, name) => {
     const state = get();
@@ -786,13 +840,28 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     if (nextPlaylists.length === state.playlists.length) return;
     const nextActive = state.activePlaylistId === id ? nextPlaylists[0].id : state.activePlaylistId;
     writePlaylists(nextPlaylists, nextActive);
-    set({ playlists: nextPlaylists, activePlaylistId: nextActive });
+    const switched = nextActive !== state.activePlaylistId;
+    const nextKey = switched
+      ? (nextPlaylists[0].entries.find(
+          (entry) => entry.sceneId === state.activePresetId,
+        )?.key ??
+        nextPlaylists[0].entries[0]?.key ??
+        null)
+      : state.activeEntryKey;
+    set({ playlists: nextPlaylists, activePlaylistId: nextActive, activeEntryKey: nextKey });
   },
   setActivePlaylist: (id) => {
     const state = get();
-    if (!state.playlists.some((entry) => entry.id === id)) return;
+    const target = state.playlists.find((entry) => entry.id === id);
+    if (!target) return;
     writePlaylists(state.playlists, id);
-    set({ activePlaylistId: id });
+    set({
+      activePlaylistId: id,
+      activeEntryKey:
+        target.entries.find((entry) => entry.sceneId === state.activePresetId)?.key ??
+        target.entries[0]?.key ??
+        null,
+    });
   },
   addSceneToPlaylist: (playlistId, sceneId) => {
     const state = get();
@@ -1000,6 +1069,7 @@ export const transitionRef = {
   swapped: false,
   start: 0,
   to: 0,
+  toKey: null as string | null,
 };
 
 export const SHORTCUT_MAP: Array<{ key: string; action: string }> = [

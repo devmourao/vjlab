@@ -205,7 +205,8 @@ export default function ControlsPage() {
               )}
               entries={snapshot.entries}
               activeId={snapshot.activePresetId}
-              onSelect={(id) => send({ type: 'dissolve', id })}
+              activeKey={snapshot.activeEntryKey}
+              onSelect={(id, key) => send({ type: 'dissolve', id, key: key ?? null })}
               ops={{
                 onMove: (from, to) => send({ type: 'moveScene', from, to }),
                 onPin: (key) => send({ type: 'pinScene', key }),

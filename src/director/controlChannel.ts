@@ -17,7 +17,7 @@ import {
 export const CONTROL_CHANNEL = 'vjlab-control-v1';
 
 export type ControlCommand =
-  | { type: 'dissolve'; id: number }
+  | { type: 'dissolve'; id: number; key?: string | null }
   | { type: 'nextPreset' }
   | { type: 'prevPreset' }
   | { type: 'hardCut' }
@@ -102,6 +102,7 @@ export interface SnapshotEntry {
 
 export interface ControlSnapshot {
   activePresetId: number;
+  activeEntryKey: string | null;
   presets: SnapshotPreset[];
   favoriteIds: number[];
   sceneOrder: number[];
@@ -218,7 +219,12 @@ function isSceneDraft(value: unknown): boolean {
 function hasValidPayload(command: Record<string, unknown>): boolean {
   switch (command['type']) {
     case 'dissolve':
-      return typeof command['id'] === 'number';
+      return (
+        typeof command['id'] === 'number' &&
+        (command['key'] === undefined ||
+          command['key'] === null ||
+          typeof command['key'] === 'string')
+      );
     case 'playQueueTrack':
     case 'removeQueueTrack':
       return typeof command['id'] === 'string';
@@ -319,6 +325,7 @@ export function buildSnapshot(
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
+    activeEntryKey: state.activeEntryKey,
     presets: presets.map((preset) => ({
       id: preset.id,
       name: preset.name,

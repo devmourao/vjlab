@@ -53,7 +53,7 @@ export function useKeyboardDesk() {
           const digit = Number(event.code.slice(-1));
           const index = digit === 0 ? DECK_SIZE - 1 : digit - 1;
           const slot = selectActivePlaylist(store).entries[index];
-          if (slot) store.requestDissolve(slot.sceneId);
+          if (slot) store.requestDissolve(slot.sceneId, slot.key);
           break;
         }
         case 'KeyN': {

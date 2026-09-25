@@ -55,6 +55,7 @@ export function SceneList({
   items,
   entries,
   activeId: activeOverride,
+  activeKey: activeKeyOverride,
   onSelect,
   manage = true,
   pageSize = SCENE_PAGE_SIZE,
@@ -63,15 +64,18 @@ export function SceneList({
   items?: ScenePreset[];
   entries?: PlaylistEntry[];
   activeId?: number;
-  onSelect?: (id: number) => void;
+  activeKey?: string | null;
+  onSelect?: (id: number, key?: string | null) => void;
   manage?: boolean;
   pageSize?: number;
   ops?: SceneListOps;
 } = {}) {
   const storeActive = useDirectorStore((s) => s.activePresetId);
-  // Remote callers mirror the deck's active scene instead of the
-  // popup-local one, so the highlight follows the stage.
+  const storeKey = useDirectorStore((s) => s.activeEntryKey);
+  // Remote callers mirror the deck's active occurrence instead of the
+  // popup-local one, so the highlight follows the stage position.
   const activePresetId = activeOverride ?? storeActive;
+  const activeKey = activeKeyOverride !== undefined ? activeKeyOverride : storeKey;
   const storeOrder = useDirectorStore((s) => s.sceneOrder);
   const storePresets = useAllPresets();
   const all = items ?? storePresets;
@@ -105,7 +109,9 @@ export function SceneList({
   const visible = collapsible && !expanded ? rows.slice(0, pageSize) : rows;
 
   const select =
-    onSelect ?? ((id: number) => useDirectorStore.getState().requestDissolve(id));
+    onSelect ??
+    ((id: number, key?: string | null) =>
+      useDirectorStore.getState().requestDissolve(id, key ?? null));
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
@@ -176,13 +182,17 @@ export function SceneList({
           const { key, preset, position } = row;
           const inDeck = position !== null && position < DECK_SIZE;
           const libraryIndex = rows.findIndex((entry) => entry.key === key);
+          const highlighted =
+            position !== null && activeKey
+              ? key === activeKey
+              : preset.id === activePresetId;
           return (
           <li key={key} className="scene-row">
             <button
               type="button"
-              className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
+              className={highlighted ? 'scene-item active' : 'scene-item'}
               data-testid={`scene-button-${preset.id}`}
-              onClick={() => select(preset.id)}
+              onClick={() => select(preset.id, position !== null ? key : null)}
             >
               {position !== null && (
                 <span

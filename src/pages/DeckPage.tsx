@@ -45,7 +45,7 @@ function executeControlCommand(
   const store = useDirectorStore.getState();
   switch (command.type) {
     case 'dissolve':
-      store.requestDissolve(command.id);
+      store.requestDissolve(command.id, command.key ?? null);
       break;
     case 'nextPreset':
       store.nextPreset();
@@ -277,11 +277,13 @@ function DeckPage() {
     allPresets.find((entry) => entry.id === activePresetId) ??
     getPreset(activePresetId);
   const playlist = useActivePlaylist();
+  const activeEntryKey = useDirectorStore((s) => s.activeEntryKey);
   const execOrder =
     playlist.entries.length > 0
       ? playlist.entries.map((entry) => entry.sceneId)
       : allPresets.map((entry) => entry.id);
-  const orderIndex = execOrder.indexOf(activePresetId);
+  const keyIndex = playlist.entries.findIndex((entry) => entry.key === activeEntryKey);
+  const orderIndex = keyIndex >= 0 ? keyIndex : execOrder.indexOf(activePresetId);
   const engineRef = useRef(engine);
   useEffect(() => {
     engineRef.current = engine;

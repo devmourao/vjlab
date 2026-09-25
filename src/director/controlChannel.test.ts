@@ -27,6 +27,18 @@ describe('controlChannel', () => {
       }),
     ).toBe(true);
     expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'dissolve', id: 2, key: 'e4' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'dissolve', id: 2, key: 9 },
+      }),
+    ).toBe(false);
+    expect(
       isControlMessage({ type: 'command', command: { type: 'formatDisk' } }),
     ).toBe(false);
     expect(
@@ -264,6 +276,10 @@ describe('controlChannel', () => {
     expect(Array.isArray(snapshot.sceneOrder)).toBe(true);
     expect(snapshot.playlists.length).toBeGreaterThan(0);
     expect(snapshot.activePlaylistId).toBe(snapshot.playlists[0].id);
+    expect(
+      snapshot.activeEntryKey === null ||
+        typeof snapshot.activeEntryKey === 'string',
+    ).toBe(true);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });
