@@ -50,6 +50,7 @@ export type ControlCommand =
   | { type: 'showGuide' }
   | { type: 'replayTour' }
   | { type: 'switchPlaylist'; id: string }
+  | { type: 'runAction'; id: string }
   | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
   | { type: 'playlistRemoveScene'; playlistId: string; key: string }
   | { type: 'togglePlayback' }
@@ -176,6 +177,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'showGuide',
   'replayTour',
   'switchPlaylist',
+  'runAction',
   'playlistAddScene',
   'playlistRemoveScene',
   'togglePlayback',
@@ -265,6 +267,8 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'deleteScene':
       return typeof command['id'] === 'number';
     case 'switchPlaylist':
+      return typeof command['id'] === 'string';
+    case 'runAction':
       return typeof command['id'] === 'string';
     case 'pinScene':
       return typeof command['key'] === 'string';

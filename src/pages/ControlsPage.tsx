@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createTrack } from '../audio/track';
 import { SITE_META } from '../config/siteMeta';
 import {
@@ -7,6 +7,7 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
+import { useControlKeys } from '../director/useControlKeys';
 import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
 import { SceneList } from '../components/SceneList';
@@ -59,13 +60,15 @@ function useControlDeck() {
     };
   }, []);
 
-  const send = (command: ControlCommand) => {
+  const send = useCallback((command: ControlCommand) => {
     try {
       channelRef.current?.postMessage({ type: 'command', command });
     } catch {
       // Lost main window is reported via the offline banner.
     }
-  };
+  }, []);
+
+  useControlKeys(send);
 
   return { snapshot, send };
 }

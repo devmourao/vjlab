@@ -142,6 +142,18 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
+        command: { type: 'runAction', id: 'scene.next' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'runAction', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
         command: { type: 'pinScene', key: 'e3' },
       }),
     ).toBe(true);

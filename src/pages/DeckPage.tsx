@@ -15,6 +15,7 @@ import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
+import { ACTIONS } from '../director/actionRegistry';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
@@ -147,6 +148,21 @@ function executeControlCommand(
     case 'switchPlaylist':
       store.setActivePlaylist(command.id);
       break;
+    case 'runAction': {
+      // Popup keystrokes execute through the same registry as deck keys,
+      // so both windows share context (fractal rules, live camera refs).
+      // Unknown ids are ignored: the registry is the whitelist.
+      const action = ACTIONS.find((entry) => entry.id === command.id);
+      if (
+        action &&
+        action.id !== 'controls.detach' &&
+        action.id !== 'output.fullscreen' &&
+        action.id !== 'output.fullscreen.f11'
+      ) {
+        action.run();
+      }
+      break;
+    }
     case 'playlistAddScene':
       store.addSceneToPlaylist(command.playlistId, command.sceneId);
       break;
