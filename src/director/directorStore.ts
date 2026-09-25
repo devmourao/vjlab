@@ -57,8 +57,6 @@ interface DirectorState {
   overlayText: string;
   overlayVisible: boolean;
   overlayKey: number;
-  meshTextureStatus: 'idle' | 'loading' | 'ready' | 'error';
-  instanceMaps: Record<string, string | null>;
   customPresets: ScenePreset[];
   mediaQueue: Track[];
   mediaIndex: number | null;
@@ -144,10 +142,6 @@ interface DirectorState {
   setOverlayText: (text: string) => void;
   fireText: () => void;
   hideText: () => void;
-  setInstanceMap: (key: string, url: string | null) => void;
-  setMeshTextureStatus: (
-    status: 'idle' | 'loading' | 'ready' | 'error',
-  ) => void;
   cyclePanelMode: () => void;
   setPanelMode: (mode: PanelMode) => void;
   toggleAutoPilot: () => void;
@@ -534,8 +528,6 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   overlayText: 'VJ LAB',
   overlayVisible: false,
   overlayKey: 0,
-  meshTextureStatus: 'idle',
-  instanceMaps: {},
   customPresets: customPresetsInitial,
   mediaQueue: [],
   mediaIndex: null,
@@ -947,14 +939,6 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
       overlayKey: s.overlayKey + 1,
     })),
   hideText: () => set({ overlayVisible: false }),
-  setInstanceMap: (key: string, url: string | null) =>
-    set((s) => ({
-      instanceMaps: { ...s.instanceMaps, [key]: url },
-      meshTextureStatus: url ? 'loading' : 'idle',
-    })),
-  setMeshTextureStatus: (
-    status: 'idle' | 'loading' | 'ready' | 'error',
-  ) => set({ meshTextureStatus: status }),
   strobeFaster: () =>
     set((s) => ({ strobeRateHz: clampStrobeHz(s.strobeRateHz + 1) })),
   strobeSlower: () =>

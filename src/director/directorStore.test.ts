@@ -95,20 +95,6 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().overlayVisible).toBe(false);
   });
 
-  it('sets and clears per-instance maps', () => {
-    const store = useDirectorStore.getState();
-    store.setInstanceMap('1:mesh:0', 'blob:fake-url');
-    expect(useDirectorStore.getState().instanceMaps['1:mesh:0']).toBe(
-      'blob:fake-url',
-    );
-    expect(useDirectorStore.getState().meshTextureStatus).toBe('loading');
-    store.setMeshTextureStatus('ready');
-    expect(useDirectorStore.getState().meshTextureStatus).toBe('ready');
-    store.setInstanceMap('1:mesh:0', null);
-    expect(useDirectorStore.getState().instanceMaps['1:mesh:0']).toBeNull();
-    expect(useDirectorStore.getState().meshTextureStatus).toBe('idle');
-  });
-
     it('tunes strobe rate and toggles the effects pack', () => {    const store = useDirectorStore.getState();
     expect(useDirectorStore.getState().strobeRateHz).toBe(4);
     store.strobeFaster();

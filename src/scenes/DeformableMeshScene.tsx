@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { readBands } from '../audio/audioBus';
-import { liveRefs, useDirectorStore } from '../director/directorStore';
+import { liveRefs } from '../director/directorStore';
 import { decayBurst, meshDisplacement } from './sceneMath';
 
 export function DeformableMeshScene({
@@ -23,7 +23,6 @@ export function DeformableMeshScene({
   // The map belongs to this instance only — never to global state.
   useEffect(() => {
     if (!mapUrl) return;
-    const store = useDirectorStore.getState();
     const loader = new THREE.TextureLoader();
     let cancelled = false;
     loader.load(
@@ -36,14 +35,12 @@ export function DeformableMeshScene({
           previous?.dispose();
           return loaded;
         });
-        store.setMeshTextureStatus('ready');
       },
       undefined,
       (error) => {
         if (cancelled) return;
         console.error('[texture] failed to load image', error);
         setTexture(null);
-        store.setMeshTextureStatus('error');
       },
     );
     return () => {
