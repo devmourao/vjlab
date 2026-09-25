@@ -30,6 +30,8 @@ export interface ActionDef {
   category: ActionCategory;
   /** Default event.code. Remappable from K2 on. */
   code: string;
+  /** Per-action sensitivity for continuous controls. */
+  step?: number;
   /** Guide row display; entries sharing it merge into one row. */
   guide?: string;
   /** Extra guide row appended after the merged rows. */
@@ -98,22 +100,22 @@ export const ACTIONS: ActionDef[] = [
   { id: 'strobe.toggle', label: 'Toggle strobe (default off)', category: 'Strobe', code: 'Space', guide: 'Space', preventDefault: true, run: () => useDirectorStore.getState().toggleStrobe() },
   { id: 'strobe.mode', label: 'Cycle strobe mode (white/black/color)', category: 'Strobe', code: 'KeyO', guide: 'O', run: () => useDirectorStore.getState().cycleStrobeMode() },
   { id: 'burst.fire', label: 'Fire burst impulse', category: 'Strobe', code: 'KeyB', guide: 'B', run: () => useDirectorStore.getState().fireBurst() },
-  { id: 'camera.left', label: 'Nudge camera', category: 'Stage', code: 'ArrowLeft', guide: 'Arrows', preventDefault: true, run: () => {
+  { id: 'camera.left', label: 'Nudge camera', category: 'Stage', code: 'ArrowLeft', guide: 'Arrows', preventDefault: true, step: CAMERA_STEP, run: () => {
     const store = useDirectorStore.getState();
     if (fractalActive()) { store.cycleFractalInner(-1); return; }
     liveRefs.azimuth -= CAMERA_STEP;
   } },
-  { id: 'camera.right', label: 'Nudge camera', category: 'Stage', code: 'ArrowRight', guide: 'Arrows', preventDefault: true, run: () => {
+  { id: 'camera.right', label: 'Nudge camera', category: 'Stage', code: 'ArrowRight', guide: 'Arrows', preventDefault: true, step: CAMERA_STEP, run: () => {
     const store = useDirectorStore.getState();
     if (fractalActive()) { store.cycleFractalInner(1); return; }
     liveRefs.azimuth += CAMERA_STEP;
   } },
-  { id: 'camera.up', label: 'Nudge camera', category: 'Stage', code: 'ArrowUp', guide: 'Arrows', preventDefault: true, extraGuide: '↑/↓ (Fractal)', run: () => {
+  { id: 'camera.up', label: 'Nudge camera', category: 'Stage', code: 'ArrowUp', guide: 'Arrows', preventDefault: true, step: CAMERA_STEP, extraGuide: '↑/↓ (Fractal)', run: () => {
     const store = useDirectorStore.getState();
     if (fractalActive()) { store.cycleFractalShape(1); return; }
     liveRefs.elevation = Math.min(1.2, liveRefs.elevation + CAMERA_STEP);
   } },
-  { id: 'camera.down', label: 'Nudge camera', category: 'Stage', code: 'ArrowDown', guide: 'Arrows', preventDefault: true, run: () => {
+  { id: 'camera.down', label: 'Nudge camera', category: 'Stage', code: 'ArrowDown', guide: 'Arrows', preventDefault: true, step: CAMERA_STEP, run: () => {
     const store = useDirectorStore.getState();
     if (fractalActive()) { store.cycleFractalShape(-1); return; }
     liveRefs.elevation = Math.max(-1.2, liveRefs.elevation - CAMERA_STEP);
@@ -154,13 +156,15 @@ export const ACTIONS: ActionDef[] = [
     const store = useDirectorStore.getState();
     store.setLibraryOpen(!store.libraryOpen);
   } },
-  { id: 'fractal.z.plus', label: 'Fractal Z rotation +/− (when Fractal active)', category: 'Stage', code: 'KeyQ', guide: 'Q / W', run: () => {
+  { id: 'axis.z.plus', label: 'Z axis + (Fractal Z / camera roll)', category: 'Stage', code: 'KeyQ', guide: 'Q / W', step: CAMERA_STEP, run: () => {
     const store = useDirectorStore.getState();
-    if (store.activePresetId === FRACTAL_PRESET_ID) store.rotateFractalZ(1);
+    if (store.activePresetId === FRACTAL_PRESET_ID) { store.rotateFractalZ(1); return; }
+    liveRefs.roll -= CAMERA_STEP;
   } },
-  { id: 'fractal.z.minus', label: 'Fractal Z rotation +/− (when Fractal active)', category: 'Stage', code: 'KeyW', guide: 'Q / W', run: () => {
+  { id: 'axis.z.minus', label: 'Z axis − (Fractal Z / camera roll)', category: 'Stage', code: 'KeyW', guide: 'Q / W', step: CAMERA_STEP, run: () => {
     const store = useDirectorStore.getState();
-    if (store.activePresetId === FRACTAL_PRESET_ID) store.rotateFractalZ(-1);
+    if (store.activePresetId === FRACTAL_PRESET_ID) { store.rotateFractalZ(-1); return; }
+    liveRefs.roll += CAMERA_STEP;
   } },
   { id: 'dialogs.close', label: 'Close topmost dialog', category: 'System', code: 'Escape', run: () => {
     const store = useDirectorStore.getState();

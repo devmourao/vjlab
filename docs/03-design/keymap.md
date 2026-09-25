@@ -64,6 +64,6 @@ edit the registry, then sync this file.
 | output.fullscreen.f11 | F11 | System | G / F11 |
 | autopilot.toggle | KeyA | System | A |
 | library.toggle | KeyM | Library | M |
-| fractal.z.plus | KeyQ | Stage | Q / W |
-| fractal.z.minus | KeyW | Stage | Q / W |
+| axis.z.plus | KeyQ | Stage | Q / W |
+| axis.z.minus | KeyW | Stage | Q / W |
 | dialogs.close | Escape | System | — |

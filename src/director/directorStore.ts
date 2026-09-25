@@ -1061,6 +1061,7 @@ export const liveRefs = {
   boost: 0,
   azimuth: 0,
   elevation: 0,
+  roll: 0,
   zoom: 1,
 };
 
