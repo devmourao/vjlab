@@ -10,6 +10,7 @@
 .scene-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -152,8 +153,12 @@
 
 .scene-item-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
+  max-width: 100%;
 }
 
 .scene-item-actions button {
@@ -181,6 +186,7 @@
 .scene-timing {
   margin-left: auto;
   flex-shrink: 0;
+  white-space: nowrap;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.65);
   font-variant-numeric: tabular-nums;
