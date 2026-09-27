@@ -106,6 +106,7 @@ interface DirectorState {
     key: string,
     patch: { durationSec?: number; follow?: CueFollow },
   ) => void;
+  setBodyFollow: (follow: CueFollow) => void;
   cycleDuration: () => void;
   stepHue: () => void;
   setHueShift: (value: number) => void;
@@ -1072,6 +1073,23 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
                       : null),
                   }
                 : scene,
+            ),
+          }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  setBodyFollow: (follow) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    if (active.entries.length <= DECK_SIZE) return;
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id
+        ? {
+            ...entry,
+            entries: entry.entries.map((scene, index) =>
+              index >= DECK_SIZE ? { ...scene, follow } : scene,
             ),
           }
         : entry,

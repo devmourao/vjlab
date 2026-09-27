@@ -336,6 +336,32 @@ describe('directorStore', () => {
     expect(isPoolIndex(-1)).toBe(false);
   });
 
+  it('flips the whole body between auto and manual', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Bulk follow test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < DECK_SIZE + 2; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const states = () =>
+      bodyEntries(
+        selectActivePlaylist(useDirectorStore.getState()).entries,
+      ).map((entry) => cueTiming(entry).follow);
+    expect(states()).toEqual(['manual', 'manual']);
+    api.setBodyFollow('auto');
+    expect(states()).toEqual(['auto', 'auto']);
+    // Pool cues are untouched by the bulk flip.
+    const pool = selectActivePlaylist(useDirectorStore.getState())
+      .entries.slice(0, DECK_SIZE)
+      .map((entry) => cueTiming(entry).follow);
+    expect(pool.every((follow) => follow === 'manual')).toBe(true);
+    api.setBodyFollow('manual');
+    expect(states()).toEqual(['manual', 'manual']);
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
   it('stores a manual show target per playlist', () => {
     const api = useDirectorStore.getState();
     const previousActive = api.activePlaylistId;

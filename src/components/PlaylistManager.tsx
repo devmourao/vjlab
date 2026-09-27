@@ -156,6 +156,29 @@ export function PlaylistManager() {
             Clear
           </button>
         )}
+        {bodyEntries(active.entries).length > 0 && (
+          <button
+            type="button"
+            onClick={() =>
+              store.setBodyFollow(
+                bodyEntries(active.entries).every(
+                  (entry) => cueTiming(entry).follow === 'auto',
+                )
+                  ? 'manual'
+                  : 'auto',
+              )
+            }
+            title="Flip every body cue between auto-advance and manual hold"
+            data-testid="body-follow-toggle"
+          >
+            Body:{' '}
+            {bodyEntries(active.entries).every(
+              (entry) => cueTiming(entry).follow === 'auto',
+            )
+              ? 'auto'
+              : 'manual'}
+          </button>
+        )}
       </div>
 
       <div className="playlist-panes">
