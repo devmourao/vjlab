@@ -29,8 +29,10 @@ import {
   useDirectorStore,
   type PanelMode,
 } from '../director/directorStore';
+import { setAudioTimeSource } from '../director/showClock';
 import { useAutoPilot } from '../director/useAutoPilot';
 import { useKeyboardDesk } from '../director/useKeyboardDesk';
+import { useShowPilot } from '../director/useShowPilot';
 import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
@@ -290,6 +292,7 @@ function DeckPage() {
   const engine = useAudioEngine();
   useKeyboardDesk();
   useAutoPilot();
+  useShowPilot();
   useGamepadPoll((index) => {
     const state = useDirectorStore.getState();
     const action = ACTIONS.find((entry) => state.padBindings[entry.id] === index);
@@ -316,6 +319,14 @@ function DeckPage() {
   useEffect(() => {
     engineRef.current = engine;
   });
+  useEffect(() => {
+    // Show Clock audio source: position while a track is loaded, else wall.
+    setAudioTimeSource(() => {
+      const current = engineRef.current;
+      return current.fileName ? current.getPosition() : null;
+    });
+    return () => setAudioTimeSource(null);
+  }, []);
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.

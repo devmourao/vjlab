@@ -23,6 +23,8 @@ export interface AudioEngineApi {
   seekTo: (seconds: number) => void;
   skipBy: (delta: number) => void;
   getSpectrum: () => SpectrumBands;
+  /** Render-free position read for the Show Clock (no re-render). */
+  getPosition: () => number;
 }
 
 const CONSOLE_LOG_INTERVAL_MS = 600;
@@ -172,6 +174,11 @@ export function useAudioEngine(): AudioEngineApi {
 
   const getSpectrum = useCallback((): SpectrumBands => bandsRef.current, []);
 
+  const getPosition = useCallback(
+    (): number => elementRef.current?.currentTime ?? 0,
+    [],
+  );
+
   useEffect(() => {
     let raf = 0;
 
@@ -233,5 +240,6 @@ export function useAudioEngine(): AudioEngineApi {
     seekTo,
     skipBy,
     getSpectrum,
+    getPosition,
   };
 }
