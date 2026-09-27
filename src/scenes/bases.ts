@@ -21,11 +21,25 @@ export interface BaseParamSchema {
   default: number | string | null;
 }
 
+/**
+ * Declared Fire-burst response (v1): the peak boost contribution on the
+ * primary target. Values moved verbatim from the scene implementations,
+ * so the feel is byte-identical and tunable tomorrow. Decay stays global
+ * (decayBurst); decaySec reserves a per-base override slot.
+ */
+export interface BurstResponse {
+  /** Human-readable targets, e.g. 'scale', 'morph + zoom'. */
+  targets: string;
+  peak: number;
+  decaySec: number | null;
+}
+
 export interface BaseCapability {
   base: BaseId;
   label: string;
   description: string;
   params: BaseParamSchema[];
+  burst: BurstResponse;
 }
 
 /** Host-level params applied by the scene host around every instance. */
@@ -55,6 +69,7 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'particles',
     label: 'Particle Field',
     description: 'Audio-reactive point cloud with bass pulse and treble scale.',
+    burst: { targets: 'scale', peak: 0.6, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
@@ -64,6 +79,7 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'mesh',
     label: 'Deformable Mesh',
     description: 'Bass-displaced sphere, flat wireframe or per-instance image.',
+    burst: { targets: 'displacement', peak: 0.3, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'map', type: 'image', scope: 'instance', default: null },
@@ -73,6 +89,7 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'tunnel',
     label: 'Tunnel Field',
     description: 'Ring tunnel advancing with mids and treble travel.',
+    burst: { targets: 'scale', peak: 0.5, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
@@ -82,6 +99,7 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'fractal',
     label: 'Fractal Bloom',
     description: 'Full-screen audio-reactive fractal shader plane.',
+    burst: { targets: 'morph + zoom', peak: 1.5, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { readBands } from '../audio/audioBus';
 import { liveRefs } from '../director/directorStore';
+import { BASE_CAPABILITIES } from './bases';
 import { decayBurst, meshDisplacement } from './sceneMath';
 
 export function DeformableMeshScene({
@@ -78,7 +79,7 @@ export function DeformableMeshScene({
       const z = base[i * 3 + 2];
       const offset =
         meshDisplacement(bass, mids, x, y, z, time) * gain +
-        liveRefs.boost * 0.3;
+        liveRefs.boost * BASE_CAPABILITIES.mesh.burst.peak;
       position.setXYZ(
         i,
         x + normals[i * 3] * offset,

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { readBands } from '../audio/audioBus';
 import { liveRefs, useDirectorStore } from '../director/directorStore';
+import { BASE_CAPABILITIES } from './bases';
 import { decayBurst } from './sceneMath';
 
 const vertexShader = `
@@ -143,7 +144,11 @@ export function FractalScene({
     const u = materialRef.current.uniforms;
     const smoothBass = THREE.MathUtils.lerp(u.bass.value, bass, 0.18);
     // Idle base 0.35 keeps metamorphosis alive with no audio; audio + boost accelerate.
-    const morphSpeed = 0.35 + smoothBass * 0.6 + mids * 0.3 + liveRefs.boost * 1.5;
+    const morphSpeed =
+      0.35 +
+      smoothBass * 0.6 +
+      mids * 0.3 +
+      liveRefs.boost * BASE_CAPABILITIES.fractal.burst.peak;
     u.morphPhase.value += delta * morphSpeed * speed;
     u.time.value = clock.elapsedTime * speed * 0.6;
     const targetZoom = 1 + Math.sin(clock.elapsedTime * 0.07) * 0.04 + liveRefs.boost * 0.9;

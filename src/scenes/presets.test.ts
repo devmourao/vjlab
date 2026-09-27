@@ -68,6 +68,25 @@ describe('presets', () => {
     expect(instanceKey(1, 'mesh', 0)).toBe('1:mesh:0');
   });
 
+  it('declares a burst response for every base with v1 peak defaults', () => {
+    const peaks = Object.fromEntries(
+      Object.values(BASE_CAPABILITIES).map((capability) => [
+        capability.base,
+        capability.burst.peak,
+      ]),
+    );
+    expect(peaks).toEqual({
+      particles: 0.6,
+      mesh: 0.3,
+      tunnel: 0.5,
+      fractal: 1.5,
+    });
+    for (const capability of Object.values(BASE_CAPABILITIES)) {
+      expect(capability.burst.targets.length).toBeGreaterThan(0);
+      expect(capability.burst.peak).toBeGreaterThan(0);
+    }
+  });
+
   it('tags shared behavior params with a global family, peculiar params stay untagged', () => {
     const byName = new Map(
       Object.values(BASE_CAPABILITIES)
