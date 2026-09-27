@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { createTrack } from '../audio/track';
 import {
   DECK_SIZE,
+  cueTiming,
+  cueWindows,
   liveRefs,
   positionIndex,
   selectActivePlaylist,
+  showTotalSec,
   transitionRef,
   useDirectorStore,
 } from './directorStore';
@@ -272,6 +275,45 @@ describe('directorStore', () => {
     // Positional advance wraps to the first occurrence; an id lookup
     // would have landed on the middle entry instead.
     expect(useDirectorStore.getState().activeEntryKey).toBe(keys[0]);
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('times cues per occurrence with accumulated windows', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Timing test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    api.addSceneToPlaylist(id, 0);
+    api.addSceneToPlaylist(id, 1);
+    let entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    // New cues are born timed: playlist default, manual hold.
+    expect(entries.map((entry) => cueTiming(entry))).toEqual([
+      { durationSec: 30, follow: 'manual' },
+      { durationSec: 30, follow: 'manual' },
+    ]);
+    // Same scene twice may carry different durations (occurrence-owned).
+    api.setCueTiming(entries[0].key, { durationSec: 45, follow: 'auto' });
+    api.setCueTiming(entries[1].key, { durationSec: 15 });
+    entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    expect(cueTiming(entries[0])).toEqual({ durationSec: 45, follow: 'auto' });
+    expect(cueTiming(entries[1])).toEqual({ durationSec: 15, follow: 'manual' });
+    expect(cueWindows(entries).map((window) => [window.startSec, window.endSec])).toEqual([
+      [0, 45],
+      [45, 60],
+    ]);
+    expect(showTotalSec(entries)).toBe(60);
+    // Clamps keep the file self-describing; unknown keys are ignored.
+    api.setCueTiming(entries[0].key, { durationSec: 99999 });
+    api.setCueTiming('missing', { durationSec: 10 });
+    entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    expect(cueTiming(entries[0]).durationSec).toBe(3600);
+    expect(showTotalSec(entries)).toBe(3615);
+    // Legacy-shaped entries (no timing fields) still resolve to defaults.
+    expect(cueTiming({ key: 'legacy', sceneId: 2 })).toEqual({
+      durationSec: 30,
+      follow: 'manual',
+    });
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });

@@ -101,6 +101,10 @@ interface DirectorState {
   setActivePlaylist: (id: string) => void;
   addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
   removeSceneFromPlaylist: (playlistId: string, key: string) => void;
+  setCueTiming: (
+    key: string,
+    patch: { durationSec?: number; follow?: CueFollow },
+  ) => void;
   cycleDuration: () => void;
   stepHue: () => void;
   setHueShift: (value: number) => void;
@@ -281,9 +285,77 @@ import {
 
 export { SECTION_IDS };
 
+/** Show cue follow mode: hold until advanced, or auto-advance on expiry. */
+export type CueFollow = 'manual' | 'auto';
+
+/** Playlist occurrence (Show cue): duration belongs to the entry, never the scene. */
 export interface PlaylistEntry {
   key: string;
   sceneId: number;
+  /** Seconds on stage; additive field, absent means the playlist default. */
+  durationSec?: number;
+  /** Absent means 'manual' (hold until advanced). */
+  follow?: CueFollow;
+}
+
+/** Playlist default when a cue omits its own duration. */
+export const DEFAULT_CUE_DURATION_SEC = 30;
+export const MIN_CUE_DURATION_SEC = 1;
+export const MAX_CUE_DURATION_SEC = 3600;
+
+function clampCueDuration(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return DEFAULT_CUE_DURATION_SEC;
+  }
+  return Math.min(
+    MAX_CUE_DURATION_SEC,
+    Math.max(MIN_CUE_DURATION_SEC, Math.round(value)),
+  );
+}
+
+function sanitizeFollow(value: unknown): CueFollow {
+  return value === 'auto' ? 'auto' : 'manual';
+}
+
+/** Effective timing for a cue, with playlist defaults applied. */
+export function cueTiming(entry: PlaylistEntry): {
+  durationSec: number;
+  follow: CueFollow;
+} {
+  return {
+    durationSec: clampCueDuration(entry.durationSec ?? DEFAULT_CUE_DURATION_SEC),
+    follow: sanitizeFollow(entry.follow ?? 'manual'),
+  };
+}
+
+export interface CueWindow {
+  key: string;
+  sceneId: number;
+  follow: CueFollow;
+  startSec: number;
+  endSec: number;
+}
+
+/** Accumulated in/out windows for a cue list, in execution order. */
+export function cueWindows(entries: PlaylistEntry[]): CueWindow[] {
+  let cursor = 0;
+  return entries.map((entry) => {
+    const timing = cueTiming(entry);
+    const window: CueWindow = {
+      key: entry.key,
+      sceneId: entry.sceneId,
+      follow: timing.follow,
+      startSec: cursor,
+      endSec: cursor + timing.durationSec,
+    };
+    cursor = window.endSec;
+    return window;
+  });
+}
+
+/** Total show runtime in seconds. */
+export function showTotalSec(entries: PlaylistEntry[]): number {
+  return entries.reduce((total, entry) => total + cueTiming(entry).durationSec, 0);
 }
 
 export interface ScenePlaylist {
@@ -311,7 +383,12 @@ function sanitizeEntries(ids: unknown, valid: Set<number>): PlaylistEntry[] {
     if (!key || seenKeys.has(key)) key = `e${counter}`;
     counter += 1;
     seenKeys.add(key);
-    entries.push({ key, sceneId: record['sceneId'] });
+    entries.push({
+      key,
+      sceneId: record['sceneId'],
+      durationSec: clampCueDuration(record['durationSec']),
+      follow: sanitizeFollow(record['follow']),
+    });
   }
   return entries;
 }
@@ -344,6 +421,8 @@ function entriesFromLegacy(
   return [...cleanFavs, ...rest].map((sceneId, index) => ({
     key: `e${index}`,
     sceneId,
+    durationSec: DEFAULT_CUE_DURATION_SEC,
+    follow: 'manual' as CueFollow,
   }));
 }
 
@@ -623,7 +702,12 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
             ...entry,
             entries: [
               ...entry.entries,
-              { key: `e${Date.now().toString(36)}`, sceneId: created.id },
+              {
+                key: `e${Date.now().toString(36)}`,
+                sceneId: created.id,
+                durationSec: DEFAULT_CUE_DURATION_SEC,
+                follow: 'manual' as CueFollow,
+              },
             ],
           }
         : entry,
@@ -905,7 +989,12 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
             ...entry,
             entries: [
               ...entry.entries,
-              { key: `e${Date.now().toString(36)}${entry.entries.length}`, sceneId },
+              {
+                key: `e${Date.now().toString(36)}${entry.entries.length}`,
+                sceneId,
+                durationSec: DEFAULT_CUE_DURATION_SEC,
+                follow: 'manual' as CueFollow,
+              },
             ],
           }
         : entry,
@@ -920,6 +1009,33 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         ? {
             ...entry,
             entries: entry.entries.filter((scene) => scene.key !== key),
+          }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  setCueTiming: (key, patch) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    if (!active.entries.some((entry) => entry.key === key)) return;
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id
+        ? {
+            ...entry,
+            entries: entry.entries.map((scene) =>
+              scene.key === key
+                ? {
+                    ...scene,
+                    ...(patch.durationSec !== undefined
+                      ? { durationSec: clampCueDuration(patch.durationSec) }
+                      : null),
+                    ...(patch.follow !== undefined
+                      ? { follow: sanitizeFollow(patch.follow) }
+                      : null),
+                  }
+                : scene,
+            ),
           }
         : entry,
     );
@@ -1120,6 +1236,14 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     }),
 }));
 
+/** Show pilot anchor: maps the active Clock source onto show elapsed time. */
+export interface ShowAnchor {
+  source: 'audio' | 'wall';
+  /** Clock reading (sec) at which elapsedBaseSec held. */
+  baseTimeSec: number;
+  elapsedBaseSec: number;
+}
+
 export const liveRefs = {
   burstId: 0,
   boost: 0,
@@ -1127,6 +1251,11 @@ export const liveRefs = {
   elevation: 0,
   roll: 0,
   zoom: 1,
+  showAnchor: null as ShowAnchor | null,
+  /** Elapsed seconds at the previous pilot tick (seek detector). */
+  showLastElapsedSec: 0,
+  /** Set while the pilot drives a cue change; manual moves clear it. */
+  showPilotDriving: false,
 };
 
 export const transitionRef = {
