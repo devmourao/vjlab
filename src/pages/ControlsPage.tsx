@@ -14,6 +14,7 @@ import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
 import { CoverageMeter } from '../components/CoverageMeter';
 import { SceneList } from '../components/SceneList';
+import { TimelineView } from '../components/TimelineView';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
 import { FlagPills } from '../components/controls/FlagPills';
@@ -310,6 +311,17 @@ export default function ControlsPage() {
                       onCueTiming: (key, patch) =>
                         send({ type: 'setCueTiming', key, patch }),
                     }}
+                  />
+                  <TimelineView
+                    entries={snapshot.entries}
+                    names={
+                      new Map(
+                        snapshot.presets.map((preset) => [preset.id, preset.name]),
+                      )
+                    }
+                    activeKey={snapshot.activeEntryKey}
+                    cueClock={cueClock}
+                    onSelect={(id, key) => send({ type: 'dissolve', id, key })}
                   />
                 </>
               )}
