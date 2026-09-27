@@ -193,3 +193,35 @@ export function pilotTick(): PilotOutcome {
 export function activeCueEntries(state: PilotState): PlaylistEntry[] {
   return selectActivePlaylist(state).entries;
 }
+
+export interface CueCountdown {
+  key: string;
+  remainingSec: number;
+}
+
+/** Countdown for the cue under `elapsed`; null past the show end. */
+export function countdownAt(
+  windows: CueWindow[],
+  elapsed: number,
+): CueCountdown | null {
+  if (windows.length === 0) return null;
+  const index = cueIndexAt(windows, elapsed);
+  const current = windows[index];
+  if (elapsed >= current.endSec) return null;
+  return { key: current.key, remainingSec: current.endSec - elapsed };
+}
+
+/** Coverage tolerance around the reference to read as "covered". */
+export const COVERAGE_TOLERANCE_SEC = 5;
+
+export type CoverageStatus = 'under' | 'covered' | 'over';
+
+/** Show total vs a reference duration (track or manual target). */
+export function coverageStatus(
+  totalSec: number,
+  referenceSec: number,
+): CoverageStatus {
+  if (totalSec < referenceSec - COVERAGE_TOLERANCE_SEC) return 'under';
+  if (totalSec > referenceSec + COVERAGE_TOLERANCE_SEC) return 'over';
+  return 'covered';
+}

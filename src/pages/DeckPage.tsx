@@ -172,6 +172,16 @@ function executeControlCommand(
     case 'playlistRemoveScene':
       store.removeSceneFromPlaylist(command.playlistId, command.key);
       break;
+    case 'setCueTiming':
+      store.setCueTiming(command.key, {
+        ...(command.patch.durationSec !== undefined
+          ? { durationSec: command.patch.durationSec }
+          : null),
+        ...(command.patch.follow !== undefined
+          ? { follow: command.patch.follow as 'manual' | 'auto' }
+          : null),
+      });
+      break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
       store.cyclePanelMode();

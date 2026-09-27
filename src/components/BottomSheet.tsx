@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { toggleInterfaceVisibility } from '../director/controlChannel';
 import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
+import { useCueCountdown } from '../director/useCueCountdown';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
 import { DeskPanel } from './controls/DeskPanel';
@@ -27,6 +28,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
   const [size, setSize] = useState<SheetSize>('mini');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
   const playlist = useActivePlaylist();
+  const cueClock = useCueCountdown();
 
   const cycleSize = () => {
     const next = SIZES[(SIZES.indexOf(size) + 1) % SIZES.length];
@@ -121,6 +123,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
               <SceneList
                 manage={false}
                 entries={playlist.entries}
+                cueClock={cueClock}
                 ops={{
                   onMove: (from, to) =>
                     useDirectorStore.getState().movePlaylistScene(from, to),

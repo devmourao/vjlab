@@ -1,9 +1,15 @@
 import { useRef, useState } from 'react';
+import { formatTrackTime } from '../audio/track';
 import {
   DECK_SIZE,
+  cueTiming,
+  cueWindows,
   useDirectorStore,
+  type CueFollow,
+  type CueWindow,
   type PlaylistEntry,
 } from '../director/directorStore';
+import type { CueCountdown } from '../director/showClock';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
@@ -13,6 +19,9 @@ import './SceneList.css';
 
 /** Entries per console page before the full-list toggle. Matches the deck. */
 export const SCENE_PAGE_SIZE = 10;
+
+/** Duration stepper step (seconds). Steppers only in v1 — no drag. */
+export const CUE_STEP_SEC = 5;
 
 /**
  * Single source for scene rows. Two modes:
@@ -31,6 +40,10 @@ export interface SceneListOps {
   onRemove?: (key: string) => void;
   onMove?: (from: number, to: number) => void;
   onPin?: (key: string) => void;
+  onCueTiming?: (
+    key: string,
+    patch: { durationSec?: number; follow?: CueFollow },
+  ) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -44,6 +57,8 @@ interface SceneRow {
   key: string;
   preset: ScenePreset;
   position: number | null;
+  timing?: { durationSec: number; follow: CueFollow };
+  window?: CueWindow;
 }
 
 function keyLabel(index: number): string {
@@ -61,6 +76,7 @@ export function SceneList({
   manage = true,
   pageSize = SCENE_PAGE_SIZE,
   ops = {},
+  cueClock = null,
 }: {
   items?: ScenePreset[];
   entries?: PlaylistEntry[];
@@ -70,6 +86,8 @@ export function SceneList({
   manage?: boolean;
   pageSize?: number;
   ops?: SceneListOps;
+  /** Live countdown (deck clock, or popup audio-derived); null hides it. */
+  cueClock?: CueCountdown | null;
 } = {}) {
   const storeActive = useDirectorStore((s) => s.activePresetId);
   const storeKey = useDirectorStore((s) => s.activeEntryKey);
@@ -82,13 +100,26 @@ export function SceneList({
   const all = items ?? storePresets;
   const byId = new Map(all.map((preset) => [preset.id, preset]));
 
+  const windowsByKey = new Map(
+    (entries ? cueWindows(entries) : []).map((window) => [window.key, window]),
+  );
+  const timeCue =
+    ops.onCueTiming ??
+    ((key: string, patch: { durationSec?: number; follow?: CueFollow }) =>
+      useDirectorStore.getState().setCueTiming(key, patch));
   let rows: SceneRow[];
   if (entries) {
     rows = entries
       .map((entry, index): SceneRow | null => {
         const preset = byId.get(entry.sceneId);
         if (!preset) return null;
-        return { key: entry.key, preset, position: index };
+        return {
+          key: entry.key,
+          preset,
+          position: index,
+          timing: cueTiming(entry),
+          window: windowsByKey.get(entry.key),
+        };
       })
       .filter((row): row is SceneRow => row !== null);
   } else {
@@ -180,7 +211,9 @@ export function SceneList({
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
         {visible.map((row, visibleIndex) => {
-          const { key, preset, position } = row;
+          const { key, preset, position, timing, window } = row;
+          const counting = cueClock?.key === key;
+          const follow = timing?.follow ?? 'manual';
           const inDeck = position !== null && position < DECK_SIZE;
           const libraryIndex = rows.findIndex((entry) => entry.key === key);
           const highlighted =
@@ -234,6 +267,21 @@ export function SceneList({
                   ★
                 </span>
               )}
+              {timing && (
+                <span
+                  className={counting ? 'scene-timing live' : 'scene-timing'}
+                  title={
+                    window
+                      ? `Cue ${formatTrackTime(timing.durationSec)} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)} · ${follow}`
+                      : `Cue ${formatTrackTime(timing.durationSec)} · ${follow}`
+                  }
+                  data-testid={`cue-time-${key}`}
+                >
+                  {counting && cueClock
+                    ? `◷ ${formatTrackTime(cueClock.remainingSec)}`
+                    : formatTrackTime(timing.durationSec)}
+                </span>
+              )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
             </button>
             <div className="scene-item-actions">
@@ -253,6 +301,48 @@ export function SceneList({
                   >
                     {inDeck ? '★' : '☆'}
                   </button>
+                  {timing && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          timeCue(key, { durationSec: timing.durationSec - CUE_STEP_SEC })
+                        }
+                        data-testid={`cue-minus-${key}`}
+                        title={`Shorten cue by ${CUE_STEP_SEC}s`}
+                        aria-label={`Shorten cue by ${CUE_STEP_SEC} seconds`}
+                      >
+                        −
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          timeCue(key, { durationSec: timing.durationSec + CUE_STEP_SEC })
+                        }
+                        data-testid={`cue-plus-${key}`}
+                        title={`Lengthen cue by ${CUE_STEP_SEC}s`}
+                        aria-label={`Lengthen cue by ${CUE_STEP_SEC} seconds`}
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        className={follow === 'auto' ? 'scene-follow auto' : 'scene-follow'}
+                        onClick={() =>
+                          timeCue(key, { follow: follow === 'auto' ? 'manual' : 'auto' })
+                        }
+                        data-testid={`cue-follow-${key}`}
+                        title={
+                          follow === 'auto'
+                            ? 'Follow: auto — advance on expiry'
+                            : 'Follow: manual — hold until advanced'
+                        }
+                        aria-label={`Follow mode ${follow}. Activate to switch.`}
+                      >
+                        {follow === 'auto' ? 'A' : 'M'}
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

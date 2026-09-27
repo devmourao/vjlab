@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
+import { useCueCountdown } from '../director/useCueCountdown';
 import { AudioPanel } from './AudioPanel';
 import { DeskPanel } from './controls/DeskPanel';
 import { SceneTransport } from './controls/SceneTransport';
@@ -26,6 +27,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<PanelTab>('track');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
   const playlist = useActivePlaylist();
+  const cueClock = useCueCountdown();
 
   return (
     <div className="side-panel" data-testid="side-panel">
@@ -67,6 +69,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
             <SceneList
               manage={false}
               entries={playlist.entries}
+              cueClock={cueClock}
               ops={{
                 onMove: (from, to) =>
                   useDirectorStore.getState().movePlaylistScene(from, to),

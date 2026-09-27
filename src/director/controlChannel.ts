@@ -1,8 +1,11 @@
 import { BASE_CAPABILITIES } from '../scenes/bases';
 import type { ScenePreset } from '../scenes/presets';
 import {
+  cueTiming,
   selectActivePlaylist,
+  showTotalSec,
   useDirectorStore,
+  type CueFollow,
   type PanelMode,
 } from './directorStore';
 
@@ -69,6 +72,11 @@ export type ControlCommand =
   | { type: 'deleteScene'; id: number }
   | { type: 'moveScene'; from: number; to: number }
   | { type: 'pinScene'; key: string }
+  | {
+      type: 'setCueTiming';
+      key: string;
+      patch: { durationSec?: number; follow?: string };
+    }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -101,6 +109,8 @@ export interface SnapshotPlaylist {
 export interface SnapshotEntry {
   key: string;
   sceneId: number;
+  durationSec: number;
+  follow: CueFollow;
 }
 
 export interface ControlSnapshot {
@@ -134,6 +144,8 @@ export interface ControlSnapshot {
   duration: number;
   queue: Array<{ id: string; name: string }>;
   mediaIndex: number | null;
+  showTotalSec: number;
+  showTargetSec: number | null;
 }
 
 export interface ImportResult {
@@ -182,8 +194,9 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'replayTour',
   'switchPlaylist',
   'runAction',
-  'playlistAddScene',
-  'playlistRemoveScene',
+    'playlistAddScene',
+    'playlistRemoveScene',
+    'setCueTiming',
   'togglePlayback',
   'seekTrack',
   'skipTrack',
@@ -281,6 +294,20 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       return typeof command['id'] === 'string';
     case 'pinScene':
       return typeof command['key'] === 'string';
+    case 'setCueTiming': {
+      if (typeof command['key'] !== 'string') return false;
+      if (!isRecord(command['patch'])) return false;
+      const patch = command['patch'];
+      if (
+        patch['durationSec'] !== undefined &&
+        typeof patch['durationSec'] !== 'number'
+      ) {
+        return false;
+      }
+      return (
+        patch['follow'] === undefined || typeof patch['follow'] === 'string'
+      );
+    }
     case 'playlistAddScene':
       return (
         typeof command['playlistId'] === 'string' &&
@@ -361,10 +388,15 @@ export function buildSnapshot(
       .entries.slice(0, 10)
       .map((entry) => entry.sceneId),
     sceneOrder: selectActivePlaylist(state).entries.map((entry) => entry.sceneId),
-    entries: selectActivePlaylist(state).entries.map((entry) => ({
-      key: entry.key,
-      sceneId: entry.sceneId,
-    })),
+    entries: selectActivePlaylist(state).entries.map((entry) => {
+      const timing = cueTiming(entry);
+      return {
+        key: entry.key,
+        sceneId: entry.sceneId,
+        durationSec: timing.durationSec,
+        follow: timing.follow,
+      };
+    }),
     playlists: state.playlists.map((entry) => ({
       id: entry.id,
       name: entry.name,
@@ -401,6 +433,8 @@ export function buildSnapshot(
     duration: track.duration ?? 0,
     queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
     mediaIndex: state.mediaIndex,
+    showTotalSec: showTotalSec(selectActivePlaylist(state).entries),
+    showTargetSec: selectActivePlaylist(state).targetSec ?? null,
   };
 }
 

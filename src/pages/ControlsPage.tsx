@@ -8,8 +8,11 @@ import {
   type ControlSnapshot,
 } from '../director/controlChannel';
 import { useControlKeys } from '../director/useControlKeys';
+import { cueWindows } from '../director/directorStore';
+import { countdownAt } from '../director/showClock';
 import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
+import { CoverageMeter } from '../components/CoverageMeter';
 import { SceneList } from '../components/SceneList';
 import { TrackCard } from '../components/TrackCard';
 import { EffectSlotList } from '../components/controls/EffectSlotList';
@@ -114,6 +117,15 @@ export default function ControlsPage() {
   const track = useMemo(
     () => (fileName ? createTrack(fileName) : null),
     [fileName],
+  );
+  // Popup countdown: derived from the snapshot track position when a track
+  // is loaded (deck owns the Clock); otherwise static durations only.
+  const cueClock = useMemo(
+    () =>
+      snapshot?.fileName
+        ? countdownAt(cueWindows(snapshot.entries), snapshot.position)
+        : null,
+    [snapshot],
   );
 
   return (
@@ -264,6 +276,17 @@ export default function ControlsPage() {
                       </button>
                     </div>
                   </div>
+                  <CoverageMeter
+                    totalSec={snapshot.showTotalSec}
+                    referenceSec={
+                      snapshot.fileName && snapshot.duration > 0
+                        ? snapshot.duration
+                        : (snapshot.showTargetSec ?? null)
+                    }
+                    referenceLabel={
+                      snapshot.fileName && snapshot.duration > 0 ? 'TRACK' : 'TARGET'
+                    }
+                  />
                   <SceneList
                     manage={false}
                     items={snapshot.presets.map(
@@ -279,10 +302,13 @@ export default function ControlsPage() {
                     entries={snapshot.entries}
                     activeId={snapshot.activePresetId}
                     activeKey={snapshot.activeEntryKey}
+                    cueClock={cueClock}
                     onSelect={(id, key) => send({ type: 'dissolve', id, key: key ?? null })}
                     ops={{
                       onMove: (from, to) => send({ type: 'moveScene', from, to }),
                       onPin: (key) => send({ type: 'pinScene', key }),
+                      onCueTiming: (key, patch) =>
+                        send({ type: 'setCueTiming', key, patch }),
                     }}
                   />
                 </>

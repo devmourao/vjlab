@@ -175,3 +175,23 @@
     display: none;
   }
 }
+
+/* Cue timing chip: small secondary number at the row end (cue level).
+   The live countdown reuses the slot with the accent treatment. */
+.scene-timing {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-timing.live {
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.scene-item-actions .scene-follow.auto {
+  border-color: rgba(125, 211, 252, 0.6);
+  color: #7dd3fc;
+}
