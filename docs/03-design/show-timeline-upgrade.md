@@ -218,3 +218,4 @@ Sprint 33 preconditions met — implementation may start.
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
 | 0.1 | 2026-09-27 | Planning doc from brainstorming sessions; no code | VJLab crew |
+| 1.0 | 2026-09-27 | Implemented (Sprints 33-35, v0.12.0): timed cues, Clock + pilot, queue UX, coverage, timeline view, declared burst. Decisions §11 locked. Phase B still future. | VJLab crew |

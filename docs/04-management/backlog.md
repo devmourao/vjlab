@@ -88,14 +88,14 @@
 | VJLAB-67 | Instance-scoped scene foundation — single instances[] composition, per-instance asset slots, base capability registry | Refactor | High | E12 | M12 | New |
 | VJLAB-68 | Scene CRUD v1 — create, edit and delete on native bases with text export/import (playlist born here) | Feature | High | E12 | M12 | New |
 | VJLAB-69 | Popup polish round — shared control kit, strobe switch and color radio with swatches, active flags, per-slot sliders, fullscreen layout, retire DETACHED pill | Enhancement | Medium | E11 | M11 | New |
-| VJLAB-70 | Show/Cue data model — occurrence owns durationSec + follow, versioned persistence (design doc `03-design/show-timeline-upgrade.md` D1) | Feature | High | E13 | M13 | New |
-| VJLAB-71 | Timed queue UX — inline duration stepper, Manual/Auto toggle per cue, countdown, show totals (D2 Play/Shape) | Feature | High | E13 | M13 | New |
-| VJLAB-72 | Proportional timeline view — duration bars, accumulated in/out ruler, show total (D2 Build) | Feature | Medium | E13 | M13 | New |
-| VJLAB-73 | Clock abstraction — audio/wall sources, seek-rebase policy, end-of-show, manual takeover (D3) | Feature | High | E13 | M13 | New |
-| VJLAB-74 | Coverage meter — bound-track duration, else manual target, else total only | Feature | Medium | E13 | M13 | New |
-| VJLAB-75 | Capability registry v2 — 4 param families mapping + spatial reference decisions (D4 design spike) | Refactor | Medium | E13 | M13 | New |
-| VJLAB-76 | Burst formalization — declared burstResponse per base, current coefficients as v1 defaults | Enhancement | Medium | E13 | M13 | New |
-| VJLAB-77 | Glossary + docs sync — Show/Cue/Clock/Takeover/Burst/macros | Documentation | Small | E13 | M13 | New |
+| VJLAB-70 | Show/Cue data model — occurrence owns durationSec + follow, versioned persistence (design doc `03-design/show-timeline-upgrade.md` D1) | Feature | High | E13 | M13 | Done |
+| VJLAB-71 | Timed queue UX — inline duration stepper, Manual/Auto toggle per cue, countdown, show totals (D2 Play/Shape) | Feature | High | E13 | M13 | Done |
+| VJLAB-72 | Proportional timeline view — duration bars, accumulated in/out ruler, show total (D2 Build) | Feature | Medium | E13 | M13 | Done |
+| VJLAB-73 | Clock abstraction — audio/wall sources, seek-rebase policy, end-of-show, manual takeover (D3) | Feature | High | E13 | M13 | Done |
+| VJLAB-74 | Coverage meter — bound-track duration, else manual target, else total only | Feature | Medium | E13 | M13 | Done |
+| VJLAB-75 | Capability registry v2 — 4 param families mapping + spatial reference decisions (D4 design spike) | Refactor | Medium | E13 | M13 | Done |
+| VJLAB-76 | Burst formalization — declared burstResponse per base, current coefficients as v1 defaults | Enhancement | Medium | E13 | M13 | Done |
+| VJLAB-77 | Glossary + docs sync — Show/Cue/Clock/Takeover/Burst/macros | Documentation | Small | E13 | M13 | Done |
 
 ## Dependencies
 

@@ -43,3 +43,48 @@ the deck with a full-list toggle.
 Help. The interactive drawer and first-run tour live on the deck; the
 Console popup carries the same compact teaser, firing remote commands
 so the guide and the tour open on the main deck window.
+
+## Show
+
+A timed playlist: ordered cues with their own total runtime, optionally
+read against a loaded track or a manual target (coverage meter). Theater
+/ QLab sense of "show". One play carries a full set ponta a ponta.
+
+## Cue
+
+One playlist occurrence: a scene reference plus its position, duration
+and follow mode. Duration belongs to the cue (`key`), never to the
+scene — the same scene may last 30 s as cue 2 and 3 min as cue 7.
+Theater / QLab sense of "cue".
+
+## Clock
+
+The single time source driving auto-advance (and recorded events in the
+future): audio position while a track plays, wall clock when the show
+runs standalone. A discontinuity reads as a seek and rebases the show
+onto the cue under the playhead.
+
+## Takeover
+
+Manual trigger during auto-playback (QLab GO style): the playhead moves
+to the taken cue and the pilot continues from there. Manual never breaks
+the automatic show, it redirects it.
+
+## Burst
+
+Momentary live impulse (`burst.fire`, B key): each base maps it to its
+own declared response with decay (grandMA Flash-button sense). Declared
+per base in the capability registry; recordable through the action
+registry.
+
+## Macro
+
+One big knob driving several params (Ableton Macro / Resolume Dashboard
+sense). Shape disclosure level: `Energy` (gain + speed) and `Breath`
+(scale-pulse depth) ship first.
+
+## Coverage
+
+Show total vs a reference duration — loaded track, else manual target,
+else the total alone — reading under / covered (±5 s) / over. The show
+always has its own ruler, with or without a track.
