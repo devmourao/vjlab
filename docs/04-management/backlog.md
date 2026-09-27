@@ -17,6 +17,7 @@
 * E11 — Web Experience v0.6.0 (landing, responsive shell, panel visibility, onboarding guide)
 * E12 — Scene Packs and Library v0.9.0 (instance foundation, pack format, scene CRUD)
 * E13 — Show Timeline v0.12.0 (timed cues, auto-advance, clock, coverage, visual timeline)
+* E14 — Anchored Show v0.13.0 (track-anchored pilot, interrupt pool/body split, resume)
 
 ## Items
 
@@ -96,6 +97,8 @@
 | VJLAB-75 | Capability registry v2 — 4 param families mapping + spatial reference decisions (D4 design spike) | Refactor | Medium | E13 | M13 | Done |
 | VJLAB-76 | Burst formalization — declared burstResponse per base, current coefficients as v1 defaults | Enhancement | Medium | E13 | M13 | Done |
 | VJLAB-77 | Glossary + docs sync — Show/Cue/Clock/Takeover/Burst/macros | Documentation | Small | E13 | M13 | Done |
+| VJLAB-78 | Track-anchored pilot — elapsed IS track position, pool/body split, timed return | Feature | High | E14 | M14 | Done |
+| VJLAB-79 | Resume action (Z) — re-sync to track point, transport button both surfaces | Feature | Medium | E14 | M14 | Done |
 
 ## Dependencies
 
@@ -116,6 +119,8 @@
 * VJLAB-73 blocks VJLAB-71 (auto-advance runs on the Clock abstraction).
 * VJLAB-71 blocks VJLAB-72 (timeline view reads the timed queue).
 * VJLAB-70 to VJLAB-76 block VJLAB-77 (docs sync closes the epic).
+* VJLAB-73 blocks VJLAB-78 (anchored pilot reworks the Clock pilot).
+* VJLAB-78 blocks VJLAB-79 (resume targets the body timeline).
 
 ## Notes for Sprint 1 Candidates
 
@@ -144,3 +149,4 @@
 | 0.9.1 | 2026-09-23 | Refresh VJLAB-50 builder redesign scope (Sprint 31) |
 | 0.10.1 | 2026-09-23 | Add VJLAB-69 popup polish round with shared control kit (Sprint 32) |
 | 0.11.0 | 2026-09-27 | Add E13 Show Timeline with VJLAB-70 to VJLAB-77 (Sprints 33-35) |
+| 0.12.0 | 2026-09-27 | Add E14 Anchored Show with VJLAB-78/79 (Sprint 36) |

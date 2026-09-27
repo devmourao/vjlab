@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatTrackTime } from '../audio/track';
 import {
   DECK_SIZE,
+  bodyEntries,
   cueTiming,
   showTotalSec,
   useDirectorStore,
@@ -114,7 +115,7 @@ export function PlaylistManager() {
       </div>
 
       <CoverageMeter
-        totalSec={showTotalSec(active.entries)}
+        totalSec={showTotalSec(bodyEntries(active.entries))}
         referenceSec={active.targetSec ?? null}
         referenceLabel="TARGET"
       />

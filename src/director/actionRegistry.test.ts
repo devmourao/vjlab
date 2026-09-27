@@ -21,11 +21,12 @@ describe('actionRegistry', () => {
 
   it('derives the guide table with merged rows in registry order', () => {
     const rows = deriveShortcutMap();
-    expect(rows.slice(0, 6)).toEqual([
+    expect(rows.slice(0, 7)).toEqual([
       { key: '1–0', action: 'Dissolve deck position 1' },
       { key: 'N / P', action: 'Dissolve next in playlist' },
       { key: 'X', action: 'Hard cut to next preset' },
       { key: 'Y', action: 'Cycle transition duration' },
+      { key: 'Z', action: 'Resume show at track point (clears interrupts)' },
       { key: 'T', action: 'Fire text overlay' },
       { key: 'H', action: 'Step global hue shift' },
     ]);

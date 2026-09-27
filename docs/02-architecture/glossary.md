@@ -88,3 +88,21 @@ sense). Shape disclosure level: `Energy` (gain + speed) and `Breath`
 Show total vs a reference duration — loaded track, else manual target,
 else the total alone — reading under / covered (±5 s) / over. The show
 always has its own ruler, with or without a track.
+
+## Pool
+
+The interrupt favorites: the first 10 playlist positions (the deck,
+Digit1–Digit0). Manual-only overlays off the timeline — the pilot never
+auto-targets them. Triggering one holds the stage over the running body.
+
+## Body
+
+The timed show: playlist positions 11+, with windows from track 0:00.
+Countdown, coverage and the timeline read the body. A show with 10 or
+fewer cues has no body and stays pure manual.
+
+## Resume
+
+Explicit return gesture (Z key, Resume button): dissolves to the body
+cue under the playhead and clears interrupts. Safe anytime — doubles
+as a re-sync to the track point.

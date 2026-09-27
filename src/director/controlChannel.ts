@@ -1,6 +1,7 @@
 import { BASE_CAPABILITIES } from '../scenes/bases';
 import type { ScenePreset } from '../scenes/presets';
 import {
+  bodyEntries,
   cueTiming,
   selectActivePlaylist,
   showTotalSec,
@@ -433,7 +434,7 @@ export function buildSnapshot(
     duration: track.duration ?? 0,
     queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
     mediaIndex: state.mediaIndex,
-    showTotalSec: showTotalSec(selectActivePlaylist(state).entries),
+    showTotalSec: showTotalSec(bodyEntries(selectActivePlaylist(state).entries)),
     showTargetSec: selectActivePlaylist(state).targetSec ?? null,
   };
 }

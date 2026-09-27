@@ -7,6 +7,7 @@ import {
   selectActivePlaylist,
   useDirectorStore,
 } from './directorStore';
+import { resumeShow } from './showClock';
 
 const CAMERA_STEP = 0.12;
 const FRACTAL_PRESET_ID = 5;
@@ -83,6 +84,7 @@ export const ACTIONS: ActionDef[] = [
   { id: 'scene.prev', label: 'Dissolve previous in playlist', category: 'Scenes', code: 'KeyP', guide: 'N / P', run: () => useDirectorStore.getState().prevPreset() },
   { id: 'scene.cut', label: 'Hard cut to next preset', category: 'Scenes', code: 'KeyX', guide: 'X', run: () => useDirectorStore.getState().hardCutNext() },
   { id: 'scene.duration', label: 'Cycle transition duration', category: 'Scenes', code: 'KeyY', guide: 'Y', run: () => useDirectorStore.getState().cycleDuration() },
+  { id: 'show.resume', label: 'Resume show at track point (clears interrupts)', category: 'Scenes', code: 'KeyZ', guide: 'Z', run: () => { resumeShow(); } },
   { id: 'overlay.fire', label: 'Fire text overlay', category: 'Overlay', code: 'KeyT', guide: 'T', run: () => useDirectorStore.getState().fireText() },
   { id: 'fx.hue.step', label: 'Step global hue shift', category: 'Effects', code: 'KeyH', guide: 'H', run: () => useDirectorStore.getState().stepHue() },
   { id: 'strobe.toggle', label: 'Toggle strobe (default off)', category: 'Strobe', code: 'Space', guide: 'Space', preventDefault: true, run: () => useDirectorStore.getState().toggleStrobe() },

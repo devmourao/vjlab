@@ -3,6 +3,7 @@ import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { toggleInterfaceVisibility } from '../director/controlChannel';
 import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
 import { useCueCountdown } from '../director/useCueCountdown';
+import { resumeShow } from '../director/showClock';
 import { AudioPanel } from './AudioPanel';
 import './BottomSheet.css';
 import { DeskPanel } from './controls/DeskPanel';
@@ -111,6 +112,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
                   onNext={() => useDirectorStore.getState().nextPreset()}
                   onCut={() => useDirectorStore.getState().hardCutNext()}
                   onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+                  onResume={() => resumeShow()}
                 />
                 <button
                   type="button"

@@ -30,6 +30,7 @@ edit the registry, then sync this file.
 | scene.prev | KeyP | Scenes | N / P |
 | scene.cut | KeyX | Scenes | X |
 | scene.duration | KeyY | Scenes | Y |
+| show.resume | KeyZ | Scenes | Z |
 | overlay.fire | KeyT | Overlay | T |
 | fx.hue.step | KeyH | Effects | H |
 | strobe.toggle | Space | Strobe | Space |

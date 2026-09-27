@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
 import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
 import { useCueCountdown } from '../director/useCueCountdown';
+import { resumeShow } from '../director/showClock';
 import { AudioPanel } from './AudioPanel';
 import { DeskPanel } from './controls/DeskPanel';
 import { SceneTransport } from './controls/SceneTransport';
@@ -57,6 +58,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
                 onNext={() => useDirectorStore.getState().nextPreset()}
                 onCut={() => useDirectorStore.getState().hardCutNext()}
                 onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+                onResume={() => resumeShow()}
               />
               <button
                 type="button"

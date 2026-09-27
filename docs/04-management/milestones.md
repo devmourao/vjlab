@@ -104,6 +104,14 @@
 * Expected evidence: full-set demo video, timeline screenshot, test output.
 * Approver: Owner.
 
+## M14 — Anchored Show 0.13.0
+
+* Objective: the track position alone predicts the stage, with live interrupts.
+* Expected deliveries: track-anchored pilot (audio = clock, wall fallback), interrupt pool (positions 1–10) with timed return, body timeline (11+) from track 0:00, Resume action (Z) plus transport button on both surfaces.
+* Completion criteria: play-from-start and play-from-middle land on the right cue; auto pool cues return on time; manual pool cues hold for Z; ≤10-cue shows stay pure manual; release gate green.
+* Expected evidence: anchored-set demo video, test output.
+* Approver: Owner.
+
 ## Revision History
 
 | Version | Date | Change |

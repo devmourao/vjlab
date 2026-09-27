@@ -278,7 +278,9 @@ export function SceneList({
                   data-testid={`cue-time-${key}`}
                 >
                   {counting && cueClock
-                    ? `◷ ${formatTrackTime(cueClock.remainingSec)}`
+                    ? cueClock.held
+                      ? 'HOLD'
+                      : `◷ ${formatTrackTime(cueClock.remainingSec)}`
                     : formatTrackTime(timing.durationSec)}
                 </span>
               )}

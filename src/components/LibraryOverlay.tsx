@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  bodyEntries,
   selectActivePlaylist,
   useDirectorStore,
 } from '../director/directorStore';
@@ -84,7 +85,7 @@ export function LibraryOverlay() {
           {activeTab === 'playlists' && <PlaylistManager />}
           {activeTab === 'timeline' && (
             <TimelineView
-              entries={timelineEntries}
+              entries={bodyEntries(timelineEntries)}
               names={names}
               activeKey={activeEntryKey}
               cueClock={cueClock}

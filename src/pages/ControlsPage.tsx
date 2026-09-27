@@ -8,7 +8,11 @@ import {
   type ControlSnapshot,
 } from '../director/controlChannel';
 import { useControlKeys } from '../director/useControlKeys';
-import { cueWindows } from '../director/directorStore';
+import {
+  bodyEntries,
+  cueWindows,
+  isPoolIndex,
+} from '../director/directorStore';
 import { countdownAt } from '../director/showClock';
 import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
@@ -120,14 +124,16 @@ export default function ControlsPage() {
     [fileName],
   );
   // Popup countdown: derived from the snapshot track position when a track
-  // is loaded (deck owns the Clock); otherwise static durations only.
-  const cueClock = useMemo(
-    () =>
-      snapshot?.fileName
-        ? countdownAt(cueWindows(snapshot.entries), snapshot.position)
-        : null,
-    [snapshot],
-  );
+  // is loaded (deck owns the Clock); pool interrupts read static, wall
+  // mode without a track shows static durations only.
+  const cueClock = useMemo(() => {
+    if (!snapshot?.fileName) return null;
+    const poolIndex = snapshot.entries.findIndex(
+      (entry) => entry.key === snapshot.activeEntryKey,
+    );
+    if (isPoolIndex(poolIndex)) return null;
+    return countdownAt(cueWindows(bodyEntries(snapshot.entries)), snapshot.position);
+  }, [snapshot]);
 
   return (
     <div className="controls-page" data-testid="controls-page">
@@ -270,6 +276,7 @@ export default function ControlsPage() {
                       onNext={() => send({ type: 'nextPreset' })}
                       onCut={() => send({ type: 'hardCut' })}
                       onCycleDuration={() => send({ type: 'cycleDuration' })}
+                      onResume={() => send({ type: 'runAction', id: 'show.resume' })}
                     />
                     <div className="controls-row">
                       <button type="button" onClick={() => send({ type: 'openLibrary' })}>
@@ -313,7 +320,7 @@ export default function ControlsPage() {
                     }}
                   />
                   <TimelineView
-                    entries={snapshot.entries}
+                    entries={bodyEntries(snapshot.entries)}
                     names={
                       new Map(
                         snapshot.presets.map((preset) => [preset.id, preset.name]),
