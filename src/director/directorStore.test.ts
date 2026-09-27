@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createTrack } from '../audio/track';
 import {
   DECK_SIZE,
+  bodyEntries,
   cueTiming,
   cueWindows,
+  isPoolIndex,
   liveRefs,
   positionIndex,
   selectActivePlaylist,
@@ -316,6 +318,22 @@ describe('directorStore', () => {
     });
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('splits the interrupt pool from the timed body', () => {
+    const entries = Array.from({ length: DECK_SIZE + 2 }, (_, index) => ({
+      key: `e${index}`,
+      sceneId: index % 6,
+    }));
+    expect(bodyEntries(entries).map((entry) => entry.key)).toEqual([
+      'e10',
+      'e11',
+    ]);
+    expect(bodyEntries(entries.slice(0, DECK_SIZE))).toEqual([]);
+    expect(isPoolIndex(0)).toBe(true);
+    expect(isPoolIndex(DECK_SIZE - 1)).toBe(true);
+    expect(isPoolIndex(DECK_SIZE)).toBe(false);
+    expect(isPoolIndex(-1)).toBe(false);
   });
 
   it('stores a manual show target per playlist', () => {

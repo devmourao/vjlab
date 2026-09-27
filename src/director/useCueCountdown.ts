@@ -1,16 +1,13 @@
 import { useEffect, useReducer } from 'react';
-import {
-  cueWindows,
-  selectActivePlaylist,
-  useDirectorStore,
-} from './directorStore';
-import { countdownAt, elapsedSec, type CueCountdown } from './showClock';
+import { useDirectorStore } from './directorStore';
+import { liveCountdown, type CueCountdown } from './showClock';
 
 const COUNTDOWN_INTERVAL_MS = 1000;
 
 /**
- * Live countdown for the cue under the playhead. Ticks at 1 Hz with no
- * per-frame React state — the strip re-renders once per second only.
+ * Live countdown for the stage: the interrupt clock while a pool cue
+ * holds it, else the body cue under the playhead. Ticks at 1 Hz with no
+ * per-frame React state.
  */
 export function useCueCountdown(): CueCountdown | null {
   const [, force] = useReducer((value: number) => value + 1, 0);
@@ -20,7 +17,5 @@ export function useCueCountdown(): CueCountdown | null {
     return () => window.clearInterval(id);
   }, []);
 
-  const state = useDirectorStore.getState();
-  const windows = cueWindows(selectActivePlaylist(state).entries);
-  return countdownAt(windows, elapsedSec());
+  return liveCountdown(useDirectorStore.getState());
 }

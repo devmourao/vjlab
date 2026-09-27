@@ -359,6 +359,19 @@ export function showTotalSec(entries: PlaylistEntry[]): number {
   return entries.reduce((total, entry) => total + cueTiming(entry).durationSec, 0);
 }
 
+/**
+ * Timed body: entries past the interrupt pool (first DECK_SIZE positions).
+ * Pool cues are manual-only overlays; only the body runs on the timeline.
+ */
+export function bodyEntries(entries: PlaylistEntry[]): PlaylistEntry[] {
+  return entries.slice(DECK_SIZE);
+}
+
+/** True for pool positions (interrupt favorites), false for body cues. */
+export function isPoolIndex(index: number): boolean {
+  return index >= 0 && index < DECK_SIZE;
+}
+
 export interface ScenePlaylist {
   id: string;
   name: string;
@@ -1260,12 +1273,20 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     }),
 }));
 
-/** Show pilot anchor: maps the active Clock source onto show elapsed time. */
+/** Show pilot anchor: wall-mode elapsed time (audio mode reads the track). */
 export interface ShowAnchor {
   source: 'audio' | 'wall';
   /** Clock reading (sec) at which elapsedBaseSec held. */
   baseTimeSec: number;
   elapsedBaseSec: number;
+}
+
+/** Live interrupt: a pool cue holding the stage over the running body. */
+export interface ShowInterrupt {
+  key: string;
+  /** Show elapsed seconds when the interrupt fired. */
+  startElapsedSec: number;
+  durationSec: number;
 }
 
 export const liveRefs = {
@@ -1280,6 +1301,7 @@ export const liveRefs = {
   showLastElapsedSec: 0,
   /** Set while the pilot drives a cue change; manual moves clear it. */
   showPilotDriving: false,
+  showInterrupt: null as ShowInterrupt | null,
 };
 
 export const transitionRef = {

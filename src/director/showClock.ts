@@ -1,5 +1,8 @@
 import {
+  bodyEntries,
+  cueTiming,
   cueWindows,
+  isPoolIndex,
   liveRefs,
   selectActivePlaylist,
   transitionRef,
@@ -10,11 +13,16 @@ import {
 } from './directorStore';
 
 /**
- * Show Clock (Sprint 33): the single time abstraction driving auto-advance
- * today and recorded events tomorrow. Two sources, one elapsed timeline:
- * audio position when a track plays (pause comes free), wall clock when
- * the show runs standalone. A discontinuity larger than SEEK_JUMP_SEC is a
- * seek — the show rebases to the cue under the playhead.
+ * Show Clock (Sprint 36): track-anchored timeline with an interrupt pool.
+ *
+ * - Audio mode: show elapsed IS the track position. Play-from-start lands
+ *   on the first body cue, play-from-middle on the cue of that timestamp,
+ *   pause freezes with the audio, seek lands correctly — no anchor.
+ * - Wall mode (no track): the anchor maps wall time onto show elapsed.
+ * - Pool (first DECK_SIZE positions): manual-only overlays off the
+ *   timeline. Body (11+): the timed show from track 0:00.
+ * - A discontinuity larger than SEEK_JUMP_SEC is a seek — the show jumps
+ *   to the cue under the playhead.
  */
 
 export type ClockSource = 'audio' | 'wall';
@@ -31,7 +39,7 @@ export function setAudioTimeSource(source: AudioTimeSource | null): void {
   audioTimeSource = source;
 }
 
-function readAudioTime(): number | null {
+export function readAudioTime(): number | null {
   if (!audioTimeSource) return null;
   try {
     const value = audioTimeSource();
@@ -48,24 +56,21 @@ export function showNowSec(): { source: ClockSource; timeSec: number } {
   return { source: 'wall', timeSec: performance.now() / 1000 };
 }
 
-/** Show elapsed seconds. Migrates the anchor across source flips. */
+/**
+ * Show elapsed seconds. Audio mode reads the track position directly;
+ * wall mode runs the anchor math.
+ */
 export function elapsedSec(): number {
   const now = showNowSec();
+  if (now.source === 'audio') return Math.max(0, now.timeSec);
   const anchor = liveRefs.showAnchor;
   if (!anchor) return 0;
-  if (anchor.source !== now.source) {
-    const elapsed = Math.max(
-      0,
-      now.timeSec - anchor.baseTimeSec + anchor.elapsedBaseSec,
-    );
-    liveRefs.showAnchor = {
-      source: now.source,
-      baseTimeSec: now.timeSec,
-      elapsedBaseSec: elapsed,
-    };
-    return elapsed;
-  }
   return Math.max(0, now.timeSec - anchor.baseTimeSec + anchor.elapsedBaseSec);
+}
+
+/** Alias read by queue UX: the single show-time value. */
+export function showElapsedSec(): number {
+  return elapsedSec();
 }
 
 /** Anchor so the show elapsed time equals the start of cue `index`. */
@@ -83,6 +88,7 @@ export function rebaseToElapsed(windows: CueWindow[], index: number): void {
 export function resetAnchor(): void {
   liveRefs.showAnchor = null;
   liveRefs.showLastElapsedSec = 0;
+  liveRefs.showInterrupt = null;
 }
 
 /** Window index holding `elapsed`; clamps to the last cue (end holds). */
@@ -95,6 +101,11 @@ export function cueIndexAt(windows: CueWindow[], elapsed: number): number {
   return index;
 }
 
+/** Body windows of the active playlist (pool excluded, from track 0:00). */
+export function activeBodyWindows(state: PilotState): CueWindow[] {
+  return cueWindows(bodyEntries(selectActivePlaylist(state).entries));
+}
+
 export interface PilotState {
   playlists: ScenePlaylist[];
   activePlaylistId: string;
@@ -102,33 +113,65 @@ export interface PilotState {
   activeEntryKey: string | null;
 }
 
-function activeCue(
+function bodyCue(
   state: PilotState,
 ): { window: CueWindow; index: number } | null {
-  const windows = cueWindows(selectActivePlaylist(state).entries);
+  const windows = activeBodyWindows(state);
   const index = windows.findIndex(
     (window) => window.key === state.activeEntryKey,
   );
   return index >= 0 ? { window: windows[index], index } : null;
 }
 
-/** True when the pilot owns scene progression (current cue is auto). */
+/** True when the pilot owns scene progression (current body cue is auto). */
 export function pilotOwnsScene(state: PilotState): boolean {
-  return activeCue(state)?.window.follow === 'auto';
+  return bodyCue(state)?.window.follow === 'auto';
+}
+
+/** Live interrupt record when the stage holds a pool cue. */
+export function activeInterrupt(state: PilotState): {
+  key: string;
+  startElapsedSec: number;
+  durationSec: number;
+} | null {
+  const record = liveRefs.showInterrupt;
+  if (!record || record.key !== state.activeEntryKey) return null;
+  const entries = selectActivePlaylist(state).entries;
+  const index = entries.findIndex((entry) => entry.key === record.key);
+  if (!isPoolIndex(index)) return null;
+  return record;
 }
 
 /**
- * Manual move (takeover = redirect): rebase the show onto the taken cue.
- * Unknown keys (playlist switch mid-flight) reset the anchor.
+ * Manual move (takeover = redirect). Pool keys open a timed interrupt
+ * over the running body; body keys redirect within the timeline (wall
+ * mode rebases, audio mode already reads the track). Unknown keys reset.
  */
 export function noteManualCue(
   state: PilotState,
   key: string | null,
 ): void {
-  const windows = cueWindows(selectActivePlaylist(state).entries);
-  const index = windows.findIndex((window) => window.key === key);
-  if (index >= 0) rebaseToElapsed(windows, index);
-  else resetAnchor();
+  const entries = selectActivePlaylist(state).entries;
+  const index = entries.findIndex((entry) => entry.key === key);
+  if (index < 0) {
+    resetAnchor();
+    return;
+  }
+  if (isPoolIndex(index)) {
+    const timing = cueTiming(entries[index]);
+    liveRefs.showInterrupt = {
+      key: entries[index].key,
+      startElapsedSec: showElapsedSec(),
+      durationSec: timing.durationSec,
+    };
+    return;
+  }
+  liveRefs.showInterrupt = null;
+  if (readAudioTime() === null) {
+    const windows = cueWindows(bodyEntries(entries));
+    const bodyIndex = windows.findIndex((window) => window.key === key);
+    if (bodyIndex >= 0) rebaseToElapsed(windows, bodyIndex);
+  }
 }
 
 function driveTo(
@@ -138,6 +181,7 @@ function driveTo(
 ): void {
   const next = windows[index];
   liveRefs.showPilotDriving = true;
+  liveRefs.showInterrupt = null;
   rebaseToElapsed(windows, index);
   if (next.sceneId === state.activePresetId) {
     // Same scene, next occurrence: move the cursor without a visual cut.
@@ -148,19 +192,60 @@ function driveTo(
   }
 }
 
+/**
+ * Resume gesture (Z): dissolve to the body cue under the playhead and
+ * clear interrupts. Safe anytime — doubles as a re-sync.
+ */
+export function resumeShow(): boolean {
+  const state = useDirectorStore.getState();
+  if (transitionRef.active) return false;
+  const windows = activeBodyWindows(state);
+  if (windows.length === 0) return false;
+  const elapsed = showElapsedSec();
+  const index = cueIndexAt(windows, elapsed);
+  if (state.activeEntryKey === windows[index].key) {
+    liveRefs.showInterrupt = null;
+    return false;
+  }
+  driveTo(state, windows, index);
+  return true;
+}
+
 export type PilotOutcome = 'advanced' | 'seek' | 'held' | 'idle';
 
 /**
- * One pilot step. Natural expiry advances auto cues only (manual cues
- * hold); any discontinuity is a seek and jumps to the cue under the
- * playhead; the show end holds on the last cue.
+ * One pilot step. Body auto cues advance on expiry; pool cues are never
+ * auto-targeted; an auto interrupt returns to the track point on expiry
+ * while a manual one holds; discontinuities seek; the end holds.
  */
 export function pilotTick(): PilotOutcome {
   const state = useDirectorStore.getState();
   if (transitionRef.active) return 'idle';
-  const windows = cueWindows(selectActivePlaylist(state).entries);
-  if (windows.length === 0) return 'idle';
-  if (!liveRefs.showAnchor) {
+  const windows = activeBodyWindows(state);
+  if (windows.length === 0) return 'held';
+  const elapsed = showElapsedSec();
+  const jumped =
+    Math.abs(elapsed - liveRefs.showLastElapsedSec) > SEEK_JUMP_SEC;
+  liveRefs.showLastElapsedSec = elapsed;
+
+  const interrupt = activeInterrupt(state);
+  if (interrupt) {
+    const entries = selectActivePlaylist(state).entries;
+    const record = entries.find((entry) => entry.key === interrupt.key);
+    const follow = record ? cueTiming(record).follow : 'manual';
+    if (follow !== 'auto') return 'held';
+    if (elapsed < interrupt.startElapsedSec + interrupt.durationSec) {
+      return 'held';
+    }
+    const index = cueIndexAt(windows, elapsed);
+    if (index >= windows.length - 1 && elapsed >= windows[index].endSec) {
+      return 'held';
+    }
+    driveTo(state, windows, index);
+    return 'advanced';
+  }
+
+  if (readAudioTime() === null && !liveRefs.showAnchor) {
     const at = Math.max(
       0,
       windows.findIndex((window) => window.key === state.activeEntryKey),
@@ -168,10 +253,6 @@ export function pilotTick(): PilotOutcome {
     rebaseToElapsed(windows, at);
     return 'idle';
   }
-  const elapsed = elapsedSec();
-  const jumped =
-    Math.abs(elapsed - liveRefs.showLastElapsedSec) > SEEK_JUMP_SEC;
-  liveRefs.showLastElapsedSec = elapsed;
   const index = cueIndexAt(windows, elapsed);
   const current = windows[index];
   if (index >= windows.length - 1 && elapsed >= current.endSec) {
@@ -180,16 +261,18 @@ export function pilotTick(): PilotOutcome {
   // Already on the cue under the playhead (or a seek inside it): hold.
   if (state.activeEntryKey === current.key) return 'held';
   if (!jumped) {
-    // Natural crossing: advance only past an expired auto cue.
-    const active = activeCue(state);
-    if (!active || active.window.follow !== 'auto') return 'held';
-    if (elapsed < active.window.endSec) return 'held';
+    // Natural crossing: joining from the pool, or past an expired auto cue.
+    const active = bodyCue(state);
+    if (active) {
+      if (active.window.follow !== 'auto') return 'held';
+      if (elapsed < active.window.endSec) return 'held';
+    }
   }
   driveTo(state, windows, index);
   return jumped ? 'seek' : 'advanced';
 }
 
-/** Timed entries of the active playlist (Sprint 34 queue UX reads this). */
+/** Timed entries of the active playlist (queue UX reads this). */
 export function activeCueEntries(state: PilotState): PlaylistEntry[] {
   return selectActivePlaylist(state).entries;
 }
@@ -197,6 +280,7 @@ export function activeCueEntries(state: PilotState): PlaylistEntry[] {
 export interface CueCountdown {
   key: string;
   remainingSec: number;
+  held?: boolean;
 }
 
 /** Countdown for the cue under `elapsed`; null past the show end. */
@@ -209,6 +293,30 @@ export function countdownAt(
   const current = windows[index];
   if (elapsed >= current.endSec) return null;
   return { key: current.key, remainingSec: current.endSec - elapsed };
+}
+
+/**
+ * Live countdown: the interrupt clock while a pool cue holds the stage,
+ * else the body cue under the playhead.
+ */
+export function liveCountdown(state: PilotState): CueCountdown | null {
+  const elapsed = showElapsedSec();
+  const interrupt = activeInterrupt(state);
+  if (interrupt) {
+    const entries = selectActivePlaylist(state).entries;
+    const record = entries.find((entry) => entry.key === interrupt.key);
+    if (cueTiming(record ?? { key: '', sceneId: -1 }).follow !== 'auto') {
+      return { key: interrupt.key, remainingSec: 0, held: true };
+    }
+    return {
+      key: interrupt.key,
+      remainingSec: Math.max(
+        0,
+        interrupt.startElapsedSec + interrupt.durationSec - elapsed,
+      ),
+    };
+  }
+  return countdownAt(activeBodyWindows(state), elapsed);
 }
 
 /** Coverage tolerance around the reference to read as "covered". */
