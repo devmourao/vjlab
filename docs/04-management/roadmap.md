@@ -55,9 +55,17 @@ Strategic evolution from blank stage to public MVP. Each phase has a clear exit 
 * Dependencies: Phase 6 released (M6 closed).
 * Exit: v0.3.0 tag with stage-control demo and updated keymap; no shortcut overlap verified in `useKeyboardDesk.ts`.
 
+### Phase 8 — Show Timeline v0.12.0 (planned)
+
+* Objective: turn the scene playlist into a timed Show that carries a full set.
+* Expected result: Show/Cue model with per-occurrence duration and follow mode; Clock abstraction with documented seek policy; countdown queue UX; coverage meter against track or manual target; proportional timeline view; formalized per-base burst response (see `docs/03-design/show-timeline-upgrade.md`).
+* Dependencies: Scene Packs and Library shipped (E12).
+* Exit: v0.12.0 tag with a programmed set running ponta a ponta and updated glossary; manual takeover verified live.
+
 ## Out of Roadmap (Future Evolution)
 
 * DJ routes with embedded audio, tab / system capture, photorealistic scenarios, procedural avatars, hardware LED integration.
+* Show Phase B: beats/BPM coexistence (per-cue unit + tap-tempo), input recording engine on the same Clock, fit-show-to-track scaling, composite-base editor, true simultaneous multi-channel rendering (Unreal track).
 
 ## Revision History
 
@@ -65,3 +73,4 @@ Strategic evolution from blank stage to public MVP. Each phase has a clear exit 
 | ------- | ---- | ------ |
 | 0.1.0 | 2026-09-11 | Initial roadmap |
 | 0.2.0 | 2026-09-12 | Add Phase 6 Live Control v0.2.0 |
+| 0.11.0 | 2026-09-27 | Add Phase 8 Show Timeline v0.12.0; park Phase B in Future Evolution |

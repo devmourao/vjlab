@@ -16,6 +16,7 @@
 * E10 — Builder & Media v0.5.0 (preset builder, video frame, elemental library, export/import)
 * E11 — Web Experience v0.6.0 (landing, responsive shell, panel visibility, onboarding guide)
 * E12 — Scene Packs and Library v0.9.0 (instance foundation, pack format, scene CRUD)
+* E13 — Show Timeline v0.12.0 (timed cues, auto-advance, clock, coverage, visual timeline)
 
 ## Items
 
@@ -87,6 +88,14 @@
 | VJLAB-67 | Instance-scoped scene foundation — single instances[] composition, per-instance asset slots, base capability registry | Refactor | High | E12 | M12 | New |
 | VJLAB-68 | Scene CRUD v1 — create, edit and delete on native bases with text export/import (playlist born here) | Feature | High | E12 | M12 | New |
 | VJLAB-69 | Popup polish round — shared control kit, strobe switch and color radio with swatches, active flags, per-slot sliders, fullscreen layout, retire DETACHED pill | Enhancement | Medium | E11 | M11 | New |
+| VJLAB-70 | Show/Cue data model — occurrence owns durationSec + follow, versioned persistence (design doc `03-design/show-timeline-upgrade.md` D1) | Feature | High | E13 | M13 | New |
+| VJLAB-71 | Timed queue UX — inline duration stepper, Manual/Auto toggle per cue, countdown, show totals (D2 Play/Shape) | Feature | High | E13 | M13 | New |
+| VJLAB-72 | Proportional timeline view — duration bars, accumulated in/out ruler, show total (D2 Build) | Feature | Medium | E13 | M13 | New |
+| VJLAB-73 | Clock abstraction — audio/wall sources, seek-rebase policy, end-of-show, manual takeover (D3) | Feature | High | E13 | M13 | New |
+| VJLAB-74 | Coverage meter — bound-track duration, else manual target, else total only | Feature | Medium | E13 | M13 | New |
+| VJLAB-75 | Capability registry v2 — 4 param families mapping + spatial reference decisions (D4 design spike) | Refactor | Medium | E13 | M13 | New |
+| VJLAB-76 | Burst formalization — declared burstResponse per base, current coefficients as v1 defaults | Enhancement | Medium | E13 | M13 | New |
+| VJLAB-77 | Glossary + docs sync — Show/Cue/Clock/Takeover/Burst/macros | Documentation | Small | E13 | M13 | New |
 
 ## Dependencies
 
@@ -102,6 +111,11 @@
 * VJLAB-66 blocks VJLAB-68 (CRUD imports through the pack format).
 * VJLAB-68 supports VJLAB-45 and VJLAB-46 (playlists build on packs and CRUD).
 * VJLAB-60 blocks VJLAB-69 (popup polish builds on the control channel).
+* VJLAB-75 blocks VJLAB-70 (capability mapping fixes the param vocabulary the model uses).
+* VJLAB-70 blocks VJLAB-71, VJLAB-73 and VJLAB-74 (queue UX, clock and coverage consume the Show/Cue model).
+* VJLAB-73 blocks VJLAB-71 (auto-advance runs on the Clock abstraction).
+* VJLAB-71 blocks VJLAB-72 (timeline view reads the timed queue).
+* VJLAB-70 to VJLAB-76 block VJLAB-77 (docs sync closes the epic).
 
 ## Notes for Sprint 1 Candidates
 
@@ -129,3 +143,4 @@
 | 0.8.1 | 2026-09-23 | Add E12 Scene Packs and Library with VJLAB-66/67/68 (Sprints 27-29) |
 | 0.9.1 | 2026-09-23 | Refresh VJLAB-50 builder redesign scope (Sprint 31) |
 | 0.10.1 | 2026-09-23 | Add VJLAB-69 popup polish round with shared control kit (Sprint 32) |
+| 0.11.0 | 2026-09-27 | Add E13 Show Timeline with VJLAB-70 to VJLAB-77 (Sprints 33-35) |

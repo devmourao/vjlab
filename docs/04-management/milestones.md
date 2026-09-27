@@ -56,9 +56,58 @@
 * Expected evidence: keymap delta, stage control demo.
 * Approver: Owner.
 
+## M8 — Desk Research
+
+* Objective: shortcut system audited against industry practice.
+* Expected deliveries: Resolume/VDMX vs VJ Lab shortcut audit and optimization proposal.
+* Completion criteria: keyboard ergonomics review published; no conflicting bindings.
+* Expected evidence: `03-design/keyboard-ergonomics-review.md`.
+* Approver: Owner.
+
+## M9 — Playlists 0.4.0
+
+* Objective: queues for music and effects presets.
+* Expected deliveries: local music queue (session persistence, reorder, load), effects preset queue.
+* Completion criteria: queue, reorder and load local tracks; save effect presets as playlist.
+* Expected evidence: demo video, keymap reference.
+* Approver: Owner.
+
+## M10 — Builder & Media 0.5.0
+
+* Objective: preset authoring and new media-capable bases.
+* Expected deliveries: preset builder redesign, Grid LED and Avatar scenes, preset export/import (versioned JSON), video frame, fractal full-screen.
+* Completion criteria: create/edit/delete presets on native bases; export/import round-trips; release gate green.
+* Expected evidence: builder demo, sample pack file.
+* Approver: Owner.
+
+## M11 — Web Experience 0.6.0
+
+* Objective: presentable, responsive, onboardable browser instrument.
+* Expected deliveries: landing route, responsive shell standard, unified side panels, dedicated player area, explicit hide vs pop-out, detached second-screen popup + polish round.
+* Completion criteria: one control language on deck and popup; first-run tour live; docs in sync.
+* Expected evidence: deployed URL, release notes.
+* Approver: Owner.
+
+## M12 — Scene Packs and Library 0.9.0
+
+* Objective: shareable scene content on a solid instance foundation.
+* Expected deliveries: `instances[]` composition, per-instance asset slots, base capability registry, versioned pack format with validator, scene CRUD with export/import.
+* Completion criteria: packs import through the validator with clean rejection; playlist born from CRUD.
+* Expected evidence: sample pack, validator test output.
+* Approver: Owner.
+
+## M13 — Show Timeline 0.12.0
+
+* Objective: a timed Show runs a full set ponta a ponta with programmed scene durations.
+* Expected deliveries: Show/Cue versioned model, Clock abstraction (audio/wall) with seek-rebase policy, timed queue UX with countdown, coverage meter vs track or manual target, proportional timeline view, declared per-base burst response, glossary sync.
+* Completion criteria: 40-minute-style set runs with auto-advance and live countdown; any manual trigger redirects the pilot without breaking it; seek visibly rebases the show; deck and popup stay in parity; release gate green.
+* Expected evidence: full-set demo video, timeline screenshot, test output.
+* Approver: Owner.
+
 ## Revision History
 
 | Version | Date | Change |
 | ------- | ---- | ------ |
 | 0.1.0 | 2026-09-11 | Initial milestones |
 | 0.2.1 | 2026-09-16 | Add M5 Live Control, M6 Polish, M7 Stage Control for panel / fullscreen / auto-pilot |
+| 0.11.0 | 2026-09-27 | Backfill M8 Playlists-era through M12 Packs/Library; add M13 Show Timeline 0.12.0 |
