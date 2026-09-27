@@ -6,11 +6,16 @@ import type { BaseId } from './presets';
  * the pack validator and the tests all read this table, so a param that
  * no component consumes cannot be advertised.
  */
+/** Global behavior family (Show Timeline contract). Untagged = peculiar to the base. */
+export type ParamFamily = 'transport' | 'modulation' | 'color' | 'spatial';
+
 export interface BaseParamSchema {
   name: string;
   type: 'number' | 'image';
   /** preset = shared by the scene, instance = owned per base instance. */
   scope: 'preset' | 'instance';
+  /** Global family; absent means base-specific (peculiar) param. */
+  family?: ParamFamily;
   min?: number;
   max?: number;
   default: number | string | null;
@@ -29,6 +34,7 @@ export const HOST_PARAM_SCHEMAS: BaseParamSchema[] = [
     name: 'cameraSensitivity',
     type: 'number',
     scope: 'instance',
+    family: 'spatial',
     min: 0,
     max: 2,
     default: 1,
@@ -37,6 +43,7 @@ export const HOST_PARAM_SCHEMAS: BaseParamSchema[] = [
     name: 'zoom',
     type: 'number',
     scope: 'instance',
+    family: 'spatial',
     min: 0.5,
     max: 2.5,
     default: 1,
@@ -49,8 +56,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     label: 'Particle Field',
     description: 'Audio-reactive point cloud with bass pulse and treble scale.',
     params: [
-      { name: 'gain', type: 'number', scope: 'preset', min: 0.4, max: 2, default: 1 },
-      { name: 'speed', type: 'number', scope: 'preset', min: 0.5, max: 2, default: 1 },
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
+      { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
     ],
   },
   mesh: {
@@ -58,7 +65,7 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     label: 'Deformable Mesh',
     description: 'Bass-displaced sphere, flat wireframe or per-instance image.',
     params: [
-      { name: 'gain', type: 'number', scope: 'preset', min: 0.4, max: 2, default: 1 },
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'map', type: 'image', scope: 'instance', default: null },
     ],
   },
@@ -67,8 +74,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     label: 'Tunnel Field',
     description: 'Ring tunnel advancing with mids and treble travel.',
     params: [
-      { name: 'gain', type: 'number', scope: 'preset', min: 0.4, max: 2, default: 1 },
-      { name: 'speed', type: 'number', scope: 'preset', min: 0.5, max: 2, default: 1 },
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
+      { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
     ],
   },
   fractal: {
@@ -76,8 +83,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     label: 'Fractal Bloom',
     description: 'Full-screen audio-reactive fractal shader plane.',
     params: [
-      { name: 'gain', type: 'number', scope: 'preset', min: 0.4, max: 2, default: 1 },
-      { name: 'speed', type: 'number', scope: 'preset', min: 0.5, max: 2, default: 1 },
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
+      { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
     ],
   },
 };

@@ -67,4 +67,18 @@ describe('presets', () => {
     }
     expect(instanceKey(1, 'mesh', 0)).toBe('1:mesh:0');
   });
+
+  it('tags shared behavior params with a global family, peculiar params stay untagged', () => {
+    const byName = new Map(
+      Object.values(BASE_CAPABILITIES)
+        .flatMap((capability) => capability.params)
+        .map((schema) => [schema.name, schema.family] as const),
+    );
+    expect(byName.get('gain')).toBe('modulation');
+    expect(byName.get('speed')).toBe('transport');
+    expect(byName.get('map')).toBeUndefined();
+    for (const schema of HOST_PARAM_SCHEMAS) {
+      expect(schema.family).toBe('spatial');
+    }
+  });
 });
