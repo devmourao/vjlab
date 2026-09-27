@@ -12,6 +12,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  /* Panel-aware, not viewport-aware: the deck panel stays narrow on
+     wide screens, so media queries cannot catch the overlap. */
+  container-type: inline-size;
 }
 
 .scene-item {
@@ -20,6 +23,7 @@
   gap: 8px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -200,4 +204,20 @@
 .scene-item-actions .scene-follow.auto {
   border-color: rgba(125, 211, 252, 0.6);
   color: #7dd3fc;
+}
+
+/* Entries rows carry position + timing already; the native badge is
+   library-mode provenance noise here — drop it to free ~64px. */
+.scene-row:has(.scene-timing) .scene-badge-native {
+  display: none;
+}
+
+/* Narrow panels (deck column included): actions take their own line
+   instead of colliding with the button content. */
+@container (max-width: 360px) {
+  .scene-row .scene-item-actions {
+    flex-basis: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
 }
