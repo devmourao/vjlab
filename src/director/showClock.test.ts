@@ -24,6 +24,7 @@ import {
   resetAnchor,
   resumeShow,
   setAudioTimeSource,
+  showDrivesScenes,
   showElapsedSec,
   showNowSec,
 } from './showClock';
@@ -317,6 +318,21 @@ describe('showClock', () => {
     expect(transitionRef.toKey).toBe(body[1].key);
     transitionRef.active = false;
     cleanupShow(previousActive);
+  });
+
+  it('hands the stage to the show when a track anchors a body', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    // No track, no ownership — the ambient tour keeps driving.
+    expect(showDrivesScenes(useDirectorStore.getState())).toBe(false);
+    buildShow([{ sceneId: 0, durationSec: 30 }]);
+    expect(showDrivesScenes(useDirectorStore.getState())).toBe(false);
+    // Track loaded plus a timed body: the show owns the stage.
+    useAudioTime();
+    expect(showDrivesScenes(useDirectorStore.getState())).toBe(true);
+    cleanupShow(previousActive);
+    // Track gone again: ownership released.
+    expect(showDrivesScenes(useDirectorStore.getState())).toBe(false);
   });
 
   it('stays pure manual with ten or fewer cues', () => {

@@ -128,6 +128,16 @@ export function pilotOwnsScene(state: PilotState): boolean {
   return bodyCue(state)?.window.follow === 'auto';
 }
 
+/**
+ * True when the show owns the stage: a track is loaded and the active
+ * playlist has a timed body. The ambient tour yields entirely then —
+ * with default manual cues it would otherwise yank a new scene (plus
+ * hue/zoom drift) every few seconds, fighting the track sync.
+ */
+export function showDrivesScenes(state: PilotState): boolean {
+  return readAudioTime() !== null && activeBodyWindows(state).length > 0;
+}
+
 /** Live interrupt record when the stage holds a pool cue. */
 export function activeInterrupt(state: PilotState): {
   key: string;

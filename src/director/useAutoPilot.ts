@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { liveRefs, useDirectorStore } from './directorStore';
-import { pilotOwnsScene } from './showClock';
+import { pilotOwnsScene, showDrivesScenes } from './showClock';
 import { PRESETS } from '../scenes/presets';
 
 const TOUR_INTERVAL_MS = 5000;
@@ -15,6 +15,10 @@ export function useAutoPilot() {
     const id = window.setInterval(() => {
       const store = useDirectorStore.getState();
       const tick = tickRef.current++;
+
+      // A track-anchored show owns the stage: the tour (palette, zoom,
+      // camera AND scenes) would otherwise fight the track sync.
+      if (showDrivesScenes(store)) return;
 
       // 1. Palette tour — always safe, no post pass re-chain.
       store.stepHue();
