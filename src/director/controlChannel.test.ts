@@ -271,6 +271,44 @@ describe('controlChannel', () => {
         command: { type: 'importPack', pack: { header: {} } },
       }),
     ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'setCueTiming',
+          key: 'e0',
+          patch: { durationSec: 45, follow: 'auto' },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 'e0', patch: {} },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 7, patch: {} },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'setCueTiming',
+          key: 'e0',
+          patch: { durationSec: 'long' },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 'e0' },
+      }),
+    ).toBe(false);
   });
 
   it('builds a serializable snapshot from store state', () => {
@@ -298,6 +336,18 @@ describe('controlChannel', () => {
       snapshot.entries.every(
         (entry) => typeof entry.key === 'string' && typeof entry.sceneId === 'number',
       ),
+    ).toBe(true);
+    expect(
+      snapshot.entries.every(
+        (entry) =>
+          typeof entry.durationSec === 'number' &&
+          (entry.follow === 'manual' || entry.follow === 'auto'),
+      ),
+    ).toBe(true);
+    expect(typeof snapshot.showTotalSec).toBe('number');
+    expect(
+      snapshot.showTargetSec === null ||
+        typeof snapshot.showTargetSec === 'number',
     ).toBe(true);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(snapshot.audioError).toBeNull();

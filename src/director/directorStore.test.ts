@@ -318,6 +318,24 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
+  it('stores a manual show target per playlist', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Target test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    expect(selectActivePlaylist(useDirectorStore.getState()).targetSec ?? null).toBeNull();
+    api.setPlaylistTarget(id, 2400);
+    expect(selectActivePlaylist(useDirectorStore.getState()).targetSec).toBe(2400);
+    api.setPlaylistTarget(id, -30);
+    expect(selectActivePlaylist(useDirectorStore.getState()).targetSec ?? null).toBeNull();
+    api.setPlaylistTarget(id, 2400.4);
+    expect(selectActivePlaylist(useDirectorStore.getState()).targetSec).toBe(2400);
+    api.setPlaylistTarget(id, null);
+    expect(selectActivePlaylist(useDirectorStore.getState()).targetSec ?? null).toBeNull();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
   it('steps the media queue without wrapping at the ends', () => {
     const api = useDirectorStore.getState();
     useDirectorStore.setState({

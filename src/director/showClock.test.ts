@@ -7,6 +7,8 @@ import {
   useDirectorStore,
 } from './directorStore';
 import {
+  countdownAt,
+  coverageStatus,
   cueIndexAt,
   elapsedSec,
   pilotOwnsScene,
@@ -57,6 +59,24 @@ describe('showClock', () => {
     expect(cueIndexAt(windows, 30)).toBe(1);
     expect(cueIndexAt(windows, 999)).toBe(1);
     expect(cueIndexAt([], 10)).toBe(-1);
+  });
+
+  it('counts down the cue under the playhead', () => {
+    const windows = cueWindows([
+      { key: 'a', sceneId: 0, durationSec: 30, follow: 'manual' },
+      { key: 'b', sceneId: 1, durationSec: 45, follow: 'auto' },
+    ]);
+    expect(countdownAt(windows, 10)).toEqual({ key: 'a', remainingSec: 20 });
+    expect(countdownAt(windows, 30)).toEqual({ key: 'b', remainingSec: 45 });
+    expect(countdownAt(windows, 75)).toBeNull();
+    expect(countdownAt([], 5)).toBeNull();
+  });
+
+  it('grades coverage with tolerance around the reference', () => {
+    expect(coverageStatus(2396, 2400)).toBe('covered');
+    expect(coverageStatus(2400, 2400)).toBe('covered');
+    expect(coverageStatus(1800, 2400)).toBe('under');
+    expect(coverageStatus(2700, 2400)).toBe('over');
   });
 
   it('rebases the anchor onto cue starts', () => {

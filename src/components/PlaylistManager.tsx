@@ -1,8 +1,18 @@
 import { useState } from 'react';
-import { DECK_SIZE, useDirectorStore } from '../director/directorStore';
+import { formatTrackTime } from '../audio/track';
+import {
+  DECK_SIZE,
+  cueTiming,
+  showTotalSec,
+  useDirectorStore,
+} from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
+import { CoverageMeter } from './CoverageMeter';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
 import './PlaylistManager.css';
+
+/** Manual show-target stepper step (seconds). */
+export const SHOW_TARGET_STEP_SEC = 60;
 
 /**
  * Library tab managing playlists: create, rename, delete and switch,
@@ -103,6 +113,50 @@ export function PlaylistManager() {
         </button>
       </div>
 
+      <CoverageMeter
+        totalSec={showTotalSec(active.entries)}
+        referenceSec={active.targetSec ?? null}
+        referenceLabel="TARGET"
+      />
+      <div className="playlist-target">
+        <span>Show target {formatTrackTime(active.targetSec ?? 0)}</span>
+        <button
+          type="button"
+          onClick={() =>
+            store.setPlaylistTarget(
+              active.id,
+              (active.targetSec ?? 0) - SHOW_TARGET_STEP_SEC,
+            )
+          }
+          title={`Shorten show target by ${SHOW_TARGET_STEP_SEC}s`}
+          aria-label="Shorten show target by one minute"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            store.setPlaylistTarget(
+              active.id,
+              (active.targetSec ?? 0) + SHOW_TARGET_STEP_SEC,
+            )
+          }
+          title={`Lengthen show target by ${SHOW_TARGET_STEP_SEC}s`}
+          aria-label="Lengthen show target by one minute"
+        >
+          +
+        </button>
+        {active.targetSec != null && (
+          <button
+            type="button"
+            onClick={() => store.setPlaylistTarget(active.id, null)}
+            title="Clear the manual show target"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="playlist-panes">
         <div className="playlist-pane">
           <h3>Library · {library.length}</h3>
@@ -151,6 +205,12 @@ export function PlaylistManager() {
                   </span>
                   <span className="playlist-name">
                     {names.get(entry.sceneId) ?? `#${entry.sceneId}`}
+                  </span>
+                  <span
+                    className="playlist-time"
+                    title={`Cue ${formatTrackTime(cueTiming(entry).durationSec)} · ${cueTiming(entry).follow}`}
+                  >
+                    {formatTrackTime(cueTiming(entry).durationSec)}
                   </span>
                   <div className="playlist-actions">
                     <button

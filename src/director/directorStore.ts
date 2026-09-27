@@ -97,6 +97,7 @@ interface DirectorState {
   pinScene: (key: string) => void;
   createPlaylist: (name: string) => void;
   renamePlaylist: (id: string, name: string) => void;
+  setPlaylistTarget: (playlistId: string, seconds: number | null) => void;
   deletePlaylist: (id: string) => void;
   setActivePlaylist: (id: string) => void;
   addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
@@ -363,6 +364,19 @@ export interface ScenePlaylist {
   name: string;
   /** Execution order; duplicates allowed, position maps to shortcuts. */
   entries: PlaylistEntry[];
+  /** Manual show target in seconds (coverage reference); absent = none. */
+  targetSec?: number | null;
+}
+
+/** Manual show target bounds (seconds). */
+export const MAX_SHOW_TARGET_SEC = 86400;
+
+export function sanitizeShowTarget(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.min(MAX_SHOW_TARGET_SEC, Math.round(value));
 }
 
 const PLAYLISTS_KEY = 'vjlab.playlists.v1';
@@ -482,6 +496,7 @@ function readPlaylists(
         id: record['id'],
         name: (record['name'] as string).slice(0, 40) || 'Untitled',
         entries,
+        targetSec: sanitizeShowTarget(record['targetSec']),
       });
     }
     if (playlists.length === 0) return fallback();
@@ -946,6 +961,15 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     if (!clean) return;
     const nextPlaylists = state.playlists.map((entry) =>
       entry.id === id ? { ...entry, name: clean } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  setPlaylistTarget: (playlistId, seconds) => {
+    const state = get();
+    const target = sanitizeShowTarget(seconds);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === playlistId ? { ...entry, targetSec: target } : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
