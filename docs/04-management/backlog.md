@@ -106,6 +106,7 @@
 | VJLAB-82 | Pre-show, pause and post-show state slots bound to player states | Feature | Medium | E15 | M15 | New |
 | VJLAB-83 | Explicit track-to-playlists binding plus auto-generate playlist from track | Feature | Medium | E15 | M15 | New |
 | VJLAB-84 | Film-strip timeline (horizontal/vertical, proportional thumbs, alternating borders, granularity zoom, playhead) | Feature | High | E15 | M15 | New |
+| VJLAB-89 | Bottom transport with show progress readout (scrub, skip, times, cue i/n) | Feature | High | E15 | M15 | Done |
 | VJLAB-85 | Per-cue transition modes (cut/dissolve select) | Enhancement | Low | E15 | M15 | New |
 | VJLAB-86 | AudioProvider interface plus local player refactor onto the contract | Refactor | High | E16 | M16 | New |
 | VJLAB-87 | Player-state events (pre/playing/paused/post) driving timeline slots | Feature | Medium | E16 | M16 | New |

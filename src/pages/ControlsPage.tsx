@@ -323,6 +323,8 @@ export default function ControlsPage() {
                   />
                   <TimelineView
                     entries={bodyEntries(snapshot.entries)}
+                    trackDuration={snapshot.duration > 0 ? snapshot.duration : null}
+                    position={snapshot.fileName ? snapshot.position : null}
                     names={
                       new Map(
                         snapshot.presets.map((preset) => [preset.id, preset.name]),

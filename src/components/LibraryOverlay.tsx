@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { AudioEngineApi } from '../audio/useAudioEngine';
 import {
   bodyEntries,
   selectActivePlaylist,
@@ -30,7 +31,7 @@ const TABS: Array<{ id: LibraryTab; label: string }> = [
  * the show. Opens from the deck (M key, Manage buttons) or remotely
  * from the console popup.
  */
-export function LibraryOverlay() {
+export function LibraryOverlay({ engine }: { engine?: AudioEngineApi }) {
   const libraryOpen = useDirectorStore((s) => s.libraryOpen);
   const customPresets = useDirectorStore((s) => s.customPresets);
   const activeEntryKey = useDirectorStore((s) => s.activeEntryKey);
@@ -92,6 +93,8 @@ export function LibraryOverlay() {
               onSelect={(id, key) =>
                 useDirectorStore.getState().requestDissolve(id, key)
               }
+              trackDuration={engine?.duration ?? null}
+              position={engine?.position ?? null}
             />
           )}
           {activeTab === 'bases' && <BasesExplorer />}

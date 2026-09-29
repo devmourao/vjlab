@@ -430,7 +430,7 @@ function DeckPage() {
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
-      <LibraryOverlay />
+      <LibraryOverlay engine={engine} />
       <GuideDrawer />
       <TourOverlay />
       <EmptyState engine={engine} />
