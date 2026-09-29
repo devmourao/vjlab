@@ -26,6 +26,48 @@
   background: rgba(125, 211, 252, 0.35);
 }
 
+/* Active but off the programmed point (interrupt, manual elsewhere). */
+.cue-seg.detour {
+  border-color: rgba(252, 211, 77, 0.8);
+  background: rgba(252, 211, 77, 0.3);
+}
+
+/* Programmed for this moment while another cue holds the stage. */
+.cue-seg.scheduled {
+  border-style: dashed;
+  border-color: rgba(125, 211, 252, 0.6);
+}
+
+/* Anchored gaps read as empty space between segments (scale mode). */
+.cue-gap {
+  flex-basis: 0;
+  flex-shrink: 0;
+  min-height: 4px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.25);
+  margin-left: 6px;
+}
+
+/* Even mode: uniform pills with internal progress fill. */
+.cue-rail.even .cue-seg {
+  flex: 1 1 0;
+  min-height: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cue-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(125, 211, 252, 0.45);
+  pointer-events: none;
+}
+
+.cue-seg.detour .cue-fill {
+  background: rgba(252, 211, 77, 0.45);
+}
+
 .cue-playhead {
   position: absolute;
   left: -2px;

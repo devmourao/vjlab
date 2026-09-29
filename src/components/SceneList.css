@@ -198,6 +198,20 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.rail-mode-toggle {
+  margin-left: 8px;
+  padding: 4px 10px;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
 .scene-item-actions button {
   min-width: 36px;
   min-height: 44px;

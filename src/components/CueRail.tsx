@@ -1,12 +1,17 @@
+import { Fragment } from 'react';
 import { formatTrackTime } from '../audio/track';
 import type { CueWindow } from '../director/directorStore';
 import './CueRail.css';
 
+export type RailMode = 'scale' | 'even';
+
 /**
- * Vertical show mini-map: one segment per cue, heights proportional to
- * duration share, with a playhead descending as the show runs. Clicking
- * a segment dissolves to that cue. Sits beside the rows; the active row
- * keeps its own highlight.
+ * Show mini-map beside the body rows. Two reading modes:
+ * - scale: segment heights proportional to durations, with visible gap
+ *   spacers between anchored windows (2 s vs 40 s reads true, gaps show).
+ * - even: uniform pills with internal progress fill on the active cue;
+ *   an off-program active cue (interrupt, manual hold elsewhere) reads
+ *   amber instead of cyan.
  */
 export function CueRail({
   windows,
@@ -14,37 +19,103 @@ export function CueRail({
   activeKey,
   fraction,
   onSelect,
+  mode = 'scale',
 }: {
   windows: CueWindow[];
   names: Map<number, string>;
   activeKey: string | null;
-  /** Elapsed share 0..1 of the total; null hides the playhead. */
+  /** Elapsed share 0..1 of the total; null hides progress. */
   fraction: number | null;
   onSelect: (sceneId: number, key: string) => void;
+  mode?: RailMode;
 }) {
   if (windows.length === 0) return null;
-  const clamped =
-    fraction === null ? null : Math.min(1, Math.max(0, fraction));
+  const total = windows[windows.length - 1].endSec;
+  const elapsed = fraction === null ? null : fraction * total;
+  const programmedKey =
+    elapsed === null
+      ? null
+      : (() => {
+          let key: string | null = null;
+          for (const window of windows) {
+            if (elapsed >= window.startSec) key = window.key;
+          }
+          return key;
+        })();
+
+  const segment = (window: CueWindow) => {
+    const active = window.key === activeKey;
+    const programmed = window.key === programmedKey;
+    const tone = active
+      ? programmed || programmedKey === null
+        ? 'active'
+        : 'detour'
+      : programmed
+        ? 'scheduled'
+        : '';
+    const duration = Math.max(0, window.endSec - window.startSec);
+    const fill =
+      mode === 'even' && active && elapsed !== null && duration > 0
+        ? Math.min(100, Math.max(0, ((elapsed - window.startSec) / duration) * 100))
+        : null;
+    return (
+      <button
+        key={window.key}
+        type="button"
+        className={tone ? `cue-seg ${tone}` : 'cue-seg'}
+        style={
+          mode === 'scale' ? { flexGrow: Math.max(duration, 0.001) } : undefined
+        }
+        onClick={() => onSelect(window.sceneId, window.key)}
+        title={`${names.get(window.sceneId) ?? `#${window.sceneId}`} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)}`}
+        data-testid={`cue-seg-${window.key}`}
+        aria-label={`Cue ${names.get(window.sceneId) ?? window.sceneId}`}
+      >
+        {fill !== null && (
+          <span
+            className="cue-fill"
+            data-testid={`cue-fill-${window.key}`}
+            style={{ height: `${fill}%` }}
+            aria-hidden
+          />
+        )}
+      </button>
+    );
+  };
 
   return (
-    <div className="cue-rail" data-testid="cue-rail" aria-label="Show progress">
-      {windows.map((window) => (
-        <button
-          key={window.key}
-          type="button"
-          className={window.key === activeKey ? 'cue-seg active' : 'cue-seg'}
-          style={{ flexGrow: window.endSec - window.startSec }}
-          onClick={() => onSelect(window.sceneId, window.key)}
-          title={`${names.get(window.sceneId) ?? `#${window.sceneId}`} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)}`}
-          data-testid={`cue-seg-${window.key}`}
-          aria-label={`Cue ${names.get(window.sceneId) ?? window.sceneId}`}
-        />
-      ))}
-      {clamped !== null && (
+    <div
+      className={mode === 'even' ? 'cue-rail even' : 'cue-rail'}
+      data-testid="cue-rail"
+      data-rail-mode={mode}
+      aria-label="Show progress"
+    >
+      {mode === 'scale'
+        ? windows.map((window, index) => {
+            const previousEnd =
+              index === 0 ? 0 : windows[index - 1].endSec;
+            const gap = Math.max(0, window.startSec - previousEnd);
+            return (
+              <Fragment key={window.key}>
+                {gap > 0 && (
+                  <span
+                    className="cue-gap"
+                    data-testid={`cue-gap-${window.key}`}
+                    style={{ flexGrow: gap }}
+                    title={`Gap ${formatTrackTime(gap)}`}
+                    aria-hidden
+                  />
+                )}
+                {segment(window)}
+              </Fragment>
+            );
+          })
+        : windows.map((window) => segment(window))}
+      {fraction !== null && (
         <div
           className="cue-playhead"
           data-testid="cue-playhead"
-          style={{ top: `${clamped * 100}%` }}
+          style={{ top: `${Math.min(100, Math.max(0, fraction)) * 100}%` }}
           aria-hidden
         />
       )}

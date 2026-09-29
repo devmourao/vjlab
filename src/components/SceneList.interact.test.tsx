@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   cueTiming,
+  cueWindows,
   selectActivePlaylist,
   useDirectorStore,
 } from '../director/directorStore';
+import { CueRail } from './CueRail';
 import { SceneList } from './SceneList';
 
 describe('SceneList timing interaction', () => {
@@ -84,6 +87,45 @@ describe('SceneList timing interaction', () => {
     unmount();
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('reads rail modes, gaps and off-program cues', () => {
+    const names = new Map([
+      [0, 'Nebula'],
+      [1, 'Bloom'],
+    ]);
+    const windows = cueWindows([
+      { key: 'a', sceneId: 0, durationSec: 2 },
+      { key: 'b', sceneId: 1, durationSec: 40, startSec: 12 },
+    ]);
+    const noop = () => undefined;
+    // Scale: anchored gap renders as empty space between segments.
+    const scale = renderToString(
+      <CueRail
+        windows={windows}
+        names={names}
+        activeKey="a"
+        fraction={0}
+        onSelect={noop}
+        mode="scale"
+      />,
+    );
+    expect(scale).toContain('cue-gap-b');
+    expect(scale).toContain('data-rail-mode="scale"');
+    // Even: active off-program cue reads amber with progress fill.
+    const even = renderToString(
+      <CueRail
+        windows={windows}
+        names={names}
+        activeKey="a"
+        fraction={0.9}
+        onSelect={noop}
+        mode="even"
+      />,
+    );
+    expect(even).toContain('data-rail-mode="even"');
+    expect(even).toContain('detour');
+    expect(even).toContain('cue-fill-a');
   });
 
   it('steps duration and toggles follow from the row', () => {

@@ -14,7 +14,7 @@ import {
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
-import { CueRail } from './CueRail';
+import { CueRail, type RailMode } from './CueRail';
 import './CueRail.css';
 import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
@@ -159,6 +159,7 @@ export function SceneList({
   }
 
   const [expanded, setExpanded] = useState(false);
+  const [railMode, setRailMode] = useState<RailMode>('scale');
   // Library mode collapses; entries mode always shows pool + body
   // (collapsing at 10 hid exactly the show behind the pool).
   const collapsible = !manage && !entries && rows.length > pageSize;
@@ -484,7 +485,24 @@ export function SceneList({
             )}
             {bodyVisible.length > 0 && (
               <>
-                <p className="scene-group-title">Show · timeline</p>
+                <p className="scene-group-title">
+                  Show · timeline{' '}
+                  <button
+                    type="button"
+                    className="rail-mode-toggle"
+                    data-testid="rail-mode-toggle"
+                    onClick={() =>
+                      setRailMode((mode) => (mode === 'scale' ? 'even' : 'scale'))
+                    }
+                    title={
+                      railMode === 'scale'
+                        ? 'Even pills with progress fill'
+                        : 'Proportional pills with gaps'
+                    }
+                  >
+                    {railMode === 'scale' ? 'Fixas' : 'Escala'}
+                  </button>
+                </p>
                 <div className="scene-list-wrap">
                   <CueRail
                     windows={cueWindows(bodySource)}
@@ -492,6 +510,7 @@ export function SceneList({
                     activeKey={activeKey}
                     fraction={cueClock?.fraction ?? null}
                     onSelect={(id, key) => select(id, key)}
+                    mode={railMode}
                   />
                   <ul className="scene-list" data-testid="scene-list-body">
                     {bodyVisible.map((row) => renderRow(row, row.position ?? 0))}
