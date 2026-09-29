@@ -106,3 +106,31 @@ fewer cues has no body and stays pure manual.
 Explicit return gesture (Z key, Resume button): dissolves to the body
 cue under the playhead and clears interrupts. Safe anytime — doubles
 as a re-sync to the track point.
+
+## Pin (start/end)
+
+Absolute timestamp locked on a body cue (`startSec`, `endSec`). End
+wins over duration; both pinned derives duration. First body cue may
+only end-pin (start is implicitly track 0:00).
+
+## Overlap guard
+
+Pairwise check of locked intervals on body windows. Overlaps render
+red, name both cues and block Distribute — conflicts never go silent.
+
+## Gap disclaimer
+
+Anchored void rendered amber with its size (`vão mm:ss sem cue`) and
+one-tap fill (duplicate previous cue trimmed to the void). Programmed
+silence, never auto-filled.
+
+## Dirty dot
+
+Runtime-only mark on Distribute after any duration/pin edit; cleared
+by distributing. Never persisted.
+
+## Unit (cue unit)
+
+Body row pairing one pill with its cue at compressive height
+(`88 + 24·ln(1+d)`, capped 248 px); per-pill progress fill replaces
+any global playhead line.

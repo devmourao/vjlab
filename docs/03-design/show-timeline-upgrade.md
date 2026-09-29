@@ -201,7 +201,31 @@ same feel today, tunable tomorrow. Notes:
 3. **Stable vocabulary** (section 2): maps 1:1 to Unreal Level Sequence /
    tracks / sections if kept clean.
 
-## 11. Decisions (locked 2026-09-27 with Owner)
+## 11. Pinned Ends, Conflicts and Gaps (locked Sprint 39)
+
+* A body cue may pin its start, its end, or both (`startSec`, `endSec`;
+  additive, persisted, sanitized). End wins over duration; both pinned
+  derives duration (`end − start`) and disables duration steppers.
+* Locked intervals `[start, end)` are checked pairwise on computed body
+  windows (`windowConflicts`). Overlaps render red rows, name both cues
+  in the manager header and block Distribute until resolved. Editing is
+  never silently refused: conflicts stay visible instead.
+* End pins shrink unfixed predecessors to fit (min 1 s each) during
+  distribution; leftovers surface as conflicts. The first body cue may
+  only end-pin (its start is implicitly track 0:00).
+* `showDirty` (runtime-only, never persisted) marks the show after any
+  duration/pin edit; Distribute clears it and shows a dot while dirty.
+* Anchored gaps render as amber labeled voids (`vão mm:ss sem cue`);
+  one tap fills the void by duplicating the previous cue trimmed to it.
+  Gaps are programmed silence, never auto-filled.
+* Unprogrammed track remainder renders as a dashed placeholder unit
+  (`Espaço livre mm:ss`); one tap distributes the body over the track.
+  It is not a cue: pilot, countdown and coverage ignore it.
+* Body rows are cue units (pill + row) at compressive heights
+  (`88 + 24·ln(1+d)`, capped 248 px); per-pill progress fill replaces
+  any global playhead line, which cannot align with uniform rows.
+
+## 12. Decisions (locked 2026-09-27 with Owner)
 
 1. Takeover: manual **redirects** the pilot — a manual trigger moves the
    playhead to that cue and the pilot continues from there (QLab GO style).
@@ -218,4 +242,5 @@ Sprint 33 preconditions met — implementation may start.
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
 | 0.1 | 2026-09-27 | Planning doc from brainstorming sessions; no code | VJLab crew |
-| 1.0 | 2026-09-27 | Implemented (Sprints 33-35, v0.12.0): timed cues, Clock + pilot, queue UX, coverage, timeline view, declared burst. Decisions §11 locked. Phase B still future. | VJLab crew |
+| 1.0 | 2026-09-27 | Implemented (Sprints 33-35, v0.12.0): timed cues, Clock + pilot, queue UX, coverage, timeline view, declared burst. Decisions §12 locked. Phase B still future. | VJLab crew |
+| 1.1 | 2026-09-29 | Implemented (Sprints 36-39, v0.13.0): anchored pilot, pool/body, Resume, fixed starts, distribution, transport, units. Rules §11 locked. | VJLab crew |
