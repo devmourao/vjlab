@@ -317,6 +317,8 @@ export default function ControlsPage() {
                       onPin: (key) => send({ type: 'pinScene', key }),
                       onCueTiming: (key, patch) =>
                         send({ type: 'setCueTiming', key, patch }),
+                      onCueAnchor: (key, seconds) =>
+                        send({ type: 'setCueAnchor', key, seconds }),
                     }}
                   />
                   <TimelineView

@@ -4,6 +4,7 @@ import {
   DECK_SIZE,
   bodyEntries,
   cueTiming,
+  sanitizeAnchor,
   showTotalSec,
   useDirectorStore,
 } from '../director/directorStore';
@@ -179,6 +180,18 @@ export function PlaylistManager() {
               : 'manual'}
           </button>
         )}
+        {bodyEntries(active.entries).some(
+          (entry) => sanitizeAnchor(entry.startSec) !== null,
+        ) || bodyEntries(active.entries).length > 1 ? (
+          <button
+            type="button"
+            onClick={() => store.distributeBody(active.targetSec ?? null)}
+            title="Even unfixed body cues over the target (else the current total)"
+            data-testid="body-distribute"
+          >
+            Distribute
+          </button>
+        ) : null}
       </div>
 
       <div className="playlist-panes">
@@ -234,7 +247,9 @@ export function PlaylistManager() {
                     className="playlist-time"
                     title={`Cue ${formatTrackTime(cueTiming(entry).durationSec)} · ${cueTiming(entry).follow}`}
                   >
-                    {formatTrackTime(cueTiming(entry).durationSec)}
+                    {sanitizeAnchor(entry.startSec) !== null
+                      ? `◈ ${formatTrackTime(sanitizeAnchor(entry.startSec) ?? 0)}`
+                      : formatTrackTime(cueTiming(entry).durationSec)}
                   </span>
                   <div className="playlist-actions">
                     <button

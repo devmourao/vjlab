@@ -4,6 +4,7 @@ import {
   DECK_SIZE,
   cueTiming,
   cueWindows,
+  sanitizeAnchor,
   useDirectorStore,
   type CueFollow,
   type CueWindow,
@@ -44,6 +45,7 @@ export interface SceneListOps {
     key: string,
     patch: { durationSec?: number; follow?: CueFollow },
   ) => void;
+  onCueAnchor?: (key: string, seconds: number | null) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -59,6 +61,7 @@ interface SceneRow {
   position: number | null;
   timing?: { durationSec: number; follow: CueFollow };
   window?: CueWindow;
+  anchor?: number | null;
 }
 
 function keyLabel(index: number): string {
@@ -107,6 +110,10 @@ export function SceneList({
     ops.onCueTiming ??
     ((key: string, patch: { durationSec?: number; follow?: CueFollow }) =>
       useDirectorStore.getState().setCueTiming(key, patch));
+  const anchorCue =
+    ops.onCueAnchor ??
+    ((key: string, seconds: number | null) =>
+      useDirectorStore.getState().setCueAnchor(key, seconds));
   let rows: SceneRow[];
   if (entries) {
     rows = entries
@@ -119,6 +126,7 @@ export function SceneList({
           position: index,
           timing: cueTiming(entry),
           window: windowsByKey.get(entry.key),
+          anchor: sanitizeAnchor(entry.startSec),
         };
       })
       .filter((row): row is SceneRow => row !== null);
@@ -211,9 +219,12 @@ export function SceneList({
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       <ul className="scene-list" data-testid="scene-list">
         {visible.map((row, visibleIndex) => {
-          const { key, preset, position, timing, window } = row;
+          const { key, preset, position, timing, window, anchor } = row;
           const counting = cueClock?.key === key;
           const follow = timing?.follow ?? 'manual';
+          // Pool positions are manual-only overlays: no anchor controls.
+          const pool = position !== null && position < DECK_SIZE;
+          const fixed = anchor ?? null;
           const inDeck = position !== null && position < DECK_SIZE;
           const libraryIndex = rows.findIndex((entry) => entry.key === key);
           const highlighted =
@@ -272,7 +283,7 @@ export function SceneList({
                   className={counting ? 'scene-timing live' : 'scene-timing'}
                   title={
                     window
-                      ? `Cue ${formatTrackTime(timing.durationSec)} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)} · ${follow}`
+                      ? `Cue ${formatTrackTime(timing.durationSec)} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)} · ${follow}${fixed !== null ? ` · fixed ${formatTrackTime(fixed)}` : ''}`
                       : `Cue ${formatTrackTime(timing.durationSec)} · ${follow}`
                   }
                   data-testid={`cue-time-${key}`}
@@ -281,7 +292,9 @@ export function SceneList({
                     ? cueClock.held
                       ? 'HOLD'
                       : `◷ ${formatTrackTime(cueClock.remainingSec)}`
-                    : formatTrackTime(timing.durationSec)}
+                    : fixed !== null
+                      ? `◈ ${formatTrackTime(fixed)}`
+                      : formatTrackTime(timing.durationSec)}
                 </span>
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
@@ -343,6 +356,43 @@ export function SceneList({
                       >
                         {follow === 'auto' ? 'A' : 'M'}
                       </button>
+                      {!pool && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              anchorCue(key, (fixed ?? window?.startSec ?? 0) - CUE_STEP_SEC)
+                            }
+                            data-testid={`anchor-minus-${key}`}
+                            title="Move fixed start earlier (creates anchor)"
+                            aria-label="Move fixed start earlier by five seconds"
+                          >
+                            ◈−
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              anchorCue(key, (fixed ?? window?.startSec ?? 0) + CUE_STEP_SEC)
+                            }
+                            data-testid={`anchor-plus-${key}`}
+                            title="Move fixed start later (creates anchor)"
+                            aria-label="Move fixed start later by five seconds"
+                          >
+                            ◈+
+                          </button>
+                          {fixed !== null && (
+                            <button
+                              type="button"
+                              onClick={() => anchorCue(key, null)}
+                              data-testid={`anchor-clear-${key}`}
+                              title="Clear fixed start (back to sequential flow)"
+                              aria-label="Clear fixed start"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
                 </>
