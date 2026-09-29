@@ -15,10 +15,16 @@ export interface AudioEngineApi {
   isPlaying: boolean;
   error: string | null;
   spectrum: SpectrumBands;
+  position: number;
+  duration: number;
   loadFile: (file: File) => void;
   loadUrl: (url: string, name: string) => void;
   toggle: () => Promise<void>;
+  seekTo: (seconds: number) => void;
+  skipBy: (delta: number) => void;
   getSpectrum: () => SpectrumBands;
+  /** Render-free position read for the Show Clock (no re-render). */
+  getPosition: () => number;
 }
 
 const CONSOLE_LOG_INTERVAL_MS = 600;
@@ -37,6 +43,9 @@ export function useAudioEngine(): AudioEngineApi {
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [spectrum, setSpectrum] = useState<SpectrumBands>({ ...IDLE_BANDS });
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const lastPositionRef = useRef(0);
 
   const ensureGraph = useCallback(() => {
     if (!elementRef.current) {
@@ -76,6 +85,10 @@ export function useAudioEngine(): AudioEngineApi {
 
     const onEnded = () => setIsPlaying(false);
     element.onended = onEnded;
+    element.onloadedmetadata = () => {
+      setDuration(Number.isFinite(element.duration) ? element.duration : 0);
+      setPosition(element.currentTime);
+    };
   }, []);
 
   const loadFile = useCallback(
@@ -140,7 +153,31 @@ export function useAudioEngine(): AudioEngineApi {
     }
   }, []);
 
+  const seekTo = useCallback((seconds: number) => {
+    const element = elementRef.current;
+    if (!element || !Number.isFinite(element.duration)) return;
+    element.currentTime = Math.max(
+      0,
+      Math.min(element.duration, seconds),
+    );
+    setPosition(element.currentTime);
+  }, []);
+
+  const skipBy = useCallback(
+    (delta: number) => {
+      const element = elementRef.current;
+      if (!element) return;
+      seekTo(element.currentTime + delta);
+    },
+    [seekTo],
+  );
+
   const getSpectrum = useCallback((): SpectrumBands => bandsRef.current, []);
+
+  const getPosition = useCallback(
+    (): number => elementRef.current?.currentTime ?? 0,
+    [],
+  );
 
   useEffect(() => {
     let raf = 0;
@@ -157,6 +194,10 @@ export function useAudioEngine(): AudioEngineApi {
         publishBands(bandsRef.current);
 
         const now = performance.now();
+        if (elementRef.current && now - lastPositionRef.current >= 250) {
+          lastPositionRef.current = now;
+          setPosition(elementRef.current.currentTime);
+        }
         if (now - lastLogRef.current >= CONSOLE_LOG_INTERVAL_MS) {
           lastLogRef.current = now;
           const bands = bandsRef.current;
@@ -186,5 +227,19 @@ export function useAudioEngine(): AudioEngineApi {
     [],
   );
 
-  return { fileName, isPlaying, error, spectrum, loadFile, loadUrl, toggle, getSpectrum };
+  return {
+    fileName,
+    isPlaying,
+    error,
+    spectrum,
+    position,
+    duration,
+    loadFile,
+    loadUrl,
+    toggle,
+    seekTo,
+    skipBy,
+    getSpectrum,
+    getPosition,
+  };
 }

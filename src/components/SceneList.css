@@ -9,8 +9,36 @@
 
 .scene-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
+  /* Panel-aware, not viewport-aware: the deck panel stays narrow on
+     wide screens, so media queries cannot catch the overlap. */
+  container-type: inline-size;
+}
+
+/* Cue units pair one pill with its row; the unit grows with duration
+   (compressive curve) while gaps read as empty space between units. */
+.scene-row.unit {
+  flex-direction: row;
+}
+
+.scene-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.scene-row.timed:not(.unit) .scene-row-main,
+.scene-row:not(.timed) .scene-row-main {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.scene-row.unit .scene-row-main {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .scene-item {
@@ -19,6 +47,7 @@
   gap: 8px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -52,6 +81,62 @@
 .scene-fav {
   color: #facc15;
   font-size: 12px;
+}
+
+.scene-pos {
+  flex-shrink: 0;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.55;
+}
+
+.scene-pos.deck {
+  border-color: transparent;
+  background: #facc15;
+  color: #000;
+  opacity: 1;
+}
+
+.scene-pos[draggable='true'],
+.scene-swatch[draggable='true'] {
+  cursor: grab;
+}
+
+.scene-toggle {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Pinned transport above the list: stays visible while scrolling. */
+.scene-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: #0b0b12;
 }
 
 .scene-badge-native {
@@ -96,8 +181,163 @@
 
 .scene-item-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
+  max-width: 100%;
+}
+
+/* Timed rows read in two levels: identity on top, grouped controls
+   below. Groups breathe apart so each control family scans as one.
+   Unit rows pair the pill beside the levels instead. */
+.scene-row.timed:not(.unit) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.scene-row.timed .scene-item-actions {
+  margin-left: 0;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+/* Unit pills: one per body cue, filling the unit height. Tones mirror
+   the old rail (active cyan, detour amber, scheduled dashed). */
+.cue-pill {
+  width: 14px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.cue-pill.active {
+  border-color: rgba(125, 211, 252, 0.8);
+  background: rgba(125, 211, 252, 0.35);
+}
+
+.cue-pill.detour {
+  border-color: rgba(252, 211, 77, 0.8);
+  background: rgba(252, 211, 77, 0.3);
+}
+
+.cue-pill.scheduled {
+  border-style: dashed;
+  border-color: rgba(125, 211, 252, 0.6);
+}
+
+.cue-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(125, 211, 252, 0.45);
+  pointer-events: none;
+}
+
+.cue-pill.detour .cue-fill {
+  background: rgba(252, 211, 77, 0.45);
+}
+
+/* Anchored gaps and the free-space placeholder between units. */
+.cue-unit-gap {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 24px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  border-left: 1px dashed rgba(255, 255, 255, 0.25);
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Blank-gap disclaimer: amber warning with one-tap fill. */
+.cue-unit-gap.warn {
+  border-left-color: rgba(252, 211, 77, 0.6);
+}
+
+.cue-gap-fill {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px dashed rgba(252, 211, 77, 0.6);
+  border-radius: 8px;
+  background: rgba(252, 211, 77, 0.08);
+  color: #fcd34d;
+  font-size: 11px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Locked-interval conflicts never go silent: red rows name the clash
+   (the manager header lists the pairs). */
+.scene-row.conflict {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.scene-row.conflict .scene-item {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.cue-pill.free {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+
+.cue-free-row {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-actions-group {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Entries mode sections: pool favorites above, timed body below. */
+.scene-group-title {
+  margin: 12px 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.rail-mode-toggle {
+  margin-left: 8px;
+  padding: 4px 10px;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
 }
 
 .scene-item-actions button {
@@ -117,5 +357,42 @@
 @media (max-width: 560px) {
   .scene-badge-native {
     display: none;
+  }
+}
+
+/* Cue timing chip: small secondary number at the row end (cue level).
+   The live countdown reuses the slot with the accent treatment. */
+.scene-timing {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-timing.live {
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.scene-item-actions .scene-follow.auto {
+  border-color: rgba(125, 211, 252, 0.6);
+  color: #7dd3fc;
+}
+
+/* Entries rows carry position + timing already; the native badge is
+   library-mode provenance noise here — drop it to free ~64px. */
+.scene-row:has(.scene-timing) .scene-badge-native {
+  display: none;
+}
+
+/* Narrow panels (deck column included): actions take their own line
+   instead of colliding with the button content. */
+@container (max-width: 360px) {
+  .scene-row .scene-item-actions {
+    flex-basis: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
   }
 }

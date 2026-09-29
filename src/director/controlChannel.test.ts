@@ -27,6 +27,18 @@ describe('controlChannel', () => {
       }),
     ).toBe(true);
     expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'dissolve', id: 2, key: 'e4' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'dissolve', id: 2, key: 9 },
+      }),
+    ).toBe(false);
+    expect(
       isControlMessage({ type: 'command', command: { type: 'formatDisk' } }),
     ).toBe(false);
     expect(
@@ -116,6 +128,90 @@ describe('controlChannel', () => {
       isControlMessage({ type: 'command', command: { type: 'exportScenes' } }),
     ).toBe(true);
     expect(
+      isControlMessage({ type: 'command', command: { type: 'openLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'closeLibrary' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'showGuide' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({ type: 'command', command: { type: 'replayTour' } }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'runAction', id: 'scene.next' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'runAction', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'seekTrack', value: 42.5 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'skipTrack', delta: -10 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'seekTrack', value: 'far' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'pinScene', key: 'e3' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'pinScene', key: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'switchPlaylist', id: 'main' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 2 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistRemoveScene', playlistId: 'main', key: 'e2' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'switchPlaylist', id: 7 },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'playlistAddScene', playlistId: 'main', sceneId: 'two' },
+      }),
+    ).toBe(false);
+    expect(
       isControlMessage({
         type: 'command',
         command: { type: 'moveScene', from: 1, to: 0 },
@@ -124,7 +220,7 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'toggleFavorite', id: 3 },
+        command: { type: 'moveScene', from: 3, to: 1 },
       }),
     ).toBe(true);
     expect(
@@ -136,7 +232,7 @@ describe('controlChannel', () => {
     expect(
       isControlMessage({
         type: 'command',
-        command: { type: 'toggleFavorite', id: 'three' },
+        command: { type: 'moveScene', from: 3, to: 'top' },
       }),
     ).toBe(false);
     expect(
@@ -175,6 +271,116 @@ describe('controlChannel', () => {
         command: { type: 'importPack', pack: { header: {} } },
       }),
     ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'setCueTiming',
+          key: 'e0',
+          patch: { durationSec: 45, follow: 'auto' },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 'e0', patch: {} },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 7, patch: {} },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: {
+          type: 'setCueTiming',
+          key: 'e0',
+          patch: { durationSec: 'long' },
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueTiming', key: 'e0' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: 103 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: 'soon' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: 2400 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: 'far' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: 71 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: 'late' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'fillGap', key: 'e0' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'fillGap', key: 4 },
+      }),
+    ).toBe(false);
   });
 
   it('builds a serializable snapshot from store state', () => {
@@ -193,17 +399,41 @@ describe('controlChannel', () => {
           instances: [{ base: 'particles' as const }],
         },
       ],
-      [0],
     );
     expect(snapshot.fileName).toBe('demo.mp3');
     expect(snapshot.isPlaying).toBe(true);
     expect(snapshot.presets).toHaveLength(1);
-    expect(snapshot.favoriteIds).toEqual([0]);
+    expect(snapshot.favoriteIds.length).toBeLessThanOrEqual(10);
+    expect(
+      snapshot.entries.every(
+        (entry) => typeof entry.key === 'string' && typeof entry.sceneId === 'number',
+      ),
+    ).toBe(true);
+    expect(
+      snapshot.entries.every(
+        (entry) =>
+          typeof entry.durationSec === 'number' &&
+          (entry.follow === 'manual' || entry.follow === 'auto') &&
+          (entry.startSec === null || typeof entry.startSec === 'number') &&
+          (entry.endSec === null || typeof entry.endSec === 'number'),
+      ),
+    ).toBe(true);
+    expect(typeof snapshot.showTotalSec).toBe('number');
+    expect(
+      snapshot.showTargetSec === null ||
+        typeof snapshot.showTargetSec === 'number',
+    ).toBe(true);
     expect(snapshot.mixes['bloom']).toBe(1);
     expect(snapshot.audioError).toBeNull();
     expect(snapshot.queue).toEqual([]);
     expect(snapshot.mediaIndex).toBeNull();
     expect(Array.isArray(snapshot.sceneOrder)).toBe(true);
+    expect(snapshot.playlists.length).toBeGreaterThan(0);
+    expect(snapshot.activePlaylistId).toBe(snapshot.playlists[0].id);
+    expect(
+      snapshot.activeEntryKey === null ||
+        typeof snapshot.activeEntryKey === 'string',
+    ).toBe(true);
     expect(JSON.parse(JSON.stringify(snapshot))).toMatchObject({
       fileName: 'demo.mp3',
     });

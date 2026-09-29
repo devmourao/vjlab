@@ -29,12 +29,6 @@
   font-size: 13px;
 }
 
-.audio-panel-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .audio-panel button {
   padding: 6px 12px;
   cursor: pointer;
@@ -140,7 +134,10 @@
 .transition-veil {
   position: fixed;
   inset: 0;
-  z-index: 18;
+  /* Stage-only dip-to-black: above the Canvas (z auto) but below every
+     console surface (side-panel 10, player-bar 12, bottom-sheet 15),
+     so the interface never blinks with the scene. */
+  z-index: 9;
   background: #000;
   opacity: 0;
   pointer-events: none;

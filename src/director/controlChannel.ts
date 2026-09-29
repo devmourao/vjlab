@@ -1,6 +1,15 @@
 import { BASE_CAPABILITIES } from '../scenes/bases';
 import type { ScenePreset } from '../scenes/presets';
-import { useDirectorStore, type PanelMode } from './directorStore';
+import {
+  bodyEntries,
+  cueTiming,
+  sanitizeAnchor,
+  selectActivePlaylist,
+  showTotalSec,
+  useDirectorStore,
+  type CueFollow,
+  type PanelMode,
+} from './directorStore';
 
 /**
  * Second-screen control protocol.
@@ -13,7 +22,7 @@ import { useDirectorStore, type PanelMode } from './directorStore';
 export const CONTROL_CHANNEL = 'vjlab-control-v1';
 
 export type ControlCommand =
-  | { type: 'dissolve'; id: number }
+  | { type: 'dissolve'; id: number; key?: string | null }
   | { type: 'nextPreset' }
   | { type: 'prevPreset' }
   | { type: 'hardCut' }
@@ -41,7 +50,17 @@ export type ControlCommand =
   | { type: 'killAll' }
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
+  | { type: 'openLibrary' }
+  | { type: 'closeLibrary' }
+  | { type: 'showGuide' }
+  | { type: 'replayTour' }
+  | { type: 'switchPlaylist'; id: string }
+  | { type: 'runAction'; id: string }
+  | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
+  | { type: 'playlistRemoveScene'; playlistId: string; key: string }
   | { type: 'togglePlayback' }
+  | { type: 'seekTrack'; value: number }
+  | { type: 'skipTrack'; delta: number }
   | { type: 'playQueueTrack'; id: string }
   | { type: 'removeQueueTrack'; id: string }
   | { type: 'moveQueueTrack'; from: number; to: number }
@@ -54,7 +73,16 @@ export type ControlCommand =
   | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
   | { type: 'deleteScene'; id: number }
   | { type: 'moveScene'; from: number; to: number }
-  | { type: 'toggleFavorite'; id: number }
+  | { type: 'pinScene'; key: string }
+  | {
+      type: 'setCueTiming';
+      key: string;
+      patch: { durationSec?: number; follow?: string };
+    }
+  | { type: 'setCueAnchor'; key: string; seconds: number | null }
+  | { type: 'distributeBody'; space: number | null }
+  | { type: 'setCueEnd'; key: string; seconds: number | null }
+  | { type: 'fillGap'; key: string }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -77,11 +105,31 @@ export interface SnapshotPreset {
   instances: Array<{ base: string; params?: Record<string, unknown> }>;
 }
 
+export interface SnapshotPlaylist {
+  id: string;
+  name: string;
+  sceneCount: number;
+  deckCount: number;
+}
+
+export interface SnapshotEntry {
+  key: string;
+  sceneId: number;
+  durationSec: number;
+  follow: CueFollow;
+  startSec: number | null;
+  endSec: number | null;
+}
+
 export interface ControlSnapshot {
   activePresetId: number;
+  activeEntryKey: string | null;
   presets: SnapshotPreset[];
   favoriteIds: number[];
   sceneOrder: number[];
+  entries: SnapshotEntry[];
+  playlists: SnapshotPlaylist[];
+  activePlaylistId: string;
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -100,8 +148,12 @@ export interface ControlSnapshot {
   fileName: string | null;
   isPlaying: boolean;
   audioError: string | null;
+  position: number;
+  duration: number;
   queue: Array<{ id: string; name: string }>;
   mediaIndex: number | null;
+  showTotalSec: number;
+  showTargetSec: number | null;
 }
 
 export interface ImportResult {
@@ -144,7 +196,22 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'killAll',
   'setPanelMode',
   'cyclePanelMode',
+  'openLibrary',
+  'closeLibrary',
+  'showGuide',
+  'replayTour',
+  'switchPlaylist',
+  'runAction',
+    'playlistAddScene',
+    'playlistRemoveScene',
+    'setCueTiming',
+    'setCueAnchor',
+    'distributeBody',
+    'setCueEnd',
+    'fillGap',
   'togglePlayback',
+  'seekTrack',
+  'skipTrack',
   'playQueueTrack',
   'removeQueueTrack',
   'moveQueueTrack',
@@ -157,7 +224,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'updateScene',
   'deleteScene',
   'moveScene',
-  'toggleFavorite',
+  'pinScene',
   'exportScenes',
   'importPack',
 ]);
@@ -185,7 +252,12 @@ function isSceneDraft(value: unknown): boolean {
 function hasValidPayload(command: Record<string, unknown>): boolean {
   switch (command['type']) {
     case 'dissolve':
-      return typeof command['id'] === 'number';
+      return (
+        typeof command['id'] === 'number' &&
+        (command['key'] === undefined ||
+          command['key'] === null ||
+          typeof command['key'] === 'string')
+      );
     case 'playQueueTrack':
     case 'removeQueueTrack':
       return typeof command['id'] === 'string';
@@ -208,7 +280,10 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
     case 'setZoom':
     case 'setStrobeHz':
     case 'setHue':
+    case 'seekTrack':
       return typeof command['value'] === 'number';
+    case 'skipTrack':
+      return typeof command['delta'] === 'number';
     case 'uploadTrack':
       return (
         typeof command['name'] === 'string' &&
@@ -224,8 +299,53 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
         typeof command['id'] === 'number' && isSceneDraft(command['patch'])
       );
     case 'deleteScene':
-    case 'toggleFavorite':
       return typeof command['id'] === 'number';
+    case 'switchPlaylist':
+      return typeof command['id'] === 'string';
+    case 'runAction':
+      return typeof command['id'] === 'string';
+    case 'pinScene':
+      return typeof command['key'] === 'string';
+    case 'setCueAnchor':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'distributeBody':
+      return (
+        command['space'] === null || typeof command['space'] === 'number'
+      );
+    case 'setCueEnd':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'fillGap':
+      return typeof command['key'] === 'string';
+    case 'setCueTiming': {
+      if (typeof command['key'] !== 'string') return false;
+      if (!isRecord(command['patch'])) return false;
+      const patch = command['patch'];
+      if (
+        patch['durationSec'] !== undefined &&
+        typeof patch['durationSec'] !== 'number'
+      ) {
+        return false;
+      }
+      return (
+        patch['follow'] === undefined || typeof patch['follow'] === 'string'
+      );
+    }
+    case 'playlistAddScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['sceneId'] === 'number'
+      );
+    case 'playlistRemoveScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['key'] === 'string'
+      );
     case 'moveScene':
       return (
         typeof command['from'] === 'number' &&
@@ -268,12 +388,18 @@ export function isControlMessage(value: unknown): value is ControlMessage {
 
 export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
-  track: { fileName: string | null; isPlaying: boolean; error?: string | null },
+  track: {
+    fileName: string | null;
+    isPlaying: boolean;
+    error?: string | null;
+    position?: number;
+    duration?: number;
+  },
   presets: ScenePreset[],
-  favoriteIds: number[],
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
+    activeEntryKey: state.activeEntryKey,
     presets: presets.map((preset) => ({
       id: preset.id,
       name: preset.name,
@@ -286,8 +412,28 @@ export function buildSnapshot(
         params: { ...(instance.params ?? {}) },
       })),
     })),
-    favoriteIds: [...favoriteIds],
-    sceneOrder: [...state.sceneOrder],
+    favoriteIds: selectActivePlaylist(state)
+      .entries.slice(0, 10)
+      .map((entry) => entry.sceneId),
+    sceneOrder: selectActivePlaylist(state).entries.map((entry) => entry.sceneId),
+    entries: selectActivePlaylist(state).entries.map((entry) => {
+      const timing = cueTiming(entry);
+      return {
+        key: entry.key,
+        sceneId: entry.sceneId,
+        durationSec: timing.durationSec,
+        follow: timing.follow,
+        startSec: sanitizeAnchor(entry.startSec),
+        endSec: sanitizeAnchor(entry.endSec),
+      };
+    }),
+    playlists: state.playlists.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      sceneCount: entry.entries.length,
+      deckCount: Math.min(entry.entries.length, 10),
+    })),
+    activePlaylistId: state.activePlaylistId,
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,
@@ -313,8 +459,12 @@ export function buildSnapshot(
     fileName: track.fileName,
     isPlaying: track.isPlaying,
     audioError: track.error ?? null,
+    position: track.position ?? 0,
+    duration: track.duration ?? 0,
     queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
     mediaIndex: state.mediaIndex,
+    showTotalSec: showTotalSec(bodyEntries(selectActivePlaylist(state).entries)),
+    showTargetSec: selectActivePlaylist(state).targetSec ?? null,
   };
 }
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { AudioEngineApi } from '../audio/useAudioEngine';
-import { useDirectorStore } from '../director/directorStore';
+import { useActivePlaylist, useDirectorStore } from '../director/directorStore';
+import { useCueCountdown } from '../director/useCueCountdown';
+import { resumeShow } from '../director/showClock';
 import { AudioPanel } from './AudioPanel';
 import { DeskPanel } from './controls/DeskPanel';
 import { SceneTransport } from './controls/SceneTransport';
@@ -25,6 +27,8 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
 export function SidePanel({ engine }: { engine: AudioEngineApi }) {
   const [activeTab, setActiveTab] = useState<PanelTab>('track');
   const transitionDuration = useDirectorStore((s) => s.transitionDuration);
+  const playlist = useActivePlaylist();
+  const cueClock = useCueCountdown();
 
   return (
     <div className="side-panel" data-testid="side-panel">
@@ -47,13 +51,32 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
         {activeTab === 'track' && <AudioPanel engine={engine} />}
         {activeTab === 'scenes' && (
           <>
-            <SceneList />
-            <SceneTransport
-              durationLabel={`${transitionDuration.toFixed(1)}s`}
-              onPrev={() => useDirectorStore.getState().prevPreset()}
-              onNext={() => useDirectorStore.getState().nextPreset()}
-              onCut={() => useDirectorStore.getState().hardCutNext()}
-              onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+            <div className="scene-sticky">
+              <SceneTransport
+                durationLabel={`${transitionDuration.toFixed(1)}s`}
+                onPrev={() => useDirectorStore.getState().prevPreset()}
+                onNext={() => useDirectorStore.getState().nextPreset()}
+                onCut={() => useDirectorStore.getState().hardCutNext()}
+                onCycleDuration={() => useDirectorStore.getState().cycleDuration()}
+                onResume={() => resumeShow()}
+              />
+              <button
+                type="button"
+                className="kit-link"
+                onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
+              >
+                Manage scenes…
+              </button>
+            </div>
+            <SceneList
+              manage={false}
+              entries={playlist.entries}
+              cueClock={cueClock}
+              trackTotal={engine.duration > 0 ? engine.duration : null}
+              ops={{
+                onMove: (from, to) =>
+                  useDirectorStore.getState().movePlaylistScene(from, to),
+              }}
             />
           </>
         )}

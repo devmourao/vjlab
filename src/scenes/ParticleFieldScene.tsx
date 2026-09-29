@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { readBands } from '../audio/audioBus';
 import { liveRefs } from '../director/directorStore';
+import { BASE_CAPABILITIES } from './bases';
 import { PARTICLE_COUNT, decayBurst, particleScale } from './sceneMath';
 
 export function ParticleFieldScene({
@@ -35,7 +36,8 @@ export function ParticleFieldScene({
     const { bass, mids, treble } = readBands();
     liveRefs.boost = decayBurst(liveRefs.boost, delta);
     const time = clock.elapsedTime;
-    const groupPulse = 1 + bass * 0.35 * gain + liveRefs.boost * 0.6;
+    const groupPulse =
+      1 + bass * 0.35 * gain + liveRefs.boost * BASE_CAPABILITIES.particles.burst.peak;
     const size = particleScale(treble);
 
     for (let i = 0; i < PARTICLE_COUNT; i += 1) {

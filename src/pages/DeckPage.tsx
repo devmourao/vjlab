@@ -6,7 +6,8 @@ import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
 import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
-import { AboutPanel } from '../components/Identity';
+import { AboutPanel, UnauthorizedVeil } from '../components/Identity';
+import { LibraryOverlay } from '../components/LibraryOverlay';
 import { PlayerBar } from '../components/PlayerBar';
 import { SidePanel } from '../components/SidePanel';
 import { StrobeOverlay } from '../components/StrobeOverlay';
@@ -14,6 +15,9 @@ import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
+import { isAuthorizedHost, printOwnershipNotice } from '../legal';
+import { ACTIONS } from '../director/actionRegistry';
+import { useGamepadPoll } from '../director/gamepad';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
@@ -21,19 +25,21 @@ import {
   isControlMessage,
   type ControlCommand,
 } from '../director/controlChannel';
-import { useDirectorStore, type PanelMode } from '../director/directorStore';
+import {
+  useActivePlaylist,
+  useDirectorStore,
+  type PanelMode,
+} from '../director/directorStore';
+import { deriveAudioStatus } from '../director/audioStatus';
+import { setAudioTimeSource } from '../director/showClock';
 import { useAutoPilot } from '../director/useAutoPilot';
 import { useKeyboardDesk } from '../director/useKeyboardDesk';
+import { useShowPilot } from '../director/useShowPilot';
 import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import {
-  PLAYLIST,
-  PRESETS,
-  getPreset,
-  type BaseInstance,
-} from '../scenes/presets';
+import { PRESETS, getPreset, type BaseInstance } from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -45,7 +51,7 @@ function executeControlCommand(
   const store = useDirectorStore.getState();
   switch (command.type) {
     case 'dissolve':
-      store.requestDissolve(command.id);
+      store.requestDissolve(command.id, command.key ?? null);
       break;
     case 'nextPreset':
       store.nextPreset();
@@ -132,6 +138,64 @@ function executeControlCommand(
       if (wasDetached && command.mode !== 'detached') closeControlsPopup();
       break;
     }
+    case 'openLibrary':
+      store.setLibraryOpen(true);
+      break;
+    case 'closeLibrary':
+      store.setLibraryOpen(false);
+      break;
+    case 'showGuide':
+      store.setHelpOpen(true);
+      break;
+    case 'replayTour':
+      store.replayTour();
+      break;
+    case 'switchPlaylist':
+      store.setActivePlaylist(command.id);
+      break;
+    case 'runAction': {
+      // Popup keystrokes execute through the same registry as deck keys,
+      // so both windows share context (fractal rules, live camera refs).
+      // Unknown ids are ignored: the registry is the whitelist.
+      const action = ACTIONS.find((entry) => entry.id === command.id);
+      if (
+        action &&
+        action.id !== 'controls.detach' &&
+        action.id !== 'output.fullscreen' &&
+        action.id !== 'output.fullscreen.f11'
+      ) {
+        action.run();
+      }
+      break;
+    }
+    case 'playlistAddScene':
+      store.addSceneToPlaylist(command.playlistId, command.sceneId);
+      break;
+    case 'playlistRemoveScene':
+      store.removeSceneFromPlaylist(command.playlistId, command.key);
+      break;
+    case 'setCueAnchor':
+      store.setCueAnchor(command.key, command.seconds);
+      break;
+    case 'distributeBody':
+      store.distributeBody(command.space);
+      break;
+    case 'setCueEnd':
+      store.setCueEnd(command.key, command.seconds);
+      break;
+    case 'fillGap':
+      store.fillGap(command.key);
+      break;
+    case 'setCueTiming':
+      store.setCueTiming(command.key, {
+        ...(command.patch.durationSec !== undefined
+          ? { durationSec: command.patch.durationSec }
+          : null),
+        ...(command.patch.follow !== undefined
+          ? { follow: command.patch.follow as 'manual' | 'auto' }
+          : null),
+      });
+      break;
     case 'cyclePanelMode': {
       const wasDetached = store.panelMode === 'detached';
       store.cyclePanelMode();
@@ -145,6 +209,12 @@ function executeControlCommand(
     }
     case 'togglePlayback':
       void engine.toggle();
+      break;
+    case 'seekTrack':
+      engine.seekTo(command.value);
+      break;
+    case 'skipTrack':
+      engine.skipBy(command.delta);
       break;
     case 'playQueueTrack': {
       const track = store.mediaQueue.find((entry) => entry.id === command.id);
@@ -214,10 +284,10 @@ function executeControlCommand(
       store.deleteScene(command.id);
       break;
     case 'moveScene':
-      store.reorderScenes(command.from, command.to);
+      store.movePlaylistScene(command.from, command.to);
       break;
-    case 'toggleFavorite':
-      store.toggleFavorite(command.id);
+    case 'pinScene':
+      store.pinScene(command.key);
       break;
     case 'exportScenes':
       store.exportCustomScenes();
@@ -244,8 +314,17 @@ function executeControlCommand(
 
 function DeckPage() {
   const engine = useAudioEngine();
+  useEffect(() => {
+    printOwnershipNotice();
+  }, []);
   useKeyboardDesk();
   useAutoPilot();
+  useShowPilot();
+  useGamepadPoll((index) => {
+    const state = useDirectorStore.getState();
+    const action = ACTIONS.find((entry) => state.padBindings[entry.id] === index);
+    action?.run();
+  });
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const customPresets = useDirectorStore((s) => s.customPresets);
   const liteOn = useDirectorStore((s) => s.liteOn);
@@ -255,11 +334,46 @@ function DeckPage() {
   const preset =
     allPresets.find((entry) => entry.id === activePresetId) ??
     getPreset(activePresetId);
-  const orderIndex = allPresets.findIndex((entry) => entry.id === activePresetId);
+  const playlist = useActivePlaylist();
+  const activeEntryKey = useDirectorStore((s) => s.activeEntryKey);
+  const execOrder =
+    playlist.entries.length > 0
+      ? playlist.entries.map((entry) => entry.sceneId)
+      : allPresets.map((entry) => entry.id);
+  const keyIndex = playlist.entries.findIndex((entry) => entry.key === activeEntryKey);
+  const orderIndex = keyIndex >= 0 ? keyIndex : execOrder.indexOf(activePresetId);
   const engineRef = useRef(engine);
   useEffect(() => {
     engineRef.current = engine;
   });
+  useEffect(() => {
+    // Show Clock audio source: position while a track is loaded, else wall.
+    setAudioTimeSource(() => {
+      const current = engineRef.current;
+      return current.fileName ? current.getPosition() : null;
+    });
+    return () => setAudioTimeSource(null);
+  }, []);
+  useEffect(() => {
+    // Player-state bridge for state slots (once per change).
+    useDirectorStore.getState().setAudioStatus(
+      deriveAudioStatus({
+        fileName: engine.fileName,
+        isPlaying: engine.isPlaying,
+        position: engine.position,
+        duration: engine.duration,
+      }),
+    );
+  }, [engine.fileName, engine.isPlaying, engine.position, engine.duration]);
+  useEffect(() => {
+    // Bound track loads switch the playlist (on load only, never mid-set).
+    if (!engine.fileName) return;
+    const store = useDirectorStore.getState();
+    const bound = store.trackBindings[engine.fileName];
+    if (bound && bound !== store.activePlaylistId) {
+      store.setActivePlaylist(bound);
+    }
+  }, [engine.fileName]);
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.
@@ -281,9 +395,10 @@ function DeckPage() {
               fileName: current.fileName,
               isPlaying: current.isPlaying,
               error: current.error,
+              position: current.position,
+              duration: current.duration,
             },
             [...PRESETS, ...state.customPresets],
-            state.favoriteIds,
           ),
         });
       } catch {
@@ -336,6 +451,16 @@ function DeckPage() {
   // so side panels stay collapsed until the first stage reveals.
   const focusMode = !engine.fileName;
 
+  const hostname =
+    typeof window === 'undefined' ? '' : window.location.hostname;
+  if (!isAuthorizedHost(hostname)) {
+    return (
+      <div className="stage-container" data-testid="blank-stage">
+        <UnauthorizedVeil hostname={hostname} />
+      </div>
+    );
+  }
+
   return (
     <div className="stage-container" data-testid="blank-stage">
       <TopBar />
@@ -349,6 +474,7 @@ function DeckPage() {
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
+      <LibraryOverlay engine={engine} />
       <GuideDrawer />
       <TourOverlay />
       <EmptyState engine={engine} />
@@ -356,7 +482,7 @@ function DeckPage() {
         <PlayerBar engine={engine} />
       )}
       <div className="scene-badge" data-testid="scene-name">
-        {preset.name} · {orderIndex + 1}/{allPresets.length} · playlist {PLAYLIST.length}
+        {preset.name} · {orderIndex + 1}/{execOrder.length} · {playlist.name}
         {liteOn ? ' · LITE' : ''}
         {panelMode !== 'docked' ? ` · ${panelMode.toUpperCase()}` : ''}
         {autoPilotOn ? ' · AUTO' : ''}

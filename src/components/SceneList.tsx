@@ -1,14 +1,40 @@
-import { useRef, useState } from 'react';
-import { useDirectorStore } from '../director/directorStore';
+import { Fragment, useRef, useState } from 'react';
+import { formatTrackTime } from '../audio/track';
+import {
+  DECK_SIZE,
+  bodyEntries,
+  cueTiming,
+  cueWindows,
+  sanitizeAnchor,
+  useDirectorStore,
+  windowConflicts,
+  type CueFollow,
+  type CueWindow,
+  type PlaylistEntry,
+} from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
+import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
+import { cueUnitHeight } from './cueUnits';
+import { CueTimeInput } from './CueTimeInput';
+import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
 
+/** Entries per console page before the full-list toggle. Matches the deck. */
+export const SCENE_PAGE_SIZE = 10;
+
+/** Duration stepper step (seconds). Steppers only in v1 — no drag. */
+export const CUE_STEP_SEC = 5;
+
 /**
- * Single source for the scene selection list, shared by the side panel
- * and the bottom sheet. Pointer-friendly companion to keyboard presets.
+ * Single source for scene rows. Two modes:
+ * - entries mode (console, deck and popup): occurrence rows in playlist
+ *   order with position badges; the top DECK_SIZE map to Digit1-Digit0.
+ *   Starring pins the occurrence into the deck by position.
+ * - library mode (no entries): every preset in library order with the
+ *   CRUD chrome; pinning lives in the Playlists tab.
  */
 function useAllPresets() {
   const customPresets = useDirectorStore((s) => s.customPresets);
@@ -16,9 +42,17 @@ function useAllPresets() {
 }
 
 export interface SceneListOps {
-  onRemove?: (id: number) => void;
+  onRemove?: (key: string) => void;
   onMove?: (from: number, to: number) => void;
-  onToggleFavorite?: (id: number) => void;
+  onPin?: (key: string) => void;
+  onCueTiming?: (
+    key: string,
+    patch: { durationSec?: number; follow?: CueFollow },
+  ) => void;
+  onCueAnchor?: (key: string, seconds: number | null) => void;
+  onCueEnd?: (key: string, seconds: number | null) => void;
+  onFillGap?: (beforeKey: string) => void;
+  onDistribute?: (spaceSec: number | null) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -28,48 +62,178 @@ export interface SceneListOps {
   importReport?: string | null;
 }
 
+interface SceneRow {
+  key: string;
+  preset: ScenePreset;
+  position: number | null;
+  timing?: { durationSec: number; follow: CueFollow };
+  window?: CueWindow;
+  anchor?: number | null;
+  endPin?: number | null;
+}
+
+function keyLabel(index: number): string {
+  if (index < DECK_SIZE - 1) return `${index + 1}`;
+  if (index === DECK_SIZE - 1) return '0';
+  return '';
+}
+
 export function SceneList({
   items,
-  favoriteIds: favoriteOverride,
-  sceneOrder: orderOverride,
+  entries,
   activeId: activeOverride,
+  activeKey: activeKeyOverride,
   onSelect,
   manage = true,
+  pageSize = SCENE_PAGE_SIZE,
   ops = {},
+  cueClock = null,
+  trackTotal = null,
 }: {
   items?: ScenePreset[];
-  favoriteIds?: number[];
-  sceneOrder?: number[];
+  entries?: PlaylistEntry[];
   activeId?: number;
-  onSelect?: (id: number) => void;
+  activeKey?: string | null;
+  onSelect?: (id: number, key?: string | null) => void;
   manage?: boolean;
+  pageSize?: number;
   ops?: SceneListOps;
+  /** Live countdown (deck clock, or popup audio-derived); null hides it. */
+  cueClock?: CueCountdown | null;
+  /** Track length for the free-space placeholder; null hides it. */
+  trackTotal?: number | null;
 } = {}) {
+  const showTrackTotal =
+    typeof trackTotal === 'number' && Number.isFinite(trackTotal) && trackTotal > 0
+      ? trackTotal
+      : null;
   const storeActive = useDirectorStore((s) => s.activePresetId);
-  // Remote callers mirror the deck's active scene instead of the
-  // popup-local one, so the highlight follows the stage.
+  const storeKey = useDirectorStore((s) => s.activeEntryKey);
+  // Remote callers mirror the deck's active occurrence instead of the
+  // popup-local one, so the highlight follows the stage position.
   const activePresetId = activeOverride ?? storeActive;
+  const activeKey = activeKeyOverride !== undefined ? activeKeyOverride : storeKey;
   const storeOrder = useDirectorStore((s) => s.sceneOrder);
-  // Remote callers (second-screen popup) mirror the deck order instead of
-  // the popup-local one, so both windows list scenes identically.
-  const sceneOrder = orderOverride ?? storeOrder;
-  const storeFavorites = useDirectorStore((s) => s.favoriteIds);
   const storePresets = useAllPresets();
   const all = items ?? storePresets;
-  const ordered = sceneOrder
-    .map((id) => all.find((preset) => preset.id === id))
-    .filter((entry): entry is ScenePreset => Boolean(entry));
-  const missing = all.filter((preset) => !sceneOrder.includes(preset.id));
-  const presets = [...ordered, ...missing];
-  const favorites = new Set(favoriteOverride ?? storeFavorites);
+  const byId = new Map(all.map((preset) => [preset.id, preset]));
+
+  const windowsByKey = new Map(
+    (entries ? cueWindows(entries) : []).map((window) => [window.key, window]),
+  );
+  // Body rows read body windows (track 0:00); pool rows keep the
+  // sequential map for display only (pool never runs on the timeline).
+  const bodyWindowsByKey = new Map(
+    (entries ? cueWindows(bodyEntries(entries)) : []).map((window) => [
+      window.key,
+      window,
+    ]),
+  );
+  const bodyWindowList = entries ? cueWindows(bodyEntries(entries)) : [];
+  const bodyTotal =
+    bodyWindowList.length > 0
+      ? bodyWindowList[bodyWindowList.length - 1].endSec
+      : 0;
+  const pillElapsed =
+    cueClock?.fraction != null && bodyTotal > 0
+      ? cueClock.fraction * bodyTotal
+      : null;
+  const programmedPillKey = (() => {
+    if (pillElapsed === null) return null;
+    let found: string | null = null;
+    for (const window of bodyWindowList) {
+      if (pillElapsed >= window.startSec) found = window.key;
+    }
+    return found;
+  })();
+  const gapBefore = new Map<string, number>();
+  bodyWindowList.forEach((window, index) => {
+    const gap =
+      window.startSec - (index === 0 ? 0 : bodyWindowList[index - 1].endSec);
+    if (gap > 0.5) gapBefore.set(window.key, gap);
+  });
+  const timeCue =
+    ops.onCueTiming ??
+    ((key: string, patch: { durationSec?: number; follow?: CueFollow }) =>
+      useDirectorStore.getState().setCueTiming(key, patch));
+  const anchorCue =
+    ops.onCueAnchor ??
+    ((key: string, seconds: number | null) =>
+      useDirectorStore.getState().setCueAnchor(key, seconds));
+  const endCue =
+    ops.onCueEnd ??
+    ((key: string, seconds: number | null) =>
+      useDirectorStore.getState().setCueEnd(key, seconds));
+  const fillCueGap =
+    ops.onFillGap ??
+    ((beforeKey: string) =>
+      useDirectorStore.getState().fillGap(beforeKey));
+  const conflictKeys = new Set(
+    entries
+      ? windowConflicts(bodyEntries(entries)).flatMap((conflict) => [
+          conflict.key,
+          conflict.withKey,
+        ])
+      : [],
+  );
+  const distribute =
+    ops.onDistribute ??
+    ((spaceSec: number | null) =>
+      useDirectorStore.getState().distributeBody(spaceSec));
+  let rows: SceneRow[];
+  if (entries) {
+    rows = entries
+      .map((entry, index): SceneRow | null => {
+        const preset = byId.get(entry.sceneId);
+        if (!preset) return null;
+        const poolRow = index < DECK_SIZE;
+        return {
+          key: entry.key,
+          preset,
+          position: index,
+          timing: cueTiming(entry),
+          window: poolRow
+            ? windowsByKey.get(entry.key)
+            : bodyWindowsByKey.get(entry.key),
+          anchor: sanitizeAnchor(entry.startSec),
+          endPin: sanitizeAnchor(entry.endSec),
+        };
+      })
+      .filter((row): row is SceneRow => row !== null);
+  } else {
+    const ordered = storeOrder
+      .map((id) => byId.get(id))
+      .filter((entry): entry is ScenePreset => Boolean(entry));
+    const missing = all.filter(
+      (preset) => !storeOrder.includes(preset.id),
+    );
+    rows = [...ordered, ...missing].map((preset) => ({
+      key: `lib-${preset.id}`,
+      preset,
+      position: null,
+    }));
+  }
+
+  const [expanded, setExpanded] = useState(false);
+  // Library mode collapses; entries mode always shows pool + body
+  // (collapsing at 10 hid exactly the show behind the pool).
+  const collapsible = !manage && !entries && rows.length > pageSize;
+  const visible = collapsible && !expanded ? rows.slice(0, pageSize) : rows;
+
   const select =
-    onSelect ?? ((id: number) => useDirectorStore.getState().requestDissolve(id));
+    onSelect ??
+    ((id: number, key?: string | null) =>
+      useDirectorStore.getState().requestDissolve(id, key ?? null));
   const [editing, setEditing] = useState<ScenePreset | null | undefined>(undefined);
   const [building, setBuilding] = useState(false);
   const [report, setReport] = useState<string | null>(null);
   const remoteSave = ops.onSaveDraft ?? null;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const isNative = (id: number) => PRESETS.some((entry) => entry.id === id);
+  const pin = (key: string) => {
+    if (ops.onPin) ops.onPin(key);
+    else useDirectorStore.getState().pinScene(key);
+  };
 
   const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -125,41 +289,269 @@ export function SceneList({
       </div>
       )}
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
-      <ul className="scene-list" data-testid="scene-list">
-        {presets.map((preset, index) => (
-          <li key={preset.id} className="scene-row">
+      {(() => {
+        const renderRow = (row: SceneRow, visibleIndex: number) => {
+          const { key, preset, position, timing, window, anchor, endPin } = row;
+          const counting = cueClock?.key === key;
+          const follow = timing?.follow ?? 'manual';
+          // Pool positions are manual-only overlays: no anchor controls.
+          const pool = position !== null && position < DECK_SIZE;
+          const fixed = anchor ?? null;
+          const fixedEnd = endPin ?? null;
+          const bothPinned = fixed !== null && fixedEnd !== null;
+          const inConflict = conflictKeys.has(key);
+          const bodyRow = entries && position !== null && position >= DECK_SIZE;
+          const unitWindow = bodyRow ? bodyWindowsByKey.get(key) : undefined;
+          const unitHeight =
+            timing && bodyRow ? cueUnitHeight(timing.durationSec) : undefined;
+          const gap = gapBefore.get(key);
+          const pillActive = key === activeKey;
+          const pillProgrammed = key === programmedPillKey;
+          const pillTone = pillActive
+            ? pillProgrammed || programmedPillKey === null
+              ? 'active'
+              : 'detour'
+            : pillProgrammed
+              ? 'scheduled'
+              : '';
+          const pillDuration =
+            unitWindow !== undefined
+              ? Math.max(0, unitWindow.endSec - unitWindow.startSec)
+              : 0;
+          const pillFill =
+            pillActive && pillElapsed !== null && pillDuration > 0
+              ? Math.min(
+                  100,
+                  Math.max(0, ((pillElapsed - (unitWindow?.startSec ?? 0)) / pillDuration) * 100),
+                )
+              : null;
+          const inDeck = position !== null && position < DECK_SIZE;
+          const libraryIndex = rows.findIndex((entry) => entry.key === key);
+          const highlighted =
+            position !== null && activeKey
+              ? key === activeKey
+              : preset.id === activePresetId;
+          const orderIndex = position ?? libraryIndex;
+          const moveRow =
+            ops.onMove ??
+            ((from: number, to: number) =>
+              position !== null
+                ? useDirectorStore.getState().movePlaylistScene(from, to)
+                : useDirectorStore.getState().reorderScenes(from, to));
+          return (
+          <Fragment key={key}>
+          {gap !== undefined && (
+            <li className="cue-unit-gap warn" data-testid={`cue-gap-${key}`}>
+              <button
+                type="button"
+                className="cue-gap-fill"
+                onClick={() => fillCueGap(key)}
+                data-testid={`cue-gap-fill-${key}`}
+                title={`Blank gap of ${formatTrackTime(gap)} with no cue — activate to insert the previous cue trimmed to fit`}
+              >
+                vão {formatTrackTime(gap)} sem cue · preencher
+              </button>
+            </li>
+          )}
+          <li
+            className={
+              timing
+                ? `scene-row timed${bodyRow ? ' unit' : ''}${inConflict ? ' conflict' : ''}`
+                : 'scene-row'
+            }
+            style={unitHeight !== undefined ? { minHeight: unitHeight } : undefined}
+            {...sectionDropProps(orderIndex, moveRow)}
+          >
+          {timing && bodyRow && unitWindow && (
             <button
               type="button"
-              className={preset.id === activePresetId ? 'scene-item active' : 'scene-item'}
-              data-testid={`scene-button-${preset.id}`}
-              onClick={() => select(preset.id)}
+              className={pillTone ? `cue-pill ${pillTone}` : 'cue-pill'}
+              onClick={() => select(unitWindow.sceneId, key)}
+              title={`${preset.name} · in ${formatTrackTime(unitWindow.startSec)} → out ${formatTrackTime(unitWindow.endSec)}`}
+              data-testid={`cue-pill-${key}`}
+              aria-label={`Cue ${preset.name}`}
             >
-              <span className="scene-swatch" style={{ background: preset.palette.primary }} aria-hidden />
+              {pillFill !== null && (
+                <span
+                  className="cue-fill"
+                  style={{ height: `${pillFill}%` }}
+                  data-testid={`cue-pfill-${key}`}
+                  aria-hidden
+                />
+              )}
+            </button>
+          )}
+          <div className="scene-row-main">
+            <button
+              type="button"
+              className={highlighted ? 'scene-item active' : 'scene-item'}
+              data-testid={`scene-button-${preset.id}`}
+              onClick={() => select(preset.id, position !== null ? key : null)}
+            >
+              {position !== null && (
+                <span
+                  className={inDeck ? 'scene-pos deck' : 'scene-pos'}
+                  title={
+                    inDeck
+                      ? `Shortcut ${keyLabel(position)} · position ${position + 1} — drag to reorder`
+                      : `Position ${position + 1} (no shortcut) — drag to reorder`
+                  }
+                  draggable
+                  {...rowDragStart(orderIndex)}
+                >
+                  {position + 1}
+                </span>
+              )}
+              <span
+                className="scene-swatch"
+                style={{ background: preset.palette.primary }}
+                aria-hidden
+                title={position === null ? 'Drag to reorder' : undefined}
+                draggable={position === null}
+                {...(position === null ? rowDragStart(orderIndex) : {})}
+              />
               <strong>{preset.name}</strong>
-              {favorites.has(preset.id) && (
-                <span className="scene-fav" title="Favorite" aria-hidden>
+              {inDeck && (
+                <span className="scene-fav" title="Pinned to deck" aria-hidden>
                   ★
+                </span>
+              )}
+              {timing && (
+                <span
+                  className={counting ? 'scene-timing live' : 'scene-timing'}
+                  title={
+                    window
+                      ? `Cue ${formatTrackTime(timing.durationSec)} · in ${formatTrackTime(window.startSec)} → out ${formatTrackTime(window.endSec)} · ${follow}${fixed !== null ? ` · fixed ${formatTrackTime(fixed)}` : ''}`
+                      : `Cue ${formatTrackTime(timing.durationSec)} · ${follow}`
+                  }
+                  data-testid={`cue-time-${key}`}
+                >
+                  {counting && cueClock
+                    ? cueClock.held
+                      ? 'HOLD'
+                      : `◷ ${formatTrackTime(cueClock.remainingSec)}`
+                    : fixed !== null
+                      ? `◈ ${formatTrackTime(fixed)}`
+                      : formatTrackTime(timing.durationSec)}
                 </span>
               )}
               {isNative(preset.id) && <span className="scene-badge-native">native</span>}
             </button>
-            {manage && (
             <div className="scene-item-actions">
-              <button type="button" disabled={index === 0} onClick={() => (ops.onMove ? ops.onMove(index, index - 1) : useDirectorStore.getState().reorderScenes(index, index - 1))} data-testid={`up-scene-${preset.id}`}>
-                ↑
-              </button>
-              <button type="button" disabled={index === presets.length - 1} onClick={() => (ops.onMove ? ops.onMove(index, index + 1) : useDirectorStore.getState().reorderScenes(index, index + 1))} data-testid={`down-scene-${preset.id}`}>
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => (ops.onToggleFavorite ? ops.onToggleFavorite(preset.id) : useDirectorStore.getState().toggleFavorite(preset.id))}
-                data-testid={`fav-scene-${preset.id}`}
-                title={favorites.has(preset.id) ? 'Unfavorite' : 'Favorite'}
-              >
-                {favorites.has(preset.id) ? '★' : '☆'}
-              </button>
-              {!isNative(preset.id) && (
+              {position !== null ? (
+                <>
+                  <span className="scene-actions-group" role="group" aria-label="Reorder">
+                    <button type="button" disabled={position === 0} onClick={() => (ops.onMove ? ops.onMove(position, position - 1) : useDirectorStore.getState().movePlaylistScene(position, position - 1))} data-testid={`up-scene-${key}`} title="Move up (renumbers shortcuts)">
+                      ↑
+                    </button>
+                    <button type="button" disabled={position === rows.length - 1} onClick={() => (ops.onMove ? ops.onMove(position, position + 1) : useDirectorStore.getState().movePlaylistScene(position, position + 1))} data-testid={`down-scene-${key}`} title="Move down (renumbers shortcuts)">
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => pin(key)}
+                      data-testid={`fav-scene-${key}`}
+                      title={inDeck ? 'Unpin from deck' : 'Pin to deck'}
+                    >
+                      {inDeck ? '★' : '☆'}
+                    </button>
+                  </span>
+                  {timing && (
+                    <>
+                      <span className="scene-actions-group" role="group" aria-label="Duration seconds">
+                        <button
+                          type="button"
+                          disabled={bothPinned}
+                          onClick={() =>
+                            timeCue(key, { durationSec: timing.durationSec - CUE_STEP_SEC })
+                          }
+                          data-testid={`cue-minus-${key}`}
+                          title={
+                            bothPinned
+                              ? 'Duration derived from pinned start and end'
+                              : `Shorten cue by ${CUE_STEP_SEC}s`
+                          }
+                          aria-label={`Shorten cue by ${CUE_STEP_SEC} seconds`}
+                        >
+                          −{CUE_STEP_SEC}s
+                        </button>
+                        <button
+                          type="button"
+                          disabled={bothPinned}
+                          onClick={() =>
+                            timeCue(key, { durationSec: timing.durationSec + CUE_STEP_SEC })
+                          }
+                          data-testid={`cue-plus-${key}`}
+                          title={
+                            bothPinned
+                              ? 'Duration derived from pinned start and end'
+                              : `Lengthen cue by ${CUE_STEP_SEC}s`
+                          }
+                          aria-label={`Lengthen cue by ${CUE_STEP_SEC} seconds`}
+                        >
+                          +{CUE_STEP_SEC}s
+                        </button>
+                        <button
+                          type="button"
+                          className={follow === 'auto' ? 'scene-follow auto' : 'scene-follow'}
+                          onClick={() =>
+                            timeCue(key, { follow: follow === 'auto' ? 'manual' : 'auto' })
+                          }
+                          data-testid={`cue-follow-${key}`}
+                          title={
+                            follow === 'auto'
+                              ? 'Follow: auto — advance on expiry'
+                              : 'Follow: manual — hold until advanced'
+                          }
+                          aria-label={`Follow mode ${follow}. Activate to switch.`}
+                        >
+                          {follow === 'auto' ? 'Auto' : 'Hold'}
+                        </button>
+                      </span>
+                      {!pool && (
+                        <span className="scene-actions-group" role="group" aria-label="Pinned start and end">
+                          <CueTimeInput
+                            valueSec={fixed}
+                            onCommit={(seconds) => anchorCue(key, seconds)}
+                            testId={`anchor-start-${key}`}
+                            label={`Pinned start mm:ss for cue ${position !== null ? position + 1 : key}`}
+                          />
+                          <CueTimeInput
+                            valueSec={fixedEnd}
+                            onCommit={(seconds) => endCue(key, seconds)}
+                            testId={`anchor-end-${key}`}
+                            label={`Pinned end mm:ss for cue ${position !== null ? position + 1 : key}`}
+                          />
+                          {(fixed !== null || fixedEnd !== null) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                anchorCue(key, null);
+                                endCue(key, null);
+                              }}
+                              data-testid={`anchor-clear-${key}`}
+                              title="Clear pinned start and end (back to sequential flow)"
+                              aria-label="Clear pinned start and end"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button type="button" disabled={visibleIndex === 0} onClick={() => useDirectorStore.getState().reorderScenes(libraryIndex, libraryIndex - 1)} data-testid={`up-scene-${key}`}>
+                    ↑
+                  </button>
+                  <button type="button" disabled={visibleIndex === visible.length - 1} onClick={() => useDirectorStore.getState().reorderScenes(libraryIndex, libraryIndex + 1)} data-testid={`down-scene-${key}`}>
+                    ↓
+                  </button>
+                </>
+              )}
+              {manage && !isNative(preset.id) && (
                 <>
                   <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
                     Edit
@@ -168,7 +560,7 @@ export function SceneList({
                     type="button"
                     onClick={() =>
                       ops.onRemove
-                        ? ops.onRemove(preset.id)
+                        ? ops.onRemove(key)
                         : useDirectorStore.getState().deleteScene(preset.id)
                     }
                     data-testid={`delete-scene-${preset.id}`}
@@ -178,10 +570,81 @@ export function SceneList({
                 </>
               )}
             </div>
-            )}
+          </div>
           </li>
-        ))}
-      </ul>
+          </Fragment>
+          );
+        };
+        const poolVisible = (entries ? visible : []).filter(
+          (row) => row.position !== null && row.position < DECK_SIZE,
+        );
+        const bodyVisible = (entries ? visible : []).filter(
+          (row) => row.position === null || row.position >= DECK_SIZE,
+        );
+        if (!entries) {
+          return (
+            <ul className="scene-list" data-testid="scene-list">
+              {visible.map((row, visibleIndex) => renderRow(row, visibleIndex))}
+            </ul>
+          );
+        }
+        return (
+          <>
+            {poolVisible.length > 0 && (
+              <>
+                <p className="scene-group-title">Favoritos · teclas 1–0</p>
+                <ul className="scene-list" data-testid="scene-list">
+                  {poolVisible.map((row) => renderRow(row, row.position ?? 0))}
+                </ul>
+              </>
+            )}
+            {bodyVisible.length > 0 && (
+              <>
+                <p className="scene-group-title">Show · timeline</p>
+                <ul className="scene-list" data-testid="scene-list-body">
+                  {bodyVisible.map((row) => renderRow(row, row.position ?? 0))}
+                  {(() => {
+                    if (showTrackTotal === null || showTrackTotal <= bodyTotal + 0.5) {
+                      return null;
+                    }
+                    const free = showTrackTotal - bodyTotal;
+                    return (
+                      <li
+                        className="scene-row timed unit free"
+                        data-testid="cue-unit-free"
+                      >
+                        <span className="cue-pill free" aria-hidden="true" />
+                        <div className="scene-row-main">
+                          <button
+                            type="button"
+                            className="cue-free-row"
+                            onClick={() => distribute(showTrackTotal)}
+                            data-testid="cue-distribute"
+                            title="Even unfixed body cues over the track"
+                          >
+                            Espaço livre {formatTrackTime(free)} · clique para
+                            distribuir
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })()}
+                </ul>
+              </>
+            )}
+          </>
+        );
+      })()}
+      {collapsible && (
+        <button
+          type="button"
+          className="scene-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? 'Show less' : `Show full list (${rows.length - pageSize} more)`}
+        </button>
+      )}
       {manage && editing !== undefined && (
         <SceneEditor
           preset={editing ?? undefined}

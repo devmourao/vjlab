@@ -17,7 +17,7 @@ export function TransitionOverlay() {
           const state = dissolveState(elapsed, store.transitionDuration);
           if (state.shouldSwap && !transitionRef.swapped) {
             transitionRef.swapped = true;
-            store.setPreset(transitionRef.to);
+            store.setPreset(transitionRef.to, transitionRef.toKey);
           }
           node.style.opacity = String(state.opacity);
           if (state.finished) {
