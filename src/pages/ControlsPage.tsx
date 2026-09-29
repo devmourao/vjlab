@@ -311,6 +311,11 @@ export default function ControlsPage() {
                     activeId={snapshot.activePresetId}
                     activeKey={snapshot.activeEntryKey}
                     cueClock={cueClock}
+                    trackTotal={
+                      snapshot.fileName && snapshot.duration > 0
+                        ? snapshot.duration
+                        : null
+                    }
                     onSelect={(id, key) => send({ type: 'dissolve', id, key: key ?? null })}
                     ops={{
                       onMove: (from, to) => send({ type: 'moveScene', from, to }),
@@ -319,10 +324,12 @@ export default function ControlsPage() {
                         send({ type: 'setCueTiming', key, patch }),
                       onCueAnchor: (key, seconds) =>
                         send({ type: 'setCueAnchor', key, seconds }),
+                      onDistribute: (space) =>
+                        send({ type: 'distributeBody', space }),
                     }}
                   />
                   <TimelineView
-                    entries={bodyEntries(snapshot.entries)}
+                    entries={snapshot.entries}
                     trackDuration={snapshot.duration > 0 ? snapshot.duration : null}
                     position={snapshot.fileName ? snapshot.position : null}
                     names={

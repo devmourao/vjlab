@@ -175,6 +175,9 @@ function executeControlCommand(
     case 'setCueAnchor':
       store.setCueAnchor(command.key, command.seconds);
       break;
+    case 'distributeBody':
+      store.distributeBody(command.space);
+      break;
     case 'setCueTiming':
       store.setCueTiming(command.key, {
         ...(command.patch.durationSec !== undefined

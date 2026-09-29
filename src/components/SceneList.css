@@ -9,12 +9,36 @@
 
 .scene-row {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: stretch;
   gap: 8px;
   /* Panel-aware, not viewport-aware: the deck panel stays narrow on
      wide screens, so media queries cannot catch the overlap. */
   container-type: inline-size;
+}
+
+/* Cue units pair one pill with its row; the unit grows with duration
+   (compressive curve) while gaps read as empty space between units. */
+.scene-row.unit {
+  flex-direction: row;
+}
+
+.scene-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.scene-row.timed:not(.unit) .scene-row-main,
+.scene-row:not(.timed) .scene-row-main {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.scene-row.unit .scene-row-main {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .scene-item {
@@ -166,8 +190,9 @@
 }
 
 /* Timed rows read in two levels: identity on top, grouped controls
-   below. Groups breathe apart so each control family scans as one. */
-.scene-row.timed {
+   below. Groups breathe apart so each control family scans as one.
+   Unit rows pair the pill beside the levels instead. */
+.scene-row.timed:not(.unit) {
   flex-direction: column;
   align-items: stretch;
 }
@@ -176,6 +201,82 @@
   margin-left: 0;
   justify-content: flex-start;
   gap: 10px;
+}
+
+/* Unit pills: one per body cue, filling the unit height. Tones mirror
+   the old rail (active cyan, detour amber, scheduled dashed). */
+.cue-pill {
+  width: 14px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.cue-pill.active {
+  border-color: rgba(125, 211, 252, 0.8);
+  background: rgba(125, 211, 252, 0.35);
+}
+
+.cue-pill.detour {
+  border-color: rgba(252, 211, 77, 0.8);
+  background: rgba(252, 211, 77, 0.3);
+}
+
+.cue-pill.scheduled {
+  border-style: dashed;
+  border-color: rgba(125, 211, 252, 0.6);
+}
+
+.cue-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(125, 211, 252, 0.45);
+  pointer-events: none;
+}
+
+.cue-pill.detour .cue-fill {
+  background: rgba(252, 211, 77, 0.45);
+}
+
+/* Anchored gaps and the free-space placeholder between units. */
+.cue-unit-gap {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 24px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  border-left: 1px dashed rgba(255, 255, 255, 0.25);
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-pill.free {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+
+.cue-free-row {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 .scene-actions-group {

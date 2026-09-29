@@ -80,6 +80,7 @@ export type ControlCommand =
       patch: { durationSec?: number; follow?: string };
     }
   | { type: 'setCueAnchor'; key: string; seconds: number | null }
+  | { type: 'distributeBody'; space: number | null }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -202,6 +203,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
     'playlistRemoveScene',
     'setCueTiming',
     'setCueAnchor',
+    'distributeBody',
   'togglePlayback',
   'seekTrack',
   'skipTrack',
@@ -303,6 +305,10 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       return (
         typeof command['key'] === 'string' &&
         (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'distributeBody':
+      return (
+        command['space'] === null || typeof command['space'] === 'number'
       );
     case 'setCueTiming': {
       if (typeof command['key'] !== 'string') return false;

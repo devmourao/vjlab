@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { formatTrackTime } from '../audio/track';
 import {
   DECK_SIZE,
@@ -14,8 +14,7 @@ import {
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
-import { CueRail, type RailMode } from './CueRail';
-import './CueRail.css';
+import { cueUnitHeight } from './cueUnits';
 import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
@@ -49,6 +48,7 @@ export interface SceneListOps {
     patch: { durationSec?: number; follow?: CueFollow },
   ) => void;
   onCueAnchor?: (key: string, seconds: number | null) => void;
+  onDistribute?: (spaceSec: number | null) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
   onSaveDraft?: (
@@ -83,6 +83,7 @@ export function SceneList({
   pageSize = SCENE_PAGE_SIZE,
   ops = {},
   cueClock = null,
+  trackTotal = null,
 }: {
   items?: ScenePreset[];
   entries?: PlaylistEntry[];
@@ -94,7 +95,13 @@ export function SceneList({
   ops?: SceneListOps;
   /** Live countdown (deck clock, or popup audio-derived); null hides it. */
   cueClock?: CueCountdown | null;
+  /** Track length for the free-space placeholder; null hides it. */
+  trackTotal?: number | null;
 } = {}) {
+  const showTrackTotal =
+    typeof trackTotal === 'number' && Number.isFinite(trackTotal) && trackTotal > 0
+      ? trackTotal
+      : null;
   const storeActive = useDirectorStore((s) => s.activePresetId);
   const storeKey = useDirectorStore((s) => s.activeEntryKey);
   // Remote callers mirror the deck's active occurrence instead of the
@@ -117,6 +124,29 @@ export function SceneList({
       window,
     ]),
   );
+  const bodyWindowList = entries ? cueWindows(bodyEntries(entries)) : [];
+  const bodyTotal =
+    bodyWindowList.length > 0
+      ? bodyWindowList[bodyWindowList.length - 1].endSec
+      : 0;
+  const pillElapsed =
+    cueClock?.fraction != null && bodyTotal > 0
+      ? cueClock.fraction * bodyTotal
+      : null;
+  const programmedPillKey = (() => {
+    if (pillElapsed === null) return null;
+    let found: string | null = null;
+    for (const window of bodyWindowList) {
+      if (pillElapsed >= window.startSec) found = window.key;
+    }
+    return found;
+  })();
+  const gapBefore = new Map<string, number>();
+  bodyWindowList.forEach((window, index) => {
+    const gap =
+      window.startSec - (index === 0 ? 0 : bodyWindowList[index - 1].endSec);
+    if (gap > 0.5) gapBefore.set(window.key, gap);
+  });
   const timeCue =
     ops.onCueTiming ??
     ((key: string, patch: { durationSec?: number; follow?: CueFollow }) =>
@@ -125,6 +155,10 @@ export function SceneList({
     ops.onCueAnchor ??
     ((key: string, seconds: number | null) =>
       useDirectorStore.getState().setCueAnchor(key, seconds));
+  const distribute =
+    ops.onDistribute ??
+    ((spaceSec: number | null) =>
+      useDirectorStore.getState().distributeBody(spaceSec));
   let rows: SceneRow[];
   if (entries) {
     rows = entries
@@ -159,7 +193,6 @@ export function SceneList({
   }
 
   const [expanded, setExpanded] = useState(false);
-  const [railMode, setRailMode] = useState<RailMode>('scale');
   // Library mode collapses; entries mode always shows pool + body
   // (collapsing at 10 hid exactly the show behind the pool).
   const collapsible = !manage && !entries && rows.length > pageSize;
@@ -242,6 +275,31 @@ export function SceneList({
           // Pool positions are manual-only overlays: no anchor controls.
           const pool = position !== null && position < DECK_SIZE;
           const fixed = anchor ?? null;
+          const bodyRow = entries && position !== null && position >= DECK_SIZE;
+          const unitWindow = bodyRow ? bodyWindowsByKey.get(key) : undefined;
+          const unitHeight =
+            timing && bodyRow ? cueUnitHeight(timing.durationSec) : undefined;
+          const gap = gapBefore.get(key);
+          const pillActive = key === activeKey;
+          const pillProgrammed = key === programmedPillKey;
+          const pillTone = pillActive
+            ? pillProgrammed || programmedPillKey === null
+              ? 'active'
+              : 'detour'
+            : pillProgrammed
+              ? 'scheduled'
+              : '';
+          const pillDuration =
+            unitWindow !== undefined
+              ? Math.max(0, unitWindow.endSec - unitWindow.startSec)
+              : 0;
+          const pillFill =
+            pillActive && pillElapsed !== null && pillDuration > 0
+              ? Math.min(
+                  100,
+                  Math.max(0, ((pillElapsed - (unitWindow?.startSec ?? 0)) / pillDuration) * 100),
+                )
+              : null;
           const inDeck = position !== null && position < DECK_SIZE;
           const libraryIndex = rows.findIndex((entry) => entry.key === key);
           const highlighted =
@@ -256,11 +314,39 @@ export function SceneList({
                 ? useDirectorStore.getState().movePlaylistScene(from, to)
                 : useDirectorStore.getState().reorderScenes(from, to));
           return (
+          <Fragment key={key}>
+          {gap !== undefined && (
+            <li className="cue-unit-gap" aria-hidden="true">
+              <span>vão {formatTrackTime(gap)}</span>
+            </li>
+          )}
           <li
-            key={key}
-            className={timing ? 'scene-row timed' : 'scene-row'}
+            className={
+              timing ? (bodyRow ? 'scene-row timed unit' : 'scene-row timed') : 'scene-row'
+            }
+            style={unitHeight !== undefined ? { minHeight: unitHeight } : undefined}
             {...sectionDropProps(orderIndex, moveRow)}
           >
+          {timing && bodyRow && unitWindow && (
+            <button
+              type="button"
+              className={pillTone ? `cue-pill ${pillTone}` : 'cue-pill'}
+              onClick={() => select(unitWindow.sceneId, key)}
+              title={`${preset.name} · in ${formatTrackTime(unitWindow.startSec)} → out ${formatTrackTime(unitWindow.endSec)}`}
+              data-testid={`cue-pill-${key}`}
+              aria-label={`Cue ${preset.name}`}
+            >
+              {pillFill !== null && (
+                <span
+                  className="cue-fill"
+                  style={{ height: `${pillFill}%` }}
+                  data-testid={`cue-pfill-${key}`}
+                  aria-hidden
+                />
+              )}
+            </button>
+          )}
+          <div className="scene-row-main">
             <button
               type="button"
               className={highlighted ? 'scene-item active' : 'scene-item'}
@@ -456,7 +542,9 @@ export function SceneList({
                 </>
               )}
             </div>
+          </div>
           </li>
+          </Fragment>
           );
         };
         const poolVisible = (entries ? visible : []).filter(
@@ -465,7 +553,6 @@ export function SceneList({
         const bodyVisible = (entries ? visible : []).filter(
           (row) => row.position === null || row.position >= DECK_SIZE,
         );
-        const bodySource = entries ? bodyEntries(entries) : [];
         if (!entries) {
           return (
             <ul className="scene-list" data-testid="scene-list">
@@ -485,37 +572,36 @@ export function SceneList({
             )}
             {bodyVisible.length > 0 && (
               <>
-                <p className="scene-group-title">
-                  Show · timeline{' '}
-                  <button
-                    type="button"
-                    className="rail-mode-toggle"
-                    data-testid="rail-mode-toggle"
-                    onClick={() =>
-                      setRailMode((mode) => (mode === 'scale' ? 'even' : 'scale'))
+                <p className="scene-group-title">Show · timeline</p>
+                <ul className="scene-list" data-testid="scene-list-body">
+                  {bodyVisible.map((row) => renderRow(row, row.position ?? 0))}
+                  {(() => {
+                    if (showTrackTotal === null || showTrackTotal <= bodyTotal + 0.5) {
+                      return null;
                     }
-                    title={
-                      railMode === 'scale'
-                        ? 'Even pills with progress fill'
-                        : 'Proportional pills with gaps'
-                    }
-                  >
-                    {railMode === 'scale' ? 'Fixas' : 'Escala'}
-                  </button>
-                </p>
-                <div className="scene-list-wrap">
-                  <CueRail
-                    windows={cueWindows(bodySource)}
-                    names={new Map(all.map((preset) => [preset.id, preset.name]))}
-                    activeKey={activeKey}
-                    fraction={cueClock?.fraction ?? null}
-                    onSelect={(id, key) => select(id, key)}
-                    mode={railMode}
-                  />
-                  <ul className="scene-list" data-testid="scene-list-body">
-                    {bodyVisible.map((row) => renderRow(row, row.position ?? 0))}
-                  </ul>
-                </div>
+                    const free = showTrackTotal - bodyTotal;
+                    return (
+                      <li
+                        className="scene-row timed unit free"
+                        data-testid="cue-unit-free"
+                      >
+                        <span className="cue-pill free" aria-hidden="true" />
+                        <div className="scene-row-main">
+                          <button
+                            type="button"
+                            className="cue-free-row"
+                            onClick={() => distribute(showTrackTotal)}
+                            data-testid="cue-distribute"
+                            title="Even unfixed body cues over the track"
+                          >
+                            Espaço livre {formatTrackTime(free)} · clique para
+                            distribuir
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })()}
+                </ul>
               </>
             )}
           </>

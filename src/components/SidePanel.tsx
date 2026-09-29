@@ -72,6 +72,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
               manage={false}
               entries={playlist.entries}
               cueClock={cueClock}
+              trackTotal={engine.duration > 0 ? engine.duration : null}
               ops={{
                 onMove: (from, to) =>
                   useDirectorStore.getState().movePlaylistScene(from, to),

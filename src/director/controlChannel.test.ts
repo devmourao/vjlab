@@ -333,6 +333,24 @@ describe('controlChannel', () => {
         command: { type: 'setCueAnchor', key: 'e0' },
       }),
     ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: 2400 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'distributeBody', space: 'far' },
+      }),
+    ).toBe(false);
   });
 
   it('builds a serializable snapshot from store state', () => {

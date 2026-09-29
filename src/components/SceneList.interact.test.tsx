@@ -1,14 +1,12 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
-import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   cueTiming,
-  cueWindows,
   selectActivePlaylist,
   useDirectorStore,
 } from '../director/directorStore';
-import { CueRail } from './CueRail';
+import { cueUnitHeight } from './cueUnits';
 import { SceneList } from './SceneList';
 
 describe('SceneList timing interaction', () => {
@@ -34,10 +32,9 @@ describe('SceneList timing interaction', () => {
         cueClock={{ key: entries[10].key, remainingSec: 20, fraction: 0.25 }}
       />,
     );
-    expect(screen.getByTestId('cue-rail')).toBeTruthy();
-    expect(screen.getByTestId(`cue-seg-${entries[10].key}`)).toBeTruthy();
+    expect(screen.getByTestId(`cue-pill-${entries[10].key}`)).toBeTruthy();
     // Progress lives inside the active pill (no global playhead line).
-    expect(screen.getByTestId(`cue-fill-${entries[10].key}`)).toBeTruthy();
+    expect(screen.getByTestId(`cue-pfill-${entries[10].key}`)).toBeTruthy();
     expect(screen.getByTestId(`cue-minus-${entries[2].key}`).textContent).toBe(
       '−5s',
     );
@@ -91,43 +88,61 @@ describe('SceneList timing interaction', () => {
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
-  it('reads rail modes, gaps and off-program cues', () => {
-    const names = new Map([
-      [0, 'Nebula'],
-      [1, 'Bloom'],
-    ]);
-    const windows = cueWindows([
-      { key: 'a', sceneId: 0, durationSec: 2 },
-      { key: 'b', sceneId: 1, durationSec: 40, startSec: 12 },
-    ]);
-    const noop = () => undefined;
-    // Scale: anchored gap renders as empty space between segments.
-    const scale = renderToString(
-      <CueRail
-        windows={windows}
-        names={names}
-        activeKey="a"
-        fraction={0}
-        onSelect={noop}
-        mode="scale"
+  it('sizes units compressively with gaps and a free-space placeholder', () => {
+    expect(cueUnitHeight(2)).toBeLessThan(cueUnitHeight(40));
+    expect(cueUnitHeight(3600)).toBe(248);
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Units test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < 12; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const getEntries = () =>
+      selectActivePlaylist(useDirectorStore.getState()).entries;
+    // Anchor the second body cue at 0:12 with 2 s and 40 s neighbors.
+    api.setCueTiming(getEntries()[10].key, { durationSec: 2 });
+    api.setCueTiming(getEntries()[11].key, { durationSec: 40 });
+    api.setCueAnchor(getEntries()[11].key, 12);
+    const { unmount, rerender } = render(
+      <SceneList
+        manage={false}
+        entries={getEntries()}
+        activeKey={getEntries()[10].key}
+        cueClock={{ key: getEntries()[10].key, remainingSec: 20, fraction: 0.25 }}
+        trackTotal={2400}
       />,
     );
-    expect(scale).toContain('cue-gap-b');
-    expect(scale).toContain('data-rail-mode="scale"');
-    // Even: active off-program cue reads amber with progress fill.
-    const even = renderToString(
-      <CueRail
-        windows={windows}
-        names={names}
-        activeKey="a"
-        fraction={0.9}
-        onSelect={noop}
-        mode="even"
-      />,
-    );
-    expect(even).toContain('data-rail-mode="even"');
-    expect(even).toContain('detour');
-    expect(even).toContain('cue-fill-a');
+    const refresh = () =>
+      rerender(
+        <SceneList
+          manage={false}
+          entries={getEntries()}
+          activeKey={getEntries()[10].key}
+          cueClock={{ key: getEntries()[10].key, remainingSec: 20, fraction: 0.25 }}
+          trackTotal={2400}
+        />,
+      );
+    // Anchored gap reads as labeled empty space between units.
+    expect(screen.getByText('vão 0:10')).toBeTruthy();
+    // Active unit pill carries progress; off-program would read amber.
+    expect(
+      screen.getByTestId(`cue-pfill-${getEntries()[10].key}`),
+    ).toBeTruthy();
+    // Free track remainder offers one-tap distribution.
+    expect(screen.getByTestId('cue-unit-free')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('cue-distribute'));
+    refresh();
+    // The anchored gap refills (predecessor stretches to 0:12).
+    expect(screen.queryByText('vão 0:10')).toBeNull();
+    expect(
+      cueTiming(
+        selectActivePlaylist(useDirectorStore.getState()).entries[10],
+      ).durationSec,
+    ).toBe(12);
+    unmount();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
   it('steps duration and toggles follow from the row', () => {
