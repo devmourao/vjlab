@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { formatTrackTime } from '../audio/track';
 import {
   DECK_SIZE,
+  bodyEntries,
   cueTiming,
   cueWindows,
   sanitizeAnchor,
@@ -10,10 +11,12 @@ import {
   type CueWindow,
   type PlaylistEntry,
 } from '../director/directorStore';
-import type { CueCountdown } from '../director/showClock';
 import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
+import { CueRail } from './CueRail';
+import './CueRail.css';
+import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
 import './SceneList.css';
@@ -217,6 +220,16 @@ export function SceneList({
       </div>
       )}
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
+      <div className="scene-list-wrap">
+      {entries && (
+        <CueRail
+          windows={cueWindows(bodyEntries(entries))}
+          names={new Map(all.map((preset) => [preset.id, preset.name]))}
+          activeKey={activeKey}
+          fraction={cueClock?.fraction ?? null}
+          onSelect={(id, key) => select(id, key)}
+        />
+      )}
       <ul className="scene-list" data-testid="scene-list">
         {visible.map((row, visibleIndex) => {
           const { key, preset, position, timing, window, anchor } = row;
@@ -241,7 +254,7 @@ export function SceneList({
           return (
           <li
             key={key}
-            className="scene-row"
+            className={timing ? 'scene-row timed' : 'scene-row'}
             {...sectionDropProps(orderIndex, moveRow)}
           >
             <button
@@ -302,62 +315,66 @@ export function SceneList({
             <div className="scene-item-actions">
               {position !== null ? (
                 <>
-                  <button type="button" disabled={position === 0} onClick={() => (ops.onMove ? ops.onMove(position, position - 1) : useDirectorStore.getState().movePlaylistScene(position, position - 1))} data-testid={`up-scene-${key}`}>
-                    ↑
-                  </button>
-                  <button type="button" disabled={position === rows.length - 1} onClick={() => (ops.onMove ? ops.onMove(position, position + 1) : useDirectorStore.getState().movePlaylistScene(position, position + 1))} data-testid={`down-scene-${key}`}>
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => pin(key)}
-                    data-testid={`fav-scene-${key}`}
-                    title={inDeck ? 'Unpin from deck' : 'Pin to deck'}
-                  >
-                    {inDeck ? '★' : '☆'}
-                  </button>
+                  <span className="scene-actions-group" role="group" aria-label="Reorder">
+                    <button type="button" disabled={position === 0} onClick={() => (ops.onMove ? ops.onMove(position, position - 1) : useDirectorStore.getState().movePlaylistScene(position, position - 1))} data-testid={`up-scene-${key}`} title="Move up (renumbers shortcuts)">
+                      ↑
+                    </button>
+                    <button type="button" disabled={position === rows.length - 1} onClick={() => (ops.onMove ? ops.onMove(position, position + 1) : useDirectorStore.getState().movePlaylistScene(position, position + 1))} data-testid={`down-scene-${key}`} title="Move down (renumbers shortcuts)">
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => pin(key)}
+                      data-testid={`fav-scene-${key}`}
+                      title={inDeck ? 'Unpin from deck' : 'Pin to deck'}
+                    >
+                      {inDeck ? '★' : '☆'}
+                    </button>
+                  </span>
                   {timing && (
                     <>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          timeCue(key, { durationSec: timing.durationSec - CUE_STEP_SEC })
-                        }
-                        data-testid={`cue-minus-${key}`}
-                        title={`Shorten cue by ${CUE_STEP_SEC}s`}
-                        aria-label={`Shorten cue by ${CUE_STEP_SEC} seconds`}
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          timeCue(key, { durationSec: timing.durationSec + CUE_STEP_SEC })
-                        }
-                        data-testid={`cue-plus-${key}`}
-                        title={`Lengthen cue by ${CUE_STEP_SEC}s`}
-                        aria-label={`Lengthen cue by ${CUE_STEP_SEC} seconds`}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className={follow === 'auto' ? 'scene-follow auto' : 'scene-follow'}
-                        onClick={() =>
-                          timeCue(key, { follow: follow === 'auto' ? 'manual' : 'auto' })
-                        }
-                        data-testid={`cue-follow-${key}`}
-                        title={
-                          follow === 'auto'
-                            ? 'Follow: auto — advance on expiry'
-                            : 'Follow: manual — hold until advanced'
-                        }
-                        aria-label={`Follow mode ${follow}. Activate to switch.`}
-                      >
-                        {follow === 'auto' ? 'A' : 'M'}
-                      </button>
+                      <span className="scene-actions-group" role="group" aria-label="Duration seconds">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            timeCue(key, { durationSec: timing.durationSec - CUE_STEP_SEC })
+                          }
+                          data-testid={`cue-minus-${key}`}
+                          title={`Shorten cue by ${CUE_STEP_SEC}s`}
+                          aria-label={`Shorten cue by ${CUE_STEP_SEC} seconds`}
+                        >
+                          −{CUE_STEP_SEC}s
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            timeCue(key, { durationSec: timing.durationSec + CUE_STEP_SEC })
+                          }
+                          data-testid={`cue-plus-${key}`}
+                          title={`Lengthen cue by ${CUE_STEP_SEC}s`}
+                          aria-label={`Lengthen cue by ${CUE_STEP_SEC} seconds`}
+                        >
+                          +{CUE_STEP_SEC}s
+                        </button>
+                        <button
+                          type="button"
+                          className={follow === 'auto' ? 'scene-follow auto' : 'scene-follow'}
+                          onClick={() =>
+                            timeCue(key, { follow: follow === 'auto' ? 'manual' : 'auto' })
+                          }
+                          data-testid={`cue-follow-${key}`}
+                          title={
+                            follow === 'auto'
+                              ? 'Follow: auto — advance on expiry'
+                              : 'Follow: manual — hold until advanced'
+                          }
+                          aria-label={`Follow mode ${follow}. Activate to switch.`}
+                        >
+                          {follow === 'auto' ? 'Auto' : 'Hold'}
+                        </button>
+                      </span>
                       {!pool && (
-                        <>
+                        <span className="scene-actions-group" role="group" aria-label="Fixed start seconds">
                           <button
                             type="button"
                             onClick={() =>
@@ -367,7 +384,7 @@ export function SceneList({
                             title="Move fixed start earlier (creates anchor)"
                             aria-label="Move fixed start earlier by five seconds"
                           >
-                            ◈−
+                            ◈−{CUE_STEP_SEC}s
                           </button>
                           <button
                             type="button"
@@ -378,7 +395,7 @@ export function SceneList({
                             title="Move fixed start later (creates anchor)"
                             aria-label="Move fixed start later by five seconds"
                           >
-                            ◈+
+                            ◈+{CUE_STEP_SEC}s
                           </button>
                           {fixed !== null && (
                             <button
@@ -391,7 +408,7 @@ export function SceneList({
                               ✕
                             </button>
                           )}
-                        </>
+                        </span>
                       )}
                     </>
                   )}
@@ -429,6 +446,7 @@ export function SceneList({
           );
         })}
       </ul>
+      </div>
       {collapsible && (
         <button
           type="button"

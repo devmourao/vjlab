@@ -1,0 +1,47 @@
+/* Vertical show mini-map beside the rows. Segments share height
+   proportionally to cue durations; the playhead descends with the show. */
+.cue-rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 14px;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 2px 0;
+}
+
+.cue-seg {
+  flex-basis: 0;
+  min-height: 8px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.cue-seg.active {
+  border-color: rgba(125, 211, 252, 0.8);
+  background: rgba(125, 211, 252, 0.35);
+}
+
+.cue-playhead {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  height: 2px;
+  background: #7dd3fc;
+  pointer-events: none;
+}
+
+.scene-list-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.scene-list-wrap .scene-list {
+  flex: 1;
+  min-width: 0;
+}

@@ -291,6 +291,8 @@ export interface CueCountdown {
   key: string;
   remainingSec: number;
   held?: boolean;
+  /** Elapsed share 0..1 of the windows total; drives progress rails. */
+  fraction?: number | null;
 }
 
 /** Countdown for the cue under `elapsed`; null past the show end. */
@@ -302,7 +304,12 @@ export function countdownAt(
   const index = cueIndexAt(windows, elapsed);
   const current = windows[index];
   if (elapsed >= current.endSec) return null;
-  return { key: current.key, remainingSec: current.endSec - elapsed };
+  const total = windows[windows.length - 1].endSec;
+  return {
+    key: current.key,
+    remainingSec: current.endSec - elapsed,
+    fraction: total > 0 ? elapsed / total : null,
+  };
 }
 
 /**
@@ -311,12 +318,15 @@ export function countdownAt(
  */
 export function liveCountdown(state: PilotState): CueCountdown | null {
   const elapsed = showElapsedSec();
+  const body = activeBodyWindows(state);
+  const total = body.length > 0 ? body[body.length - 1].endSec : 0;
+  const fraction = total > 0 ? Math.min(1, Math.max(0, elapsed / total)) : null;
   const interrupt = activeInterrupt(state);
   if (interrupt) {
     const entries = selectActivePlaylist(state).entries;
     const record = entries.find((entry) => entry.key === interrupt.key);
     if (cueTiming(record ?? { key: '', sceneId: -1 }).follow !== 'auto') {
-      return { key: interrupt.key, remainingSec: 0, held: true };
+      return { key: interrupt.key, remainingSec: 0, held: true, fraction };
     }
     return {
       key: interrupt.key,
@@ -324,9 +334,11 @@ export function liveCountdown(state: PilotState): CueCountdown | null {
         0,
         interrupt.startElapsedSec + interrupt.durationSec - elapsed,
       ),
+      fraction,
     };
   }
-  return countdownAt(activeBodyWindows(state), elapsed);
+  const ticking = countdownAt(body, elapsed);
+  return ticking ? { ...ticking, fraction } : null;
 }
 
 /** Coverage tolerance around the reference to read as "covered". */
