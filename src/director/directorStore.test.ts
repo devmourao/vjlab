@@ -14,6 +14,7 @@ import {
   showTotalSec,
   transitionRef,
   useDirectorStore,
+  windowConflicts,
 } from './directorStore';
 
 describe('directorStore', () => {
@@ -430,6 +431,88 @@ describe('directorStore', () => {
     api.setCueAnchor(body[2].key, null);
     body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
     expect(body[2].startSec ?? null).toBeNull();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('pins ends, flags overlaps and fills gaps', () => {
+    // End pins win over duration; both-pinned derives it.
+    const windows = cueWindows([
+      { key: 'a', sceneId: 0, durationSec: 30, startSec: 43 },
+      { key: 'b', sceneId: 1, durationSec: 30, endSec: 71 },
+    ]);
+    expect(windows.map((window) => [window.startSec, window.endSec])).toEqual([
+      [43, 73],
+      [41, 71],
+    ]);
+    // Overlap between locked intervals never goes silent.
+    expect(
+      windowConflicts([
+        { key: 'a', sceneId: 0, durationSec: 30, startSec: 43, endSec: 71 },
+        { key: 'b', sceneId: 1, durationSec: 30, startSec: 60 },
+      ]),
+    ).toEqual([{ key: 'b', withKey: 'a' }]);
+    expect(
+      windowConflicts([
+        { key: 'a', sceneId: 0, durationSec: 30 },
+        { key: 'b', sceneId: 1, durationSec: 30, startSec: 30 },
+      ]),
+    ).toEqual([]);
+    // End pins shrink predecessors to fit (100 s over [0, 71] keeps 41 s).
+    const shrunk = distributeBodyEntries(
+      [
+        { key: 'a', sceneId: 0, durationSec: 100 },
+        { key: 'b', sceneId: 1, durationSec: 28, endSec: 71 },
+      ],
+      1000,
+    );
+    expect(shrunk.map((entry) => entry.durationSec)).toEqual([43, 28]);
+    expect(
+      cueWindows(shrunk).map((window) => [window.startSec, window.endSec]),
+    ).toEqual([
+      [0, 43],
+      [43, 71],
+    ]);
+  });
+
+  it('tracks end pins, gap fills and the dirty dot through the store', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    useDirectorStore.setState({ showDirty: false });
+    expect(useDirectorStore.getState().showDirty).toBe(false);
+    api.createPlaylist('Pins test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < DECK_SIZE + 3; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const keys = () =>
+      bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries).map(
+        (entry) => entry.key,
+      );
+    api.setCueEnd(keys()[1], 71);
+    api.setCueAnchor('missing', 10);
+    expect(
+      sanitizeAnchor(
+        bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries)[1]
+          .endSec,
+      ),
+    ).toBe(71);
+    expect(useDirectorStore.getState().showDirty).toBe(true);
+    // Gap fill duplicates the previous cue trimmed to the void.
+    api.setCueAnchor(keys()[2], 200);
+    api.fillGap(keys()[2]);
+    let body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
+    expect(body).toHaveLength(4);
+    expect(body[2].durationSec).toBe(200 - 71);
+    api.fillGap('missing');
+    api.fillGap(keys()[0]);
+    expect(
+      bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries),
+    ).toHaveLength(4);
+    api.distributeBody(null);
+    expect(useDirectorStore.getState().showDirty).toBe(false);
+    body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
+    expect(body.map((entry) => entry.durationSec)).toEqual([41, 30, 129, 30]);
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });

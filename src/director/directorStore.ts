@@ -108,7 +108,11 @@ interface DirectorState {
   ) => void;
   setBodyFollow: (follow: CueFollow) => void;
   setCueAnchor: (key: string, seconds: number | null) => void;
+  setCueEnd: (key: string, seconds: number | null) => void;
+  fillGap: (beforeKey: string) => void;
   distributeBody: (spaceSec: number | null) => void;
+  /** Runtime-only: true after any duration/pin edit, cleared by distribute. */
+  showDirty: boolean;
   cycleDuration: () => void;
   stepHue: () => void;
   setHueShift: (value: number) => void;
@@ -302,6 +306,8 @@ export interface PlaylistEntry {
   follow?: CueFollow;
   /** Fixed start timestamp (sec); body only, absent means sequential flow. */
   startSec?: number | null;
+  /** Fixed end timestamp (sec); body only, wins over duration. */
+  endSec?: number | null;
 }
 
 /** Playlist default when a cue omits its own duration. */
@@ -353,32 +359,68 @@ export interface CueWindow {
 
 /**
  * Accumulated in/out windows for a cue list, in execution order.
- * A fixed anchor pins the start (fixed wins on conflict; gaps read as
- * holds of the previous cue downstream).
+ * A fixed start pins the start; a fixed end wins over duration
+ * (both pinned derives duration); gaps read as holds downstream.
  */
 export function cueWindows(entries: PlaylistEntry[]): CueWindow[] {
   let cursor = 0;
   return entries.map((entry) => {
     const timing = cueTiming(entry);
-    const fixed = sanitizeAnchor(entry.startSec);
-    const start = fixed ?? cursor;
+    const fixedStart = sanitizeAnchor(entry.startSec);
+    const fixedEnd = sanitizeAnchor(entry.endSec);
+    // End-only pins float the start (end minus duration); fixed starts
+    // hold even when predecessors overflow (flagged as conflicts).
+    const start =
+      fixedStart ?? (fixedEnd !== null ? fixedEnd - timing.durationSec : cursor);
+    const end = fixedEnd ?? start + timing.durationSec;
     const window: CueWindow = {
       key: entry.key,
       sceneId: entry.sceneId,
       follow: timing.follow,
       startSec: start,
-      endSec: start + timing.durationSec,
+      endSec: Math.max(start, end),
     };
     cursor = window.endSec;
     return window;
   });
 }
 
+/** Locked `[start, end)` intervals for overlap checks (body order). */
+export function lockedIntervals(
+  entries: PlaylistEntry[],
+): Array<{ key: string; startSec: number; endSec: number }> {
+  return cueWindows(entries).map((window) => ({
+    key: window.key,
+    startSec: window.startSec,
+    endSec: window.endSec,
+  }));
+}
+
 /**
- * Even split of `spaceSec` over unfixed runs between fixed anchors.
- * Fixed cues keep their duration; negative gaps are skipped; the minimum
- * one second per cue may push the total past the space (documented).
- * Pure: returns a new body array.
+ * Pairwise overlap between locked intervals: later cue starting
+ * strictly inside an earlier one still running. Returns cue key pairs.
+ */
+export function windowConflicts(
+  entries: PlaylistEntry[],
+): Array<{ key: string; withKey: string }> {
+  const windows = cueWindows(entries);
+  const conflicts: Array<{ key: string; withKey: string }> = [];
+  for (let i = 0; i < windows.length; i += 1) {
+    for (let j = i + 1; j < windows.length; j += 1) {
+      if (windows[j].startSec < windows[i].endSec - 0.5) {
+        conflicts.push({ key: windows[j].key, withKey: windows[i].key });
+      }
+    }
+  }
+  return conflicts;
+}
+
+/**
+ * Even split of `spaceSec` over unfixed runs between locked boundaries.
+ * Start pins hold their timestamp; end pins shrink unfixed predecessors
+ * to fit (min 1 s each); both-pinned cues never move and normalize
+ * their stored duration. Leftovers surface via windowConflicts instead
+ * of silent overlaps. Pure: returns a new body array.
  */
 export function distributeBodyEntries(
   body: PlaylistEntry[],
@@ -388,32 +430,62 @@ export function distributeBodyEntries(
   const result = body.map((entry) => ({ ...entry }));
   let cursor = 0;
   let run: number[] = [];
-  const flush = (end: number) => {
-    const span = Math.max(0, end - cursor);
-    if (run.length > 0 && span > 0) {
-      let assigned = 0;
-      run.forEach((index, position) => {
-        const share =
-          position === run.length - 1
-            ? span - assigned
-            : Math.round(span / run.length);
-        const duration = clampCueDuration(Math.max(MIN_CUE_DURATION_SEC, Math.round(share)));
-        result[index] = { ...result[index], durationSec: duration };
-        assigned += duration;
-      });
+  const share = (indices: number[], span: number) => {
+    if (indices.length === 0 || span <= 0) return;
+    let assigned = 0;
+    indices.forEach((index, position) => {
+      const duration =
+        position === indices.length - 1
+          ? Math.max(MIN_CUE_DURATION_SEC, Math.round(span - assigned))
+          : Math.max(
+              MIN_CUE_DURATION_SEC,
+              Math.round(span / indices.length),
+            );
+      result[index] = {
+        ...result[index],
+        durationSec: clampCueDuration(duration),
+      };
+      assigned += result[index].durationSec as number;
+    });
+  };
+  /** Fill the buffered run inside [cursor, end), reserving seconds. */
+  const flush = (end: number, reserve: number): boolean => {
+    const span = end - cursor;
+    if (span < 0) {
+      run = [];
+      return false;
     }
+    share(run, Math.max(0, span - reserve));
     run = [];
+    return true;
   };
   result.forEach((entry, index) => {
-    const fixed = sanitizeAnchor(entry.startSec);
-    if (fixed === null) {
+    const d = cueTiming(entry).durationSec;
+    const start = sanitizeAnchor(entry.startSec);
+    const end = sanitizeAnchor(entry.endSec);
+    if (start === null && end === null) {
       run.push(index);
       return;
     }
-    flush(fixed);
-    cursor = fixed + cueTiming(entry).durationSec;
+    if (start !== null) {
+      flush(start, 0);
+      if (end !== null) {
+        result[index] = {
+          ...entry,
+          durationSec: clampCueDuration(
+            Math.max(MIN_CUE_DURATION_SEC, end - start),
+          ),
+        };
+      }
+      cursor = Math.max(cursor, end ?? start + d);
+      return;
+    }
+    // End-only: predecessors shrink so this cue ends exactly at `end`.
+    if (end !== null && flush(end, d)) {
+      cursor = end;
+    }
   });
-  flush(space);
+  flush(space, 0);
   return result;
 }
 
@@ -479,6 +551,7 @@ function sanitizeEntries(ids: unknown, valid: Set<number>): PlaylistEntry[] {
       durationSec: clampCueDuration(record['durationSec']),
       follow: sanitizeFollow(record['follow']),
       startSec: sanitizeAnchor(record['startSec']),
+      endSec: sanitizeAnchor(record['endSec']),
     });
   }
   return entries;
@@ -705,6 +778,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   sceneOrder: sceneOrderInitial,
   playlists: playlistsInitial.playlists,
   activePlaylistId: playlistsInitial.activeId,
+  showDirty: false,
   activeEntryKey: activeEntryKeyInitial,
   panelMode: 'docked',
   autoPilotOn: true,
@@ -1141,7 +1215,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
-    set({ playlists: nextPlaylists });
+    set({ playlists: nextPlaylists, showDirty: true });
   },
   setBodyFollow: (follow) => {
     const state = get();
@@ -1158,7 +1232,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
-    set({ playlists: nextPlaylists });
+    set({ playlists: nextPlaylists, showDirty: true });
   },
   setCueAnchor: (key, seconds) => {
     const state = get();
@@ -1176,7 +1250,49 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
-    set({ playlists: nextPlaylists });
+    set({ playlists: nextPlaylists, showDirty: true });
+  },
+  setCueEnd: (key, seconds) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    if (!active.entries.some((entry) => entry.key === key)) return;
+    const end = sanitizeAnchor(seconds);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id
+        ? {
+            ...entry,
+            entries: entry.entries.map((scene) =>
+              scene.key === key ? { ...scene, endSec: end } : scene,
+            ),
+          }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists, showDirty: true });
+  },
+  fillGap: (beforeKey) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    const index = active.entries.findIndex((entry) => entry.key === beforeKey);
+    if (index <= 0) return;
+    const windows = cueWindows(active.entries);
+    const gap = windows[index].startSec - windows[index - 1].endSec;
+    if (!(gap > 0.5)) return;
+    const source = active.entries[index - 1];
+    const inserted: PlaylistEntry = {
+      ...source,
+      key: `e${Date.now().toString(36)}${active.entries.length}`,
+      durationSec: clampCueDuration(Math.round(gap)),
+      startSec: null,
+      endSec: null,
+    };
+    const nextEntries = [...active.entries];
+    nextEntries.splice(index, 0, inserted);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id ? { ...entry, entries: nextEntries } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists, showDirty: true });
   },
   distributeBody: (spaceSec) => {
     const state = get();
@@ -1201,7 +1317,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         : entry,
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
-    set({ playlists: nextPlaylists });
+    set({ playlists: nextPlaylists, showDirty: false });
   },
   cycleDuration: () =>
     set((s) => ({ transitionDuration: nextDuration(s.transitionDuration) })),

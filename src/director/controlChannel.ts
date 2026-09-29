@@ -81,6 +81,8 @@ export type ControlCommand =
     }
   | { type: 'setCueAnchor'; key: string; seconds: number | null }
   | { type: 'distributeBody'; space: number | null }
+  | { type: 'setCueEnd'; key: string; seconds: number | null }
+  | { type: 'fillGap'; key: string }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -116,6 +118,7 @@ export interface SnapshotEntry {
   durationSec: number;
   follow: CueFollow;
   startSec: number | null;
+  endSec: number | null;
 }
 
 export interface ControlSnapshot {
@@ -204,6 +207,8 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
     'setCueTiming',
     'setCueAnchor',
     'distributeBody',
+    'setCueEnd',
+    'fillGap',
   'togglePlayback',
   'seekTrack',
   'skipTrack',
@@ -310,6 +315,13 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       return (
         command['space'] === null || typeof command['space'] === 'number'
       );
+    case 'setCueEnd':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'fillGap':
+      return typeof command['key'] === 'string';
     case 'setCueTiming': {
       if (typeof command['key'] !== 'string') return false;
       if (!isRecord(command['patch'])) return false;
@@ -412,6 +424,7 @@ export function buildSnapshot(
         durationSec: timing.durationSec,
         follow: timing.follow,
         startSec: sanitizeAnchor(entry.startSec),
+        endSec: sanitizeAnchor(entry.endSec),
       };
     }),
     playlists: state.playlists.map((entry) => ({

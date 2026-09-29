@@ -178,6 +178,12 @@ function executeControlCommand(
     case 'distributeBody':
       store.distributeBody(command.space);
       break;
+    case 'setCueEnd':
+      store.setCueEnd(command.key, command.seconds);
+      break;
+    case 'fillGap':
+      store.fillGap(command.key);
+      break;
     case 'setCueTiming':
       store.setCueTiming(command.key, {
         ...(command.patch.durationSec !== undefined

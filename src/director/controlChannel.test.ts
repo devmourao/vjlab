@@ -351,6 +351,36 @@ describe('controlChannel', () => {
         command: { type: 'distributeBody', space: 'far' },
       }),
     ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: 71 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueEnd', key: 'e0', seconds: 'late' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'fillGap', key: 'e0' },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'fillGap', key: 4 },
+      }),
+    ).toBe(false);
   });
 
   it('builds a serializable snapshot from store state', () => {
@@ -384,7 +414,8 @@ describe('controlChannel', () => {
         (entry) =>
           typeof entry.durationSec === 'number' &&
           (entry.follow === 'manual' || entry.follow === 'auto') &&
-          (entry.startSec === null || typeof entry.startSec === 'number'),
+          (entry.startSec === null || typeof entry.startSec === 'number') &&
+          (entry.endSec === null || typeof entry.endSec === 'number'),
       ),
     ).toBe(true);
     expect(typeof snapshot.showTotalSec).toBe('number');
