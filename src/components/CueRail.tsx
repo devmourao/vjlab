@@ -54,8 +54,11 @@ export function CueRail({
         ? 'scheduled'
         : '';
     const duration = Math.max(0, window.endSec - window.startSec);
+    // Progress lives inside the active pill in both modes: a global
+    // playhead line cannot align with rows (time-proportional rail vs
+    // uniform rows), so it lied whenever durations varied.
     const fill =
-      mode === 'even' && active && elapsed !== null && duration > 0
+      active && elapsed !== null && duration > 0
         ? Math.min(100, Math.max(0, ((elapsed - window.startSec) / duration) * 100))
         : null;
     return (
@@ -111,14 +114,6 @@ export function CueRail({
             );
           })
         : windows.map((window) => segment(window))}
-      {fraction !== null && (
-        <div
-          className="cue-playhead"
-          data-testid="cue-playhead"
-          style={{ top: `${Math.min(100, Math.max(0, fraction)) * 100}%` }}
-          aria-hidden
-        />
-      )}
     </div>
   );
 }

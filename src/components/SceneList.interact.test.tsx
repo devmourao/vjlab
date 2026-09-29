@@ -30,12 +30,14 @@ describe('SceneList timing interaction', () => {
       <SceneList
         manage={false}
         entries={entries}
-        cueClock={{ key: entries[2].key, remainingSec: 20, fraction: 0.25 }}
+        activeKey={entries[10].key}
+        cueClock={{ key: entries[10].key, remainingSec: 20, fraction: 0.25 }}
       />,
     );
     expect(screen.getByTestId('cue-rail')).toBeTruthy();
-    expect(screen.getByTestId('cue-playhead')).toBeTruthy();
     expect(screen.getByTestId(`cue-seg-${entries[10].key}`)).toBeTruthy();
+    // Progress lives inside the active pill (no global playhead line).
+    expect(screen.getByTestId(`cue-fill-${entries[10].key}`)).toBeTruthy();
     expect(screen.getByTestId(`cue-minus-${entries[2].key}`).textContent).toBe(
       '−5s',
     );
