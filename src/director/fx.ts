@@ -140,3 +140,21 @@ export const GLITCH_DELAY: [number, number] = [1.5, 3.5];
 export const GLITCH_DURATION: [number, number] = [0.2, 0.6];
 
 export const GLITCH_STRENGTH: [number, number] = [0.2, 0.5];
+
+/**
+ * Slider bounds per effect slot. Contrast and saturation use their own
+ * ranges; every other slot mixes dry/wet from 0 to 1.
+ */
+export function slotRange(slot: FxSlot): { min: number; max: number; step: number } {
+  if (slot === 'contrast')
+    return { min: CONTRAST_MIN, max: CONTRAST_MAX, step: 0.01 };
+  if (slot === 'saturation') return { min: 0, max: SATURATION_MAX, step: 0.01 };
+  return { min: 0, max: 1, step: 0.01 };
+}
+
+/** Fill fraction (0–1) for slot value bars. */
+export function slotFraction(slot: FxSlot, value: number): number {
+  const { min, max } = slotRange(slot);
+  if (max === min) return 0;
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}

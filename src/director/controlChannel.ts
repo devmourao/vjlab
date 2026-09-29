@@ -1,4 +1,15 @@
-import { useDirectorStore, type PanelMode } from './directorStore';
+import { BASE_CAPABILITIES } from '../scenes/bases';
+import type { ScenePreset } from '../scenes/presets';
+import {
+  bodyEntries,
+  cueTiming,
+  sanitizeAnchor,
+  selectActivePlaylist,
+  showTotalSec,
+  useDirectorStore,
+  type CueFollow,
+  type PanelMode,
+} from './directorStore';
 
 /**
  * Second-screen control protocol.
@@ -11,12 +22,13 @@ import { useDirectorStore, type PanelMode } from './directorStore';
 export const CONTROL_CHANNEL = 'vjlab-control-v1';
 
 export type ControlCommand =
-  | { type: 'dissolve'; id: number }
+  | { type: 'dissolve'; id: number; key?: string | null }
   | { type: 'nextPreset' }
   | { type: 'prevPreset' }
   | { type: 'hardCut' }
   | { type: 'cycleDuration' }
   | { type: 'stepHue' }
+  | { type: 'setHue'; value: number }
   | { type: 'zoomIn' }
   | { type: 'zoomOut' }
   | { type: 'cycleFxSlot' }
@@ -38,15 +50,86 @@ export type ControlCommand =
   | { type: 'killAll' }
   | { type: 'setPanelMode'; mode: PanelMode }
   | { type: 'cyclePanelMode' }
+  | { type: 'openLibrary' }
+  | { type: 'closeLibrary' }
+  | { type: 'showGuide' }
+  | { type: 'replayTour' }
+  | { type: 'switchPlaylist'; id: string }
+  | { type: 'runAction'; id: string }
+  | { type: 'playlistAddScene'; playlistId: string; sceneId: number }
+  | { type: 'playlistRemoveScene'; playlistId: string; key: string }
   | { type: 'togglePlayback' }
+  | { type: 'seekTrack'; value: number }
+  | { type: 'skipTrack'; delta: number }
+  | { type: 'playQueueTrack'; id: string }
+  | { type: 'removeQueueTrack'; id: string }
+  | { type: 'moveQueueTrack'; from: number; to: number }
   | { type: 'setOverlayText'; text: string }
   | { type: 'setMix'; slot: string; value: number }
   | { type: 'setZoom'; value: number }
-  | { type: 'setStrobeHz'; value: number };
+  | { type: 'setStrobeHz'; value: number }
+  | { type: 'uploadTrack'; name: string; mime: string; data: ArrayBuffer }
+  | { type: 'createScene'; draft: SceneDraftPayload }
+  | { type: 'updateScene'; id: number; patch: SceneDraftPayload }
+  | { type: 'deleteScene'; id: number }
+  | { type: 'moveScene'; from: number; to: number }
+  | { type: 'pinScene'; key: string }
+  | {
+      type: 'setCueTiming';
+      key: string;
+      patch: { durationSec?: number; follow?: string };
+    }
+  | { type: 'setCueAnchor'; key: string; seconds: number | null }
+  | { type: 'distributeBody'; space: number | null }
+  | { type: 'setCueEnd'; key: string; seconds: number | null }
+  | { type: 'fillGap'; key: string }
+  | { type: 'exportScenes' }
+  | { type: 'importPack'; pack: unknown };
+
+export interface SceneDraftPayload {
+  name: string;
+  palette: { primary: string; emissive: string };
+  background: string;
+  gain: number;
+  speed: number;
+  instances: Array<{ base: string; params?: Record<string, unknown> }>;
+}
+
+export interface SnapshotPreset {
+  id: number;
+  name: string;
+  palette: { primary: string; emissive: string };
+  background: string;
+  gain: number;
+  speed: number;
+  instances: Array<{ base: string; params?: Record<string, unknown> }>;
+}
+
+export interface SnapshotPlaylist {
+  id: string;
+  name: string;
+  sceneCount: number;
+  deckCount: number;
+}
+
+export interface SnapshotEntry {
+  key: string;
+  sceneId: number;
+  durationSec: number;
+  follow: CueFollow;
+  startSec: number | null;
+  endSec: number | null;
+}
 
 export interface ControlSnapshot {
   activePresetId: number;
-  presetCount: number;
+  activeEntryKey: string | null;
+  presets: SnapshotPreset[];
+  favoriteIds: number[];
+  sceneOrder: number[];
+  entries: SnapshotEntry[];
+  playlists: SnapshotPlaylist[];
+  activePlaylistId: string;
   strobeOn: boolean;
   strobeMode: string;
   strobeRateHz: number;
@@ -64,11 +147,24 @@ export interface ControlSnapshot {
   mixes: Record<string, number>;
   fileName: string | null;
   isPlaying: boolean;
+  audioError: string | null;
+  position: number;
+  duration: number;
+  queue: Array<{ id: string; name: string }>;
+  mediaIndex: number | null;
+  showTotalSec: number;
+  showTargetSec: number | null;
+}
+
+export interface ImportResult {
+  accepted: string[];
+  rejected: Array<{ id: string; reason: string }>;
 }
 
 export type ControlMessage =
   | { kind: 'hello'; source: 'controls' }
   | { kind: 'snapshot'; snapshot: ControlSnapshot }
+  | { kind: 'importResult'; result: ImportResult }
   | { type: 'command'; command: ControlCommand };
 
 const COMMAND_TYPES: ReadonlySet<string> = new Set([
@@ -78,6 +174,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'hardCut',
   'cycleDuration',
   'stepHue',
+  'setHue',
   'zoomIn',
   'zoomOut',
   'cycleFxSlot',
@@ -99,17 +196,76 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
   'killAll',
   'setPanelMode',
   'cyclePanelMode',
+  'openLibrary',
+  'closeLibrary',
+  'showGuide',
+  'replayTour',
+  'switchPlaylist',
+  'runAction',
+    'playlistAddScene',
+    'playlistRemoveScene',
+    'setCueTiming',
+    'setCueAnchor',
+    'distributeBody',
+    'setCueEnd',
+    'fillGap',
   'togglePlayback',
+  'seekTrack',
+  'skipTrack',
+  'playQueueTrack',
+  'removeQueueTrack',
+  'moveQueueTrack',
   'setOverlayText',
   'setMix',
   'setZoom',
   'setStrobeHz',
+  'uploadTrack',
+  'createScene',
+  'updateScene',
+  'deleteScene',
+  'moveScene',
+  'pinScene',
+  'exportScenes',
+  'importPack',
 ]);
+
+const KNOWN_BASE_IDS = new Set(Object.keys(BASE_CAPABILITIES));
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSceneDraft(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (typeof value['name'] !== 'string' || !value['name']) return false;
+  if (!Array.isArray(value['instances']) || value['instances'].length === 0) {
+    return false;
+  }
+  return value['instances'].every(
+    (entry) =>
+      isRecord(entry) &&
+      typeof entry['base'] === 'string' &&
+      KNOWN_BASE_IDS.has(entry['base']),
+  );
+}
 
 function hasValidPayload(command: Record<string, unknown>): boolean {
   switch (command['type']) {
     case 'dissolve':
-      return typeof command['id'] === 'number';
+      return (
+        typeof command['id'] === 'number' &&
+        (command['key'] === undefined ||
+          command['key'] === null ||
+          typeof command['key'] === 'string')
+      );
+    case 'playQueueTrack':
+    case 'removeQueueTrack':
+      return typeof command['id'] === 'string';
+    case 'moveQueueTrack':
+      return (
+        typeof command['from'] === 'number' &&
+        typeof command['to'] === 'number'
+      );
     case 'selectFxSlot':
       return typeof command['slot'] === 'string';
     case 'setPanelMode':
@@ -123,7 +279,82 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       );
     case 'setZoom':
     case 'setStrobeHz':
+    case 'setHue':
+    case 'seekTrack':
       return typeof command['value'] === 'number';
+    case 'skipTrack':
+      return typeof command['delta'] === 'number';
+    case 'uploadTrack':
+      return (
+        typeof command['name'] === 'string' &&
+        command['name'].length > 0 &&
+        typeof command['mime'] === 'string' &&
+        command['data'] instanceof ArrayBuffer &&
+        command['data'].byteLength > 0
+      );
+    case 'createScene':
+      return isSceneDraft(command['draft']);
+    case 'updateScene':
+      return (
+        typeof command['id'] === 'number' && isSceneDraft(command['patch'])
+      );
+    case 'deleteScene':
+      return typeof command['id'] === 'number';
+    case 'switchPlaylist':
+      return typeof command['id'] === 'string';
+    case 'runAction':
+      return typeof command['id'] === 'string';
+    case 'pinScene':
+      return typeof command['key'] === 'string';
+    case 'setCueAnchor':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'distributeBody':
+      return (
+        command['space'] === null || typeof command['space'] === 'number'
+      );
+    case 'setCueEnd':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
+    case 'fillGap':
+      return typeof command['key'] === 'string';
+    case 'setCueTiming': {
+      if (typeof command['key'] !== 'string') return false;
+      if (!isRecord(command['patch'])) return false;
+      const patch = command['patch'];
+      if (
+        patch['durationSec'] !== undefined &&
+        typeof patch['durationSec'] !== 'number'
+      ) {
+        return false;
+      }
+      return (
+        patch['follow'] === undefined || typeof patch['follow'] === 'string'
+      );
+    }
+    case 'playlistAddScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['sceneId'] === 'number'
+      );
+    case 'playlistRemoveScene':
+      return (
+        typeof command['playlistId'] === 'string' &&
+        typeof command['key'] === 'string'
+      );
+    case 'moveScene':
+      return (
+        typeof command['from'] === 'number' &&
+        typeof command['to'] === 'number'
+      );
+    case 'exportScenes':
+      return true;
+    case 'importPack':
+      return command['pack'] !== undefined;
     default:
       return true;
   }
@@ -136,6 +367,11 @@ export function isControlMessage(value: unknown): value is ControlMessage {
   if (record['kind'] === 'snapshot') {
     return (
       typeof record['snapshot'] === 'object' && record['snapshot'] !== null
+    );
+  }
+  if (record['kind'] === 'importResult') {
+    return (
+      typeof record['result'] === 'object' && record['result'] !== null
     );
   }
   if (record['type'] === 'command') {
@@ -152,12 +388,52 @@ export function isControlMessage(value: unknown): value is ControlMessage {
 
 export function buildSnapshot(
   state: ReturnType<typeof useDirectorStore.getState>,
-  track: { fileName: string | null; isPlaying: boolean },
-  presetCount: number,
+  track: {
+    fileName: string | null;
+    isPlaying: boolean;
+    error?: string | null;
+    position?: number;
+    duration?: number;
+  },
+  presets: ScenePreset[],
 ): ControlSnapshot {
   return {
     activePresetId: state.activePresetId,
-    presetCount,
+    activeEntryKey: state.activeEntryKey,
+    presets: presets.map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      palette: { ...preset.palette },
+      background: preset.background,
+      gain: preset.gain,
+      speed: preset.speed,
+      instances: (preset.instances ?? []).map((instance) => ({
+        base: instance.base,
+        params: { ...(instance.params ?? {}) },
+      })),
+    })),
+    favoriteIds: selectActivePlaylist(state)
+      .entries.slice(0, 10)
+      .map((entry) => entry.sceneId),
+    sceneOrder: selectActivePlaylist(state).entries.map((entry) => entry.sceneId),
+    entries: selectActivePlaylist(state).entries.map((entry) => {
+      const timing = cueTiming(entry);
+      return {
+        key: entry.key,
+        sceneId: entry.sceneId,
+        durationSec: timing.durationSec,
+        follow: timing.follow,
+        startSec: sanitizeAnchor(entry.startSec),
+        endSec: sanitizeAnchor(entry.endSec),
+      };
+    }),
+    playlists: state.playlists.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      sceneCount: entry.entries.length,
+      deckCount: Math.min(entry.entries.length, 10),
+    })),
+    activePlaylistId: state.activePlaylistId,
     strobeOn: state.strobeOn,
     strobeMode: state.strobeMode,
     strobeRateHz: state.strobeRateHz,
@@ -182,6 +458,13 @@ export function buildSnapshot(
     },
     fileName: track.fileName,
     isPlaying: track.isPlaying,
+    audioError: track.error ?? null,
+    position: track.position ?? 0,
+    duration: track.duration ?? 0,
+    queue: state.mediaQueue.map((entry) => ({ id: entry.id, name: entry.name })),
+    mediaIndex: state.mediaIndex,
+    showTotalSec: showTotalSec(bodyEntries(selectActivePlaylist(state).entries)),
+    showTargetSec: selectActivePlaylist(state).targetSec ?? null,
   };
 }
 
@@ -232,14 +515,27 @@ export function resolveDetachmentToggle(mode: PanelMode): PanelMode {
   return mode === 'detached' ? 'docked' : 'detached';
 }
 
+export function isControlsPopupOpen(): boolean {
+  try {
+    return popupRef !== null && !popupRef.closed;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Button A: hide or show the interface. Never opens a popup and never
- * touches fullscreen, so it is safe at any moment of a performance.
+ * Button A: hide or show the main-screen interface. Never closes the
+ * second-screen popup: the performance use case is a clean stage on the
+ * main screen while control continues from the popup. Restoring from
+ * hidden returns to detached when the popup is still open.
  */
 export function toggleInterfaceVisibility(): void {
   const store = useDirectorStore.getState();
-  if (store.panelMode === 'detached') closeControlsPopup();
-  store.setPanelMode(resolveVisibilityToggle(store.panelMode));
+  if (store.panelMode === 'hidden') {
+    store.setPanelMode(isControlsPopupOpen() ? 'detached' : 'docked');
+    return;
+  }
+  store.setPanelMode('hidden');
 }
 
 /**

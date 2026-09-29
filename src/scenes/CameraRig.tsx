@@ -21,6 +21,7 @@ export function CameraRig() {
       radius * Math.cos(az) * Math.cos(el),
     );
     camera.lookAt(0, 0, 0);
+    camera.rotateZ(liveRefs.roll);
   });
   return null;
 }

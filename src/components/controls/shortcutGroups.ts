@@ -1,0 +1,43 @@
+import {
+  deriveShortcutMap,
+  type GuideRow,
+} from '../../director/actionRegistry';
+
+const SHORTCUT_MAP: GuideRow[] = deriveShortcutMap();
+
+export const START_KEYS = new Set(['U', 'D', 'G / F11', 'L', 'A', 'I', 'M']);
+export const PERFORM_KEYS = new Set([
+  '1–0',
+  'N / P',
+  'X',
+  'Y',
+  'T',
+  'B',
+  'Arrows',
+  '+ / -',
+  'Q / W',
+  '↑/↓ (Fractal)',
+]);
+export const EFFECTS_KEYS = new Set([
+  'H',
+  'E / ]',
+  'R / F',
+  ', / .',
+  'Space',
+  'O',
+  'V',
+  'C',
+  'J',
+  'K',
+  'S',
+]);
+
+export function rowsFor(keys: Set<string>) {
+  return SHORTCUT_MAP.filter((row) => keys.has(row.key));
+}
+
+export const SHORTCUT_GROUPS: Array<{ title: string; keys: Set<string> }> = [
+  { title: 'Start', keys: START_KEYS },
+  { title: 'Perform', keys: PERFORM_KEYS },
+  { title: 'Effects', keys: EFFECTS_KEYS },
+];

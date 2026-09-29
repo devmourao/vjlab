@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { liveRefs, useDirectorStore } from './directorStore';
+import { pilotOwnsScene, showDrivesScenes } from './showClock';
 import { PRESETS } from '../scenes/presets';
 
 const TOUR_INTERVAL_MS = 5000;
@@ -15,6 +16,10 @@ export function useAutoPilot() {
       const store = useDirectorStore.getState();
       const tick = tickRef.current++;
 
+      // A track-anchored show owns the stage: the tour (palette, zoom,
+      // camera AND scenes) would otherwise fight the track sync.
+      if (showDrivesScenes(store)) return;
+
       // 1. Palette tour — always safe, no post pass re-chain.
       store.stepHue();
 
@@ -26,7 +31,8 @@ export function useAutoPilot() {
       liveRefs.azimuth += 0.08 * (tick % 2 === 0 ? 1 : -1);
 
       // 4. Scene tour — every 3rd tick, respect dissolve guardrail.
-      if (tick % 3 === 0) {
+      // Yields to the Show pilot while the current cue is auto-timed.
+      if (tick % 3 === 0 && !pilotOwnsScene(store)) {
         const order = store.sceneOrder.length > 0 ? store.sceneOrder : [...PRESETS, ...store.customPresets].map((preset) => preset.id);
         const index = order.indexOf(store.activePresetId);
         const next = order[(index + 1) % order.length];

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { readBands } from '../audio/audioBus';
 import { useDirectorStore, liveRefs } from '../director/directorStore';
+import { BASE_CAPABILITIES } from './bases';
 import { RING_COUNT, RING_SPACING, decayBurst, wrapRingZ } from './sceneMath';
 
 export function TunnelFieldScene({
@@ -50,7 +51,9 @@ export function TunnelFieldScene({
       target.position.z = wrapRingZ(offsets[i] + ((time * speedBase) % span));
     });
 
-    group.scale.setScalar(1 + bass * 0.3 * gain + liveRefs.boost * 0.5);
+    group.scale.setScalar(
+      1 + bass * 0.3 * gain + liveRefs.boost * BASE_CAPABILITIES.tunnel.burst.peak,
+    );
     // Standard rotation on z for Tri (visible), y for Hyper
     const activeId = useDirectorStore.getState().activePresetId;
     const isTriMode = activeId === 3;

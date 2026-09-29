@@ -6,7 +6,8 @@ import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
 import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
-import { AboutPanel } from '../components/Identity';
+import { AboutPanel, UnauthorizedVeil } from '../components/Identity';
+import { LibraryOverlay } from '../components/LibraryOverlay';
 import { PlayerBar } from '../components/PlayerBar';
 import { SidePanel } from '../components/SidePanel';
 import { StrobeOverlay } from '../components/StrobeOverlay';
@@ -14,20 +15,31 @@ import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
+import { isAuthorizedHost, printOwnershipNotice } from '../legal';
+import { ACTIONS } from '../director/actionRegistry';
+import { useGamepadPoll } from '../director/gamepad';
 import {
   CONTROL_CHANNEL,
   buildSnapshot,
+  closeControlsPopup,
   isControlMessage,
   type ControlCommand,
 } from '../director/controlChannel';
-import { useDirectorStore, type PanelMode } from '../director/directorStore';
+import {
+  useActivePlaylist,
+  useDirectorStore,
+  type PanelMode,
+} from '../director/directorStore';
+import { deriveAudioStatus } from '../director/audioStatus';
+import { setAudioTimeSource } from '../director/showClock';
 import { useAutoPilot } from '../director/useAutoPilot';
 import { useKeyboardDesk } from '../director/useKeyboardDesk';
+import { useShowPilot } from '../director/useShowPilot';
 import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
-import { PLAYLIST, PRESETS, getPreset } from '../scenes/presets';
+import { PRESETS, getPreset, type BaseInstance } from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
 const PANEL_MODES: PanelMode[] = ['docked', 'detached', 'hidden'];
@@ -39,7 +51,7 @@ function executeControlCommand(
   const store = useDirectorStore.getState();
   switch (command.type) {
     case 'dissolve':
-      store.requestDissolve(command.id);
+      store.requestDissolve(command.id, command.key ?? null);
       break;
     case 'nextPreset':
       store.nextPreset();
@@ -55,6 +67,9 @@ function executeControlCommand(
       break;
     case 'stepHue':
       store.stepHue();
+      break;
+    case 'setHue':
+      store.setHueShift(command.value);
       break;
     case 'zoomIn':
       store.zoomIn();
@@ -115,17 +130,115 @@ function executeControlCommand(
     case 'killAll':
       store.killAll();
       break;
-    case 'setPanelMode':
-      if ((PANEL_MODES as readonly string[]).includes(command.mode)) {
-        store.setPanelMode(command.mode);
+    case 'setPanelMode': {
+      if (!(PANEL_MODES as readonly string[]).includes(command.mode)) break;
+      const wasDetached = store.panelMode === 'detached';
+      store.setPanelMode(command.mode);
+      // A popup that docks the deck would orphan itself: follow it home.
+      if (wasDetached && command.mode !== 'detached') closeControlsPopup();
+      break;
+    }
+    case 'openLibrary':
+      store.setLibraryOpen(true);
+      break;
+    case 'closeLibrary':
+      store.setLibraryOpen(false);
+      break;
+    case 'showGuide':
+      store.setHelpOpen(true);
+      break;
+    case 'replayTour':
+      store.replayTour();
+      break;
+    case 'switchPlaylist':
+      store.setActivePlaylist(command.id);
+      break;
+    case 'runAction': {
+      // Popup keystrokes execute through the same registry as deck keys,
+      // so both windows share context (fractal rules, live camera refs).
+      // Unknown ids are ignored: the registry is the whitelist.
+      const action = ACTIONS.find((entry) => entry.id === command.id);
+      if (
+        action &&
+        action.id !== 'controls.detach' &&
+        action.id !== 'output.fullscreen' &&
+        action.id !== 'output.fullscreen.f11'
+      ) {
+        action.run();
       }
       break;
-    case 'cyclePanelMode':
-      store.cyclePanelMode();
+    }
+    case 'playlistAddScene':
+      store.addSceneToPlaylist(command.playlistId, command.sceneId);
       break;
+    case 'playlistRemoveScene':
+      store.removeSceneFromPlaylist(command.playlistId, command.key);
+      break;
+    case 'setCueAnchor':
+      store.setCueAnchor(command.key, command.seconds);
+      break;
+    case 'distributeBody':
+      store.distributeBody(command.space);
+      break;
+    case 'setCueEnd':
+      store.setCueEnd(command.key, command.seconds);
+      break;
+    case 'fillGap':
+      store.fillGap(command.key);
+      break;
+    case 'setCueTiming':
+      store.setCueTiming(command.key, {
+        ...(command.patch.durationSec !== undefined
+          ? { durationSec: command.patch.durationSec }
+          : null),
+        ...(command.patch.follow !== undefined
+          ? { follow: command.patch.follow as 'manual' | 'auto' }
+          : null),
+      });
+      break;
+    case 'cyclePanelMode': {
+      const wasDetached = store.panelMode === 'detached';
+      store.cyclePanelMode();
+      if (
+        wasDetached &&
+        useDirectorStore.getState().panelMode !== 'detached'
+      ) {
+        closeControlsPopup();
+      }
+      break;
+    }
     case 'togglePlayback':
       void engine.toggle();
       break;
+    case 'seekTrack':
+      engine.seekTo(command.value);
+      break;
+    case 'skipTrack':
+      engine.skipBy(command.delta);
+      break;
+    case 'playQueueTrack': {
+      const track = store.mediaQueue.find((entry) => entry.id === command.id);
+      if (!track) break;
+      store.playMedia(command.id);
+      if (track.url) engine.loadUrl(track.url, track.name);
+      break;
+    }
+    case 'removeQueueTrack':
+      store.removeMediaTrack(command.id);
+      break;
+    case 'moveQueueTrack':
+      store.reorderMedia(command.from, command.to);
+      break;
+    case 'uploadTrack': {
+      // ArrayBuffer clones reliably across same-origin windows; the main
+      // deck owns the resulting object URL, so playback stays local.
+      const file = new File([command.data], command.name, {
+        type: command.mime,
+      });
+      const [created] = store.addMediaTracks([file]);
+      if (created) store.playMedia(created.id);
+      break;
+    }
     case 'setOverlayText':
       store.setOverlayText(command.text);
       break;
@@ -140,13 +253,78 @@ function executeControlCommand(
     case 'setStrobeHz':
       store.setStrobeRate(command.value);
       break;
+    case 'createScene':
+      store.createScene({
+        name: command.draft.name,
+        palette: { ...command.draft.palette },
+        background: command.draft.background,
+        gain: command.draft.gain,
+        speed: command.draft.speed,
+        scene: 0 as const,
+        instances: command.draft.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'updateScene':
+      store.updateScene(command.id, {
+        name: command.patch.name,
+        palette: { ...command.patch.palette },
+        background: command.patch.background,
+        gain: command.patch.gain,
+        speed: command.patch.speed,
+        instances: command.patch.instances.map((instance) => ({
+          base: instance.base as BaseInstance['base'],
+          params: { ...(instance.params ?? {}) },
+        })),
+      });
+      break;
+    case 'deleteScene':
+      store.deleteScene(command.id);
+      break;
+    case 'moveScene':
+      store.movePlaylistScene(command.from, command.to);
+      break;
+    case 'pinScene':
+      store.pinScene(command.key);
+      break;
+    case 'exportScenes':
+      store.exportCustomScenes();
+      break;
+    case 'importPack': {
+      const result = store.importScenes(command.pack);
+      try {
+        const channel = new BroadcastChannel(CONTROL_CHANNEL);
+        channel.postMessage({
+          kind: 'importResult',
+          result: {
+            accepted: result.accepted.map((entry) => entry.name),
+            rejected: result.rejected,
+          },
+        });
+        channel.close();
+      } catch {
+        // The popup refreshes from snapshots regardless.
+      }
+      break;
+    }
   }
 }
 
 function DeckPage() {
   const engine = useAudioEngine();
+  useEffect(() => {
+    printOwnershipNotice();
+  }, []);
   useKeyboardDesk();
   useAutoPilot();
+  useShowPilot();
+  useGamepadPoll((index) => {
+    const state = useDirectorStore.getState();
+    const action = ACTIONS.find((entry) => state.padBindings[entry.id] === index);
+    action?.run();
+  });
   const activePresetId = useDirectorStore((s) => s.activePresetId);
   const customPresets = useDirectorStore((s) => s.customPresets);
   const liteOn = useDirectorStore((s) => s.liteOn);
@@ -156,18 +334,56 @@ function DeckPage() {
   const preset =
     allPresets.find((entry) => entry.id === activePresetId) ??
     getPreset(activePresetId);
-  const orderIndex = allPresets.findIndex((entry) => entry.id === activePresetId);
+  const playlist = useActivePlaylist();
+  const activeEntryKey = useDirectorStore((s) => s.activeEntryKey);
+  const execOrder =
+    playlist.entries.length > 0
+      ? playlist.entries.map((entry) => entry.sceneId)
+      : allPresets.map((entry) => entry.id);
+  const keyIndex = playlist.entries.findIndex((entry) => entry.key === activeEntryKey);
+  const orderIndex = keyIndex >= 0 ? keyIndex : execOrder.indexOf(activePresetId);
   const engineRef = useRef(engine);
   useEffect(() => {
     engineRef.current = engine;
   });
+  useEffect(() => {
+    // Show Clock audio source: position while a track is loaded, else wall.
+    setAudioTimeSource(() => {
+      const current = engineRef.current;
+      return current.fileName ? current.getPosition() : null;
+    });
+    return () => setAudioTimeSource(null);
+  }, []);
+  useEffect(() => {
+    // Player-state bridge for state slots (once per change).
+    useDirectorStore.getState().setAudioStatus(
+      deriveAudioStatus({
+        fileName: engine.fileName,
+        isPlaying: engine.isPlaying,
+        position: engine.position,
+        duration: engine.duration,
+      }),
+    );
+  }, [engine.fileName, engine.isPlaying, engine.position, engine.duration]);
+  useEffect(() => {
+    // Bound track loads switch the playlist (on load only, never mid-set).
+    if (!engine.fileName) return;
+    const store = useDirectorStore.getState();
+    const bound = store.trackBindings[engine.fileName];
+    if (bound && bound !== store.activePlaylistId) {
+      store.setActivePlaylist(bound);
+    }
+  }, [engine.fileName]);
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.
+  // Snapshots are throttled: slider drags fire dozens of store updates
+  // per second, and each snapshot clones the preset list. The popup
+  // echoes drags locally, so it stays smooth on a trailing snapshot.
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(CONTROL_CHANNEL);
-    const sendSnapshot = () => {
+    const postSnapshot = () => {
       try {
         const current = engineRef.current;
         const state = useDirectorStore.getState();
@@ -175,13 +391,40 @@ function DeckPage() {
           kind: 'snapshot',
           snapshot: buildSnapshot(
             state,
-            { fileName: current.fileName, isPlaying: current.isPlaying },
-            [...PRESETS, ...state.customPresets].length,
+            {
+              fileName: current.fileName,
+              isPlaying: current.isPlaying,
+              error: current.error,
+              position: current.position,
+              duration: current.duration,
+            },
+            [...PRESETS, ...state.customPresets],
           ),
         });
       } catch {
         // A closed popup must never break the deck.
       }
+    };
+    let lastSent = 0;
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    const sendSnapshot = () => {
+      const now = Date.now();
+      const elapsed = now - lastSent;
+      if (elapsed >= 66) {
+        lastSent = now;
+        if (pending) {
+          clearTimeout(pending);
+          pending = null;
+        }
+        postSnapshot();
+        return;
+      }
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = null;
+        lastSent = Date.now();
+        postSnapshot();
+      }, 66 - elapsed);
     };
     channel.onmessage = (event: MessageEvent) => {
       const message = event.data;
@@ -197,6 +440,7 @@ function DeckPage() {
     sendSnapshot();
     return () => {
       unsubscribe();
+      if (pending) clearTimeout(pending);
       channel.close();
     };
   }, []);
@@ -206,6 +450,16 @@ function DeckPage() {
   // Focus mode: with no track loaded the hero player and tour lead,
   // so side panels stay collapsed until the first stage reveals.
   const focusMode = !engine.fileName;
+
+  const hostname =
+    typeof window === 'undefined' ? '' : window.location.hostname;
+  if (!isAuthorizedHost(hostname)) {
+    return (
+      <div className="stage-container" data-testid="blank-stage">
+        <UnauthorizedVeil hostname={hostname} />
+      </div>
+    );
+  }
 
   return (
     <div className="stage-container" data-testid="blank-stage">
@@ -220,6 +474,7 @@ function DeckPage() {
       <TransitionOverlay />
       <TextOverlay />
       <AboutPanel />
+      <LibraryOverlay engine={engine} />
       <GuideDrawer />
       <TourOverlay />
       <EmptyState engine={engine} />
@@ -227,7 +482,7 @@ function DeckPage() {
         <PlayerBar engine={engine} />
       )}
       <div className="scene-badge" data-testid="scene-name">
-        {preset.name} · {orderIndex + 1}/{allPresets.length} · playlist {PLAYLIST.length}
+        {preset.name} · {orderIndex + 1}/{execOrder.length} · {playlist.name}
         {liteOn ? ' · LITE' : ''}
         {panelMode !== 'docked' ? ` · ${panelMode.toUpperCase()}` : ''}
         {autoPilotOn ? ' · AUTO' : ''}

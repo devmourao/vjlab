@@ -1,0 +1,82 @@
+.library-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.library-dialog {
+  position: absolute;
+  inset: 24px;
+  display: flex;
+  flex-direction: column;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 20px
+    calc(20px + env(safe-area-inset-bottom, 0px));
+  color: #fff;
+  background: #0b0b12;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+@media (min-width: 900px) {
+  .library-dialog {
+    inset: 40px auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(880px, calc(100vw - 80px));
+  }
+}
+
+.library-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+}
+
+.library-close {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.library-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.library-tab {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.library-tab.active {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.15);
+}
+
+.library-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}

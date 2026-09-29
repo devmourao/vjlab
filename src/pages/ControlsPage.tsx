@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createTrack } from '../audio/track';
 import { SITE_META } from '../config/siteMeta';
 import {
@@ -7,32 +7,39 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
+import { isAuthorizedHost, printOwnershipNotice } from '../legal';
+import { useControlKeys } from '../director/useControlKeys';
 import {
-  CONTRAST_MAX,
-  CONTRAST_MIN,
-  FX_SLOTS,
-  SATURATION_MAX,
-  STROBE_MAX_HZ,
-  STROBE_MIN_HZ,
-  ZOOM_MAX,
-  ZOOM_MIN,
-} from '../director/fx';
-import { PRESETS } from '../scenes/presets';
+  bodyEntries,
+  cueWindows,
+  isPoolIndex,
+} from '../director/directorStore';
+import { countdownAt } from '../director/showClock';
+import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
+import type { BaseId, ScenePreset } from '../scenes/presets';
+import { CoverageMeter } from '../components/CoverageMeter';
+import { UnauthorizedVeil } from '../components/Identity';
+import { SceneList } from '../components/SceneList';
+import { TimelineView } from '../components/TimelineView';
 import { TrackCard } from '../components/TrackCard';
+import { EffectSlotList } from '../components/controls/EffectSlotList';
+import { FlagPills } from '../components/controls/FlagPills';
+import { HueSlider } from '../components/controls/HueSlider';
+import { MixRow } from '../components/controls/MixRow';
+import { RemoteQueue } from '../components/controls/RemoteQueue';
+import { GuideTeaser } from '../components/GuideTeaser';
+import '../components/GuideTeaser.css';
+import { SceneTransport } from '../components/controls/SceneTransport';
+import { SectionHandle } from '../components/controls/SectionHandle';
+import { sectionDropProps } from '../components/controls/sectionDrag';
+import {
+  moveOrderItem,
+  readSectionOrder,
+  writeSectionOrder,
+} from '../director/sectionLayout';
+import { StrobeControl } from '../components/controls/StrobeControl';
+import '../components/controls/ControlsKit.css';
 import './ControlsPage.css';
-
-function slotRange(slot: string): { min: number; max: number; step: number } {
-  if (slot === 'contrast')
-    return { min: CONTRAST_MIN, max: CONTRAST_MAX, step: 0.01 };
-  if (slot === 'saturation') return { min: 0, max: SATURATION_MAX, step: 0.01 };
-  return { min: 0, max: 1, step: 0.01 };
-}
-
-function slotFraction(slot: string, value: number): number {
-  const { min, max } = slotRange(slot);
-  if (max === min) return 0;
-  return Math.max(0, Math.min(1, (value - min) / (max - min)));
-}
 
 function useControlDeck() {
   const [snapshot, setSnapshot] = useState<ControlSnapshot | null>(null);
@@ -52,11 +59,8 @@ function useControlDeck() {
     };
     channel.onmessage = (event: MessageEvent) => {
       const message = event.data;
-      if (
-        isControlMessage(message) &&
-        'kind' in message &&
-        message.kind === 'snapshot'
-      ) {
+      if (!isControlMessage(message) || !('kind' in message)) return;
+      if (message.kind === 'snapshot') {
         seenRef.current = true;
         setSnapshot(message.snapshot);
       }
@@ -73,20 +77,46 @@ function useControlDeck() {
     };
   }, []);
 
-  const send = (command: ControlCommand) => {
+  const send = useCallback((command: ControlCommand) => {
     try {
       channelRef.current?.postMessage({ type: 'command', command });
     } catch {
       // Lost main window is reported via the offline banner.
     }
-  };
+  }, []);
+
+  useControlKeys(send);
 
   return { snapshot, send };
 }
 
+const SECTION_TITLES: Record<string, string> = {
+  track: 'Track',
+  scenes: 'Scenes',
+  stage: 'Stage',
+  strobe: 'Strobe',
+  effects: 'Effects',
+  flags: 'Flags',
+  overlay: 'Overlay and actions',
+  guide: 'Guide',
+};
+
 export default function ControlsPage() {
   const { snapshot, send } = useControlDeck();
+  useEffect(() => {
+    printOwnershipNotice();
+  }, []);
   const [overlayDraft, setOverlayDraft] = useState('VJ LAB');
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() =>
+    readSectionOrder(),
+  );
+  const moveSectionLocal = (from: number, to: number) => {
+    setSectionOrder((prev) => {
+      const next = moveOrderItem(prev, from, to);
+      if (next !== prev) writeSectionOrder(next);
+      return next;
+    });
+  };
 
   const onOverlay = (event: ChangeEvent<HTMLInputElement>) => {
     const text = event.target.value.slice(0, 60);
@@ -98,6 +128,27 @@ export default function ControlsPage() {
     () => (fileName ? createTrack(fileName) : null),
     [fileName],
   );
+  // Popup countdown: derived from the snapshot track position when a track
+  // is loaded (deck owns the Clock); pool interrupts read static, wall
+  // mode without a track shows static durations only.
+  const cueClock = useMemo(() => {
+    if (!snapshot?.fileName) return null;
+    const poolIndex = snapshot.entries.findIndex(
+      (entry) => entry.key === snapshot.activeEntryKey,
+    );
+    if (isPoolIndex(poolIndex)) return null;
+    return countdownAt(cueWindows(bodyEntries(snapshot.entries)), snapshot.position);
+  }, [snapshot]);
+
+  const hostname =
+    typeof window === 'undefined' ? '' : window.location.hostname;
+  if (!isAuthorizedHost(hostname)) {
+    return (
+      <div className="controls-page" data-testid="controls-page">
+        <UnauthorizedVeil hostname={hostname} />
+      </div>
+    );
+  }
 
   return (
     <div className="controls-page" data-testid="controls-page">
@@ -111,223 +162,310 @@ export default function ControlsPage() {
         >
           {snapshot ? 'Linked' : 'Waiting'}
         </span>
+        {snapshot && (
+          <button
+            type="button"
+            data-testid="controls-stage-toggle"
+            title={
+              snapshot.panelMode === 'hidden'
+                ? 'Show the main-screen interface'
+                : 'Hide the main-screen interface (stage only)'
+            }
+            onClick={() =>
+              send(
+                snapshot.panelMode === 'hidden'
+                  ? { type: 'setPanelMode', mode: 'detached' }
+                  : { type: 'setPanelMode', mode: 'hidden' },
+              )
+            }
+          >
+            {snapshot.panelMode === 'hidden' ? 'Show UI' : 'Hide UI'}
+          </button>
+        )}
       </header>
 
       {!snapshot && (
         <p className="controls-offline" data-testid="controls-offline">
           Waiting for the main deck — open the live deck first, then reopen
-          this window from the deck Hide UI control.
+          this window with the deck Pop out control.
         </p>
       )}
 
       {snapshot && (
-        <>
-          <section className="controls-section" aria-label="Track">
-            <h2>Track</h2>
+        <div className="controls-sections">
+          {sectionOrder.map((sectionId, index) => (
+            <section
+              key={sectionId}
+              className="controls-section"
+              aria-label={SECTION_TITLES[sectionId] ?? sectionId}
+              {...sectionDropProps(index, moveSectionLocal)}
+            >
+              <div className="section-head">
+                <h2>{SECTION_TITLES[sectionId] ?? sectionId}</h2>
+                <SectionHandle
+                  index={index}
+                  total={sectionOrder.length}
+                  onMove={moveSectionLocal}
+                />
+              </div>
+              {sectionId === 'track' && (
+                <>
             <TrackCard
               track={track}
               isPlaying={snapshot.isPlaying}
               variant="status"
+              position={snapshot.position}
+              duration={snapshot.duration}
+              canPrev={snapshot.mediaIndex !== null && snapshot.mediaIndex > 0}
+              canNext={
+                snapshot.mediaIndex !== null &&
+                snapshot.mediaIndex < snapshot.queue.length - 1
+              }
               onTogglePlayback={() => send({ type: 'togglePlayback' })}
+              onSeek={(value) => send({ type: 'seekTrack', value })}
+              onSkip={(delta) => send({ type: 'skipTrack', delta })}
+              onPrev={() => {
+                const target =
+                  snapshot.mediaIndex === null
+                    ? undefined
+                    : snapshot.queue[snapshot.mediaIndex - 1];
+                if (target) send({ type: 'playQueueTrack', id: target.id });
+              }}
+              onNext={() => {
+                const target =
+                  snapshot.mediaIndex === null
+                    ? undefined
+                    : snapshot.queue[snapshot.mediaIndex + 1];
+                if (target) send({ type: 'playQueueTrack', id: target.id });
+              }}
             />
-            <p className="controls-hint">Upload stays on the main deck.</p>
-          </section>
-
-          <section className="controls-section" aria-label="Scenes">
-            <h2>Scenes</h2>
-            <div className="controls-grid">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={
-                    preset.id === snapshot.activePresetId
-                      ? 'controls-button active'
-                      : 'controls-button'
-                  }
-                  onClick={() => send({ type: 'dissolve', id: preset.id })}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'prevPreset' })}>
-                Prev
-              </button>
-              <button type="button" onClick={() => send({ type: 'nextPreset' })}>
-                Next
-              </button>
-              <button type="button" onClick={() => send({ type: 'hardCut' })}>
-                Cut
-              </button>
-              <button type="button" onClick={() => send({ type: 'cycleDuration' })}>
-                {snapshot.transitionDuration.toFixed(1)}s
-              </button>
-            </div>
-          </section>
-
-          <section className="controls-section" aria-label="Strobe">
-            <h2>Strobe</h2>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'toggleStrobe' })}>
-                {snapshot.strobeOn ? 'On' : 'Off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'cycleStrobeMode' })}>
-                {snapshot.strobeMode}
-              </button>
-              <span>{snapshot.strobeRateHz}Hz</span>
-            </div>
-            <label className="controls-slider">
-              <span>Speed</span>
-              <input
-                type="range"
-                min={STROBE_MIN_HZ}
-                max={STROBE_MAX_HZ}
-                step={1}
-                value={snapshot.strobeRateHz}
-                aria-label="Strobe speed"
-                onChange={(event) =>
-                  send({
-                    type: 'setStrobeHz',
-                    value: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-          </section>
-
-          <section className="controls-section" aria-label="Flags">
-            <h2>Flags</h2>
-            <div className="controls-grid">
-              <button type="button" onClick={() => send({ type: 'toggleVhs' })}>
-                VHS {snapshot.vhsOn ? 'on' : 'off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'toggleRgb' })}>
-                RGB {snapshot.rgbOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleBeatFlash' })}
-              >
-                Beat {snapshot.beatFlashOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleFxBypass' })}
-              >
-                Bypass {snapshot.fxBypassed ? 'on' : 'off'}
-              </button>
-              <button type="button" onClick={() => send({ type: 'toggleLite' })}>
-                Lite {snapshot.liteOn ? 'on' : 'off'}
-              </button>
-              <button
-                type="button"
-                onClick={() => send({ type: 'toggleAutoPilot' })}
-              >
-                Auto {snapshot.autoPilotOn ? 'on' : 'off'}
-              </button>
-            </div>
-          </section>
-
-          <section className="controls-section" aria-label="Effects">
-            <h2>Effect slot</h2>
-            <div className="controls-grid">
-              {FX_SLOTS.map((slot) => {
-                const value = snapshot.mixes[slot] ?? 0;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    className={
-                      slot === snapshot.selectedFx
-                        ? 'controls-button slot active'
-                        : 'controls-button slot'
+                  {snapshot.audioError ? (
+                    <p className="controls-error" data-testid="controls-audio-error">
+                      {snapshot.audioError}
+                    </p>
+                  ) : null}
+                  <RemoteQueue
+                    items={snapshot.queue}
+                    activeIndex={snapshot.mediaIndex}
+                    onPlay={(id) => send({ type: 'playQueueTrack', id })}
+                    onMove={(from, to) => send({ type: 'moveQueueTrack', from, to })}
+                    onRemove={(id) => send({ type: 'removeQueueTrack', id })}
+                    onAdd={(file) => {
+                      void file.arrayBuffer().then((data) =>
+                        send({
+                          type: 'uploadTrack',
+                          name: file.name,
+                          mime: file.type || 'audio/mpeg',
+                          data,
+                        }),
+                      );
+                    }}
+                  />
+                  <p className="controls-hint">
+                    Files sent here join the deck queue; if silent, press Play.
+                  </p>
+                </>
+              )}
+              {sectionId === 'scenes' && (
+                <>
+                  <label className="controls-playlist">
+                    <span>Playlist</span>
+                    <select
+                      value={snapshot.activePlaylistId}
+                      aria-label="Active playlist"
+                      onChange={(event) =>
+                        send({ type: 'switchPlaylist', id: event.target.value })
+                      }
+                    >
+                      {snapshot.playlists.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.name} ({entry.sceneCount} · deck {entry.deckCount})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="scene-sticky">
+                    <SceneTransport
+                      durationLabel={`${snapshot.transitionDuration.toFixed(1)}s`}
+                      onPrev={() => send({ type: 'prevPreset' })}
+                      onNext={() => send({ type: 'nextPreset' })}
+                      onCut={() => send({ type: 'hardCut' })}
+                      onCycleDuration={() => send({ type: 'cycleDuration' })}
+                      onResume={() => send({ type: 'runAction', id: 'show.resume' })}
+                    />
+                    <div className="controls-row">
+                      <button type="button" onClick={() => send({ type: 'openLibrary' })}>
+                        Manage scenes…
+                      </button>
+                    </div>
+                  </div>
+                  <CoverageMeter
+                    totalSec={snapshot.showTotalSec}
+                    referenceSec={
+                      snapshot.fileName && snapshot.duration > 0
+                        ? snapshot.duration
+                        : (snapshot.showTargetSec ?? null)
                     }
-                    onClick={() => send({ type: 'selectFxSlot', slot })}
-                  >
-                    <span className="slot-name">{slot}</span>
-                    <span className="slot-value">{value.toFixed(2)}</span>
-                    <span className="slot-bar" aria-hidden>
-                      <span
-                        style={{
-                          width: `${Math.round(slotFraction(slot, value) * 100)}%`,
-                        }}
+                    referenceLabel={
+                      snapshot.fileName && snapshot.duration > 0 ? 'TRACK' : 'TARGET'
+                    }
+                  />
+                  <SceneList
+                    manage={false}
+                    items={snapshot.presets.map(
+                      (preset): ScenePreset => ({
+                        ...preset,
+                        scene: 0 as const,
+                        instances: preset.instances.map((instance) => ({
+                          base: instance.base as BaseId,
+                          params: { ...(instance.params ?? {}) },
+                        })),
+                      }),
+                    )}
+                    entries={snapshot.entries}
+                    activeId={snapshot.activePresetId}
+                    activeKey={snapshot.activeEntryKey}
+                    cueClock={cueClock}
+                    trackTotal={
+                      snapshot.fileName && snapshot.duration > 0
+                        ? snapshot.duration
+                        : null
+                    }
+                    onSelect={(id, key) => send({ type: 'dissolve', id, key: key ?? null })}
+                    ops={{
+                      onMove: (from, to) => send({ type: 'moveScene', from, to }),
+                      onPin: (key) => send({ type: 'pinScene', key }),
+                      onCueTiming: (key, patch) =>
+                        send({ type: 'setCueTiming', key, patch }),
+                      onCueAnchor: (key, seconds) =>
+                        send({ type: 'setCueAnchor', key, seconds }),
+                      onCueEnd: (key, seconds) =>
+                        send({ type: 'setCueEnd', key, seconds }),
+                      onFillGap: (beforeKey) =>
+                        send({ type: 'fillGap', key: beforeKey }),
+                      onDistribute: (space) =>
+                        send({ type: 'distributeBody', space }),
+                    }}
+                  />
+                  <TimelineView
+                    entries={bodyEntries(snapshot.entries)}
+                    trackDuration={snapshot.duration > 0 ? snapshot.duration : null}
+                    position={snapshot.fileName ? snapshot.position : null}
+                    names={
+                      new Map(
+                        snapshot.presets.map((preset) => [preset.id, preset.name]),
+                      )
+                    }
+                    activeKey={snapshot.activeEntryKey}
+                    cueClock={cueClock}
+                    onSelect={(id, key) => send({ type: 'dissolve', id, key })}
+                  />
+                </>
+              )}
+              {sectionId === 'stage' && (
+                <MixRow
+                  name="Stage zoom"
+                  display={`${snapshot.zoomTarget.toFixed(2)}x`}
+                  min={ZOOM_MIN}
+                  max={ZOOM_MAX}
+                  step={0.01}
+                  value={snapshot.zoomTarget}
+                  inputLabel="Stage zoom"
+                  onChange={(value) => send({ type: 'setZoom', value })}
+                />
+              )}
+              {sectionId === 'strobe' && (
+                <StrobeControl
+                  on={snapshot.strobeOn}
+                  mode={snapshot.strobeMode}
+                  hz={snapshot.strobeRateHz}
+                  mix={snapshot.mixes['strobe'] ?? 0}
+                  onToggle={() => send({ type: 'toggleStrobe' })}
+                  onCycleMode={() => send({ type: 'cycleStrobeMode' })}
+                  onHz={(value) => send({ type: 'setStrobeHz', value })}
+                  onMix={(value) => send({ type: 'setMix', slot: 'strobe', value })}
+                />
+              )}
+              {sectionId === 'effects' && (
+                <>
+                  <EffectSlotList
+                    slots={[...FX_SLOTS]}
+                    values={snapshot.mixes}
+                    selected={snapshot.selectedFx}
+                    onSelect={(slot: FxSlot) => send({ type: 'selectFxSlot', slot })}
+                    onMix={(slot: FxSlot, value: number) =>
+                      send({ type: 'setMix', slot, value })
+                    }
+                    trailing={
+                      <HueSlider
+                        value={snapshot.hueShift}
+                        onChange={(value) => send({ type: 'setHue', value })}
                       />
-                    </span>
+                    }
+                  />
+                  <div className="controls-row">
+                    <button type="button" onClick={() => send({ type: 'fireBurst' })}>
+                      Burst
+                    </button>
+                  </div>
+                </>
+              )}
+              {sectionId === 'flags' && (
+                <FlagPills
+                  flags={[
+                    { id: 'vhs', label: `VHS ${snapshot.vhsOn ? 'on' : 'off'}`, on: snapshot.vhsOn, tone: 'vhs' },
+                    { id: 'rgb', label: `RGB ${snapshot.rgbOn ? 'on' : 'off'}`, on: snapshot.rgbOn, tone: 'rgb' },
+                    { id: 'beat', label: `Beat ${snapshot.beatFlashOn ? 'on' : 'off'}`, on: snapshot.beatFlashOn, tone: 'beat' },
+                    { id: 'bypass', label: `Bypass ${snapshot.fxBypassed ? 'on' : 'off'}`, on: snapshot.fxBypassed, tone: 'bypass' },
+                    { id: 'lite', label: `Lite ${snapshot.liteOn ? 'on' : 'off'}`, on: snapshot.liteOn, tone: 'lite' },
+                    { id: 'auto', label: `Auto ${snapshot.autoPilotOn ? 'on' : 'off'}`, on: snapshot.autoPilotOn, tone: 'auto' },
+                  ]}
+                  onToggle={(id) => {
+                    if (id === 'vhs') send({ type: 'toggleVhs' });
+                    else if (id === 'rgb') send({ type: 'toggleRgb' });
+                    else if (id === 'beat') send({ type: 'toggleBeatFlash' });
+                    else if (id === 'bypass') send({ type: 'toggleFxBypass' });
+                    else if (id === 'lite') send({ type: 'toggleLite' });
+                    else send({ type: 'toggleAutoPilot' });
+                  }}
+                />
+              )}
+              {sectionId === 'overlay' && (
+                <>
+                  <label className="controls-overlay stacked">
+                    <span>Overlay text (T)</span>
+                    <input
+                      type="text"
+                      maxLength={60}
+                      value={overlayDraft}
+                      onChange={onOverlay}
+                    />
+                  </label>
+                  <div className="controls-row">
+                    <button type="button" onClick={() => send({ type: 'fireText' })}>
+                      Fire text
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="controls-panic"
+                    title="Reset every effect instantly (S)"
+                    onClick={() => send({ type: 'killAll' })}
+                  >
+                    Kill all
                   </button>
-                );
-              })}
-            </div>
-            <label className="controls-slider">
-              <span>Mix · {snapshot.selectedFx}</span>
-              <input
-                type="range"
-                min={slotRange(snapshot.selectedFx).min}
-                max={slotRange(snapshot.selectedFx).max}
-                step={slotRange(snapshot.selectedFx).step}
-                value={snapshot.mixes[snapshot.selectedFx] ?? 0}
-                aria-label="Selected effect mix"
-                onChange={(event) =>
-                  send({
-                    type: 'setMix',
-                    slot: snapshot.selectedFx,
-                    value: Number(event.target.value),
-                  })
-                }
-              />
-            </label>
-          </section>
-
-          <section className="controls-section" aria-label="Color and zoom">
-            <h2>Color and zoom</h2>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'stepHue' })}>
-                Hue step
-              </button>
-              <span>{Math.round(snapshot.hueShift * 8)}/8</span>
-            </div>
-            <label className="controls-slider">
-              <span>Zoom · {snapshot.zoomTarget.toFixed(2)}x</span>
-              <input
-                type="range"
-                min={ZOOM_MIN}
-                max={ZOOM_MAX}
-                step={0.01}
-                value={snapshot.zoomTarget}
-                aria-label="Zoom"
-                onChange={(event) =>
-                  send({ type: 'setZoom', value: Number(event.target.value) })
-                }
-              />
-            </label>
-          </section>
-
-          <section className="controls-section" aria-label="Overlay and actions">
-            <h2>Overlay and actions</h2>
-            <label className="controls-overlay stacked">
-              <span>Overlay text</span>
-              <input
-                type="text"
-                maxLength={60}
-                value={overlayDraft}
-                onChange={onOverlay}
-              />
-            </label>
-            <div className="controls-row">
-              <button type="button" onClick={() => send({ type: 'fireText' })}>
-                Fire text
-              </button>
-              <button type="button" onClick={() => send({ type: 'fireBurst' })}>
-                Burst
-              </button>
-              <button type="button" onClick={() => send({ type: 'killAll' })}>
-                Kill all
-              </button>
-            </div>
-          </section>
+                </>
+              )}
+              {sectionId === 'guide' && (
+                <GuideTeaser
+                  onOpenGuide={() => send({ type: 'showGuide' })}
+                  onReplayTour={() => send({ type: 'replayTour' })}
+                />
+              )}
+            </section>
+          ))}
           <div className="controls-end" aria-hidden />
-        </>
+        </div>
       )}
     </div>
   );
