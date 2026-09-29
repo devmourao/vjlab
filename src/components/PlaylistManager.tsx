@@ -23,11 +23,12 @@ export const SHOW_TARGET_STEP_SEC = 60;
  * Positions 1-DECK_SIZE map to Digit1-Digit0; starring pins the
  * occurrence into the deck by position.
  */
-export function PlaylistManager() {
+export function PlaylistManager({ trackName }: { trackName?: string | null }) {
   const playlists = useDirectorStore((s) => s.playlists);
   const activePlaylistId = useDirectorStore((s) => s.activePlaylistId);
   const customPresets = useDirectorStore((s) => s.customPresets);
   const showDirty = useDirectorStore((s) => s.showDirty);
+  const trackBindings = useDirectorStore((s) => s.trackBindings);
   const [draft, setDraft] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
@@ -122,6 +123,65 @@ export function PlaylistManager() {
         referenceSec={active.targetSec ?? null}
         referenceLabel="TARGET"
       />
+      <div className="playlist-states">
+        {(
+          [
+            ['pre', 'Pré'],
+            ['pause', 'Pausa'],
+            ['post', 'Pós'],
+          ] as const
+        ).map(([slot, label]) => (
+          <label key={slot} className="playlist-state">
+            <span>{label}</span>
+            <select
+              aria-label={`${label}-show cue`}
+              value={
+                (slot === 'pre' ? active.preCue : slot === 'pause' ? active.pauseCue : active.postCue) ?? ''
+              }
+              onChange={(event) =>
+                store.setStateCue(
+                  active.id,
+                  slot,
+                  event.target.value === '' ? null : Number(event.target.value),
+                )
+              }
+            >
+              <option value="">—</option>
+              {library.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div className="playlist-bind">
+        {trackName ? (
+          trackBindings[trackName] === active.id ? (
+            <button type="button" onClick={() => store.unbindTrack(trackName)}>
+              Unbind {trackName}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => store.bindTrack(trackName, active.id)}
+            >
+              Bind {trackName} to {active.name}
+            </button>
+          )
+        ) : (
+          <span className="playlist-bind-hint">Load a track to bind it</span>
+        )}
+        <button
+          type="button"
+          onClick={() => store.generateBody(active.targetSec ?? null)}
+          title="Fill the body from library order (explicit tap only)"
+          data-testid="body-generate"
+        >
+          Generate
+        </button>
+      </div>
       {(() => {
         const conflicts = windowConflicts(bodyEntries(active.entries));
         if (conflicts.length === 0) return null;

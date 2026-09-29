@@ -30,6 +30,7 @@ import {
   useDirectorStore,
   type PanelMode,
 } from '../director/directorStore';
+import { deriveAudioStatus } from '../director/audioStatus';
 import { setAudioTimeSource } from '../director/showClock';
 import { useAutoPilot } from '../director/useAutoPilot';
 import { useKeyboardDesk } from '../director/useKeyboardDesk';
@@ -353,6 +354,26 @@ function DeckPage() {
     });
     return () => setAudioTimeSource(null);
   }, []);
+  useEffect(() => {
+    // Player-state bridge for state slots (once per change).
+    useDirectorStore.getState().setAudioStatus(
+      deriveAudioStatus({
+        fileName: engine.fileName,
+        isPlaying: engine.isPlaying,
+        position: engine.position,
+        duration: engine.duration,
+      }),
+    );
+  }, [engine.fileName, engine.isPlaying, engine.position, engine.duration]);
+  useEffect(() => {
+    // Bound track loads switch the playlist (on load only, never mid-set).
+    if (!engine.fileName) return;
+    const store = useDirectorStore.getState();
+    const bound = store.trackBindings[engine.fileName];
+    if (bound && bound !== store.activePlaylistId) {
+      store.setActivePlaylist(bound);
+    }
+  }, [engine.fileName]);
 
   // Second-screen bridge: answer control popups with snapshots and
   // execute their whitelisted commands. Audio and WebGL stay here.

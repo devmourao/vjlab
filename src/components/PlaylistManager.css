@@ -175,6 +175,39 @@
   font-size: 12px;
 }
 
+.playlist-states,
+.playlist-bind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.playlist-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.playlist-state select,
+.playlist-bind button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+}
+
+.playlist-bind-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* Read-only cue chip on the manage surface (editing lives in SceneList). */
 .playlist-time {
   margin-left: auto;

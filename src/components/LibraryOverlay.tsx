@@ -83,7 +83,9 @@ export function LibraryOverlay({ engine }: { engine?: AudioEngineApi }) {
         </div>
         <div className="library-body">
           {activeTab === 'scenes' && <SceneList />}
-          {activeTab === 'playlists' && <PlaylistManager />}
+          {activeTab === 'playlists' && (
+            <PlaylistManager trackName={engine?.fileName ?? null} />
+          )}
           {activeTab === 'timeline' && (
             <TimelineView
               entries={bodyEntries(timelineEntries)}
