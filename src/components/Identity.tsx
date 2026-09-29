@@ -15,6 +15,39 @@ export function Seal() {
   );
 }
 
+export function UnauthorizedVeil({ hostname }: { hostname: string }) {
+  return (
+    <div
+      data-testid="unauthorized-veil"
+      role="alert"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#000',
+        color: '#fff',
+        padding: 24,
+        textAlign: 'center',
+      }}
+    >
+      <div>
+        <h1 style={{ fontSize: 20, marginBottom: 12 }}>
+          {SITE_META.name} — unauthorized copy
+        </h1>
+        <p style={{ opacity: 0.8, maxWidth: 480 }}>
+          This host ({hostname || 'unknown'}) is not authorized to run this
+          software. VJ Lab is proprietary intellectual property of{' '}
+          {OWNER_META.name}. All rights reserved — contact {OWNER_META.email}{' '}
+          for licensing.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function AboutPanel() {
   const aboutOpen = useDirectorStore((s) => s.aboutOpen);
   if (!aboutOpen) return null;

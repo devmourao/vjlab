@@ -6,7 +6,7 @@ import { BeatFlashOverlay } from '../components/BeatFlashOverlay';
 import { BottomSheet } from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
 import { GuideDrawer } from '../components/GuideDrawer';
-import { AboutPanel } from '../components/Identity';
+import { AboutPanel, UnauthorizedVeil } from '../components/Identity';
 import { LibraryOverlay } from '../components/LibraryOverlay';
 import { PlayerBar } from '../components/PlayerBar';
 import { SidePanel } from '../components/SidePanel';
@@ -15,7 +15,7 @@ import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
-import { printOwnershipNotice } from '../legal';
+import { isAuthorizedHost, printOwnershipNotice } from '../legal';
 import { ACTIONS } from '../director/actionRegistry';
 import { useGamepadPoll } from '../director/gamepad';
 import {
@@ -429,6 +429,16 @@ function DeckPage() {
   // Focus mode: with no track loaded the hero player and tour lead,
   // so side panels stay collapsed until the first stage reveals.
   const focusMode = !engine.fileName;
+
+  const hostname =
+    typeof window === 'undefined' ? '' : window.location.hostname;
+  if (!isAuthorizedHost(hostname)) {
+    return (
+      <div className="stage-container" data-testid="blank-stage">
+        <UnauthorizedVeil hostname={hostname} />
+      </div>
+    );
+  }
 
   return (
     <div className="stage-container" data-testid="blank-stage">

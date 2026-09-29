@@ -7,7 +7,7 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
-import { printOwnershipNotice } from '../legal';
+import { isAuthorizedHost, printOwnershipNotice } from '../legal';
 import { useControlKeys } from '../director/useControlKeys';
 import {
   bodyEntries,
@@ -18,6 +18,7 @@ import { countdownAt } from '../director/showClock';
 import { FX_SLOTS, ZOOM_MAX, ZOOM_MIN, type FxSlot } from '../director/fx';
 import type { BaseId, ScenePreset } from '../scenes/presets';
 import { CoverageMeter } from '../components/CoverageMeter';
+import { UnauthorizedVeil } from '../components/Identity';
 import { SceneList } from '../components/SceneList';
 import { TimelineView } from '../components/TimelineView';
 import { TrackCard } from '../components/TrackCard';
@@ -138,6 +139,16 @@ export default function ControlsPage() {
     if (isPoolIndex(poolIndex)) return null;
     return countdownAt(cueWindows(bodyEntries(snapshot.entries)), snapshot.position);
   }, [snapshot]);
+
+  const hostname =
+    typeof window === 'undefined' ? '' : window.location.hostname;
+  if (!isAuthorizedHost(hostname)) {
+    return (
+      <div className="controls-page" data-testid="controls-page">
+        <UnauthorizedVeil hostname={hostname} />
+      </div>
+    );
+  }
 
   return (
     <div className="controls-page" data-testid="controls-page">
