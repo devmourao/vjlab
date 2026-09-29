@@ -104,7 +104,7 @@
 | VJLAB-80 | Fixed cue timestamps with predecessor redistribution (anchor at mm:ss, fill the gap) | Feature | High | E15 | M15 | Done |
 | VJLAB-81 | Proportional auto-distribution of unfixed cues into empty space | Feature | High | E15 | M15 | Done |
 | VJLAB-82 | Pre-show, pause and post-show state slots bound to player states | Feature | Medium | E15 | M15 | New |
-| VJLAB-83 | Explicit track-to-playlists binding plus auto-generate playlist from track | Feature | Medium | E15 | M15 | New |
+| VJLAB-83 | Explicit track-to-playlists binding plus assisted autogen (energy curve, interest points, confirm, fill by average; tap-tempo bridge, BPM auto later; curated moment tags with per-base defaults) | Feature | Medium | E15 | M15 | New |
 | VJLAB-84 | Film-strip timeline (horizontal/vertical, proportional thumbs, alternating borders, granularity zoom, playhead) | Feature | High | E15 | M15 | New |
 | VJLAB-89 | Bottom transport with show progress readout (scrub, skip, times, cue i/n) | Feature | High | E15 | M15 | Done |
 | VJLAB-85 | Per-cue transition modes (cut/dissolve select) | Enhancement | Low | E15 | M15 | New |
