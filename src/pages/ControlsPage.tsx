@@ -7,6 +7,7 @@ import {
   type ControlCommand,
   type ControlSnapshot,
 } from '../director/controlChannel';
+import { printOwnershipNotice } from '../legal';
 import { useControlKeys } from '../director/useControlKeys';
 import {
   bodyEntries,
@@ -101,6 +102,9 @@ const SECTION_TITLES: Record<string, string> = {
 
 export default function ControlsPage() {
   const { snapshot, send } = useControlDeck();
+  useEffect(() => {
+    printOwnershipNotice();
+  }, []);
   const [overlayDraft, setOverlayDraft] = useState('VJ LAB');
   const [sectionOrder, setSectionOrder] = useState<string[]>(() =>
     readSectionOrder(),

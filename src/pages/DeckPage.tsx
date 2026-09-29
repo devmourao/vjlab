@@ -15,6 +15,7 @@ import { TextOverlay } from '../components/TextOverlay';
 import { TourOverlay } from '../components/TourOverlay';
 import { FloatingPanelToggle, TopBar } from '../components/TopBar';
 import { TransitionOverlay } from '../components/TransitionOverlay';
+import { printOwnershipNotice } from '../legal';
 import { ACTIONS } from '../director/actionRegistry';
 import { useGamepadPoll } from '../director/gamepad';
 import {
@@ -312,6 +313,9 @@ function executeControlCommand(
 
 function DeckPage() {
   const engine = useAudioEngine();
+  useEffect(() => {
+    printOwnershipNotice();
+  }, []);
   useKeyboardDesk();
   useAutoPilot();
   useShowPilot();

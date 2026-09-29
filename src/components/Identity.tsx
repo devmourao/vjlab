@@ -52,6 +52,10 @@ export function AboutPanel() {
             <a href={`mailto:${OWNER_META.email}`}>{OWNER_META.email}</a>
           </li>
         </ul>
+        <p className="about-legal">
+          © 2026 {OWNER_META.name}. All rights reserved. Unauthorized use
+          prohibited (see LICENSE).
+        </p>
         <p className="about-hint">Press I or Esc to close.</p>
       </div>
     </div>
