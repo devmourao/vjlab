@@ -188,6 +188,16 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* Entries mode sections: pool favorites above, timed body below. */
+.scene-group-title {
+  margin: 12px 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .scene-item-actions button {
   min-width: 36px;
   min-height: 44px;

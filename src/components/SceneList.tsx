@@ -109,6 +109,14 @@ export function SceneList({
   const windowsByKey = new Map(
     (entries ? cueWindows(entries) : []).map((window) => [window.key, window]),
   );
+  // Body rows read body windows (track 0:00); pool rows keep the
+  // sequential map for display only (pool never runs on the timeline).
+  const bodyWindowsByKey = new Map(
+    (entries ? cueWindows(bodyEntries(entries)) : []).map((window) => [
+      window.key,
+      window,
+    ]),
+  );
   const timeCue =
     ops.onCueTiming ??
     ((key: string, patch: { durationSec?: number; follow?: CueFollow }) =>
@@ -123,12 +131,15 @@ export function SceneList({
       .map((entry, index): SceneRow | null => {
         const preset = byId.get(entry.sceneId);
         if (!preset) return null;
+        const poolRow = index < DECK_SIZE;
         return {
           key: entry.key,
           preset,
           position: index,
           timing: cueTiming(entry),
-          window: windowsByKey.get(entry.key),
+          window: poolRow
+            ? windowsByKey.get(entry.key)
+            : bodyWindowsByKey.get(entry.key),
           anchor: sanitizeAnchor(entry.startSec),
         };
       })
@@ -148,7 +159,9 @@ export function SceneList({
   }
 
   const [expanded, setExpanded] = useState(false);
-  const collapsible = !manage && entries && rows.length > pageSize;
+  // Library mode collapses; entries mode always shows pool + body
+  // (collapsing at 10 hid exactly the show behind the pool).
+  const collapsible = !manage && !entries && rows.length > pageSize;
   const visible = collapsible && !expanded ? rows.slice(0, pageSize) : rows;
 
   const select =
@@ -220,18 +233,8 @@ export function SceneList({
       </div>
       )}
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
-      <div className="scene-list-wrap">
-      {entries && (
-        <CueRail
-          windows={cueWindows(bodyEntries(entries))}
-          names={new Map(all.map((preset) => [preset.id, preset.name]))}
-          activeKey={activeKey}
-          fraction={cueClock?.fraction ?? null}
-          onSelect={(id, key) => select(id, key)}
-        />
-      )}
-      <ul className="scene-list" data-testid="scene-list">
-        {visible.map((row, visibleIndex) => {
+      {(() => {
+        const renderRow = (row: SceneRow, visibleIndex: number) => {
           const { key, preset, position, timing, window, anchor } = row;
           const counting = cueClock?.key === key;
           const follow = timing?.follow ?? 'manual';
@@ -375,38 +378,48 @@ export function SceneList({
                       </span>
                       {!pool && (
                         <span className="scene-actions-group" role="group" aria-label="Fixed start seconds">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              anchorCue(key, (fixed ?? window?.startSec ?? 0) - CUE_STEP_SEC)
-                            }
-                            data-testid={`anchor-minus-${key}`}
-                            title="Move fixed start earlier (creates anchor)"
-                            aria-label="Move fixed start earlier by five seconds"
-                          >
-                            ◈−{CUE_STEP_SEC}s
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              anchorCue(key, (fixed ?? window?.startSec ?? 0) + CUE_STEP_SEC)
-                            }
-                            data-testid={`anchor-plus-${key}`}
-                            title="Move fixed start later (creates anchor)"
-                            aria-label="Move fixed start later by five seconds"
-                          >
-                            ◈+{CUE_STEP_SEC}s
-                          </button>
-                          {fixed !== null && (
+                          {fixed === null ? (
                             <button
                               type="button"
-                              onClick={() => anchorCue(key, null)}
-                              data-testid={`anchor-clear-${key}`}
-                              title="Clear fixed start (back to sequential flow)"
-                              aria-label="Clear fixed start"
+                              onClick={() =>
+                                anchorCue(key, window?.startSec ?? 0)
+                              }
+                              data-testid={`anchor-fix-${key}`}
+                              title="Pin this cue at its natural start (harmless first step)"
+                              aria-label="Pin cue at its natural start time"
                             >
-                              ✕
+                              ◈ Fix
                             </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => anchorCue(key, fixed - CUE_STEP_SEC)}
+                                data-testid={`anchor-minus-${key}`}
+                                title={`Move fixed start earlier by ${CUE_STEP_SEC}s`}
+                                aria-label="Move fixed start earlier by five seconds"
+                              >
+                                −{CUE_STEP_SEC}s
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => anchorCue(key, fixed + CUE_STEP_SEC)}
+                                data-testid={`anchor-plus-${key}`}
+                                title={`Move fixed start later by ${CUE_STEP_SEC}s`}
+                                aria-label="Move fixed start later by five seconds"
+                              >
+                                +{CUE_STEP_SEC}s
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => anchorCue(key, null)}
+                                data-testid={`anchor-clear-${key}`}
+                                title="Clear fixed start (back to sequential flow)"
+                                aria-label="Clear fixed start"
+                              >
+                                ✕
+                              </button>
+                            </>
                           )}
                         </span>
                       )}
@@ -444,9 +457,51 @@ export function SceneList({
             </div>
           </li>
           );
-        })}
-      </ul>
-      </div>
+        };
+        const poolVisible = (entries ? visible : []).filter(
+          (row) => row.position !== null && row.position < DECK_SIZE,
+        );
+        const bodyVisible = (entries ? visible : []).filter(
+          (row) => row.position === null || row.position >= DECK_SIZE,
+        );
+        const bodySource = entries ? bodyEntries(entries) : [];
+        if (!entries) {
+          return (
+            <ul className="scene-list" data-testid="scene-list">
+              {visible.map((row, visibleIndex) => renderRow(row, visibleIndex))}
+            </ul>
+          );
+        }
+        return (
+          <>
+            {poolVisible.length > 0 && (
+              <>
+                <p className="scene-group-title">Favoritos · teclas 1–0</p>
+                <ul className="scene-list" data-testid="scene-list">
+                  {poolVisible.map((row) => renderRow(row, row.position ?? 0))}
+                </ul>
+              </>
+            )}
+            {bodyVisible.length > 0 && (
+              <>
+                <p className="scene-group-title">Show · timeline</p>
+                <div className="scene-list-wrap">
+                  <CueRail
+                    windows={cueWindows(bodySource)}
+                    names={new Map(all.map((preset) => [preset.id, preset.name]))}
+                    activeKey={activeKey}
+                    fraction={cueClock?.fraction ?? null}
+                    onSelect={(id, key) => select(id, key)}
+                  />
+                  <ul className="scene-list" data-testid="scene-list-body">
+                    {bodyVisible.map((row) => renderRow(row, row.position ?? 0))}
+                  </ul>
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
       {collapsible && (
         <button
           type="button"

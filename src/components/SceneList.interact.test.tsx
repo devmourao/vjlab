@@ -43,6 +43,49 @@ describe('SceneList timing interaction', () => {
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
+  it('groups pool above body and pins anchors only on Fix', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Group test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < 12; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const getEntries = () =>
+      selectActivePlaylist(useDirectorStore.getState()).entries;
+    const bodyKey = getEntries()[10].key;
+    const { unmount, rerender } = render(
+      <SceneList manage={false} entries={getEntries()} />,
+    );
+    const refresh = () =>
+      rerender(<SceneList manage={false} entries={getEntries()} />);
+    // Pool rows carry no anchor controls; body rows offer Fix first.
+    expect(screen.queryByTestId(`anchor-fix-${getEntries()[2].key}`)).toBeNull();
+    expect(screen.getByTestId(`anchor-fix-${bodyKey}`)).toBeTruthy();
+    expect(screen.queryByTestId(`anchor-plus-${bodyKey}`)).toBeNull();
+    // Fix pins at the natural start (harmless), then adjusts.
+    fireEvent.click(screen.getByTestId(`anchor-fix-${bodyKey}`));
+    refresh();
+    expect(
+      screen.getByTestId(`anchor-plus-${bodyKey}`),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByTestId(`anchor-plus-${bodyKey}`));
+    refresh();
+    const fixed = selectActivePlaylist(
+      useDirectorStore.getState(),
+    ).entries.find((entry) => entry.key === bodyKey);
+    expect(fixed?.startSec).toBe(5);
+    fireEvent.click(screen.getByTestId(`anchor-clear-${bodyKey}`));
+    expect(
+      selectActivePlaylist(useDirectorStore.getState()).entries.find(
+        (entry) => entry.key === bodyKey,
+      )?.startSec ?? null,
+    ).toBeNull();
+    unmount();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
   it('steps duration and toggles follow from the row', () => {
     const api = useDirectorStore.getState();
     const previousActive = api.activePlaylistId;
