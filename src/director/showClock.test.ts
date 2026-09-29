@@ -130,8 +130,15 @@ describe('showClock', () => {
       { key: 'a', sceneId: 0, durationSec: 30, follow: 'manual' },
       { key: 'b', sceneId: 1, durationSec: 45, follow: 'auto' },
     ]);
-    expect(countdownAt(windows, 10)).toEqual({ key: 'a', remainingSec: 20 });
-    expect(countdownAt(windows, 30)).toEqual({ key: 'b', remainingSec: 45 });
+    expect(countdownAt(windows, 10)).toMatchObject({
+      key: 'a',
+      remainingSec: 20,
+    });
+    expect(countdownAt(windows, 10)?.fraction).toBeCloseTo(10 / 75, 5);
+    expect(countdownAt(windows, 30)).toMatchObject({
+      key: 'b',
+      remainingSec: 45,
+    });
     expect(countdownAt(windows, 75)).toBeNull();
     expect(countdownAt([], 5)).toBeNull();
   });
