@@ -112,6 +112,22 @@
 * Expected evidence: anchored-set demo video, test output.
 * Approver: Owner.
 
+## M15 — Programmed Show 0.14.0
+
+* Objective: shows authored against the track clock, not just played on it.
+* Expected deliveries: fixed cue timestamps with predecessor redistribution, proportional auto-distribution, pre/pause/post state slots, explicit track-to-playlists binding with auto-generation, film-strip timeline (both orientations, granularity zoom, playhead), per-cue transition modes.
+* Completion criteria: anchoring a cue at 1:43 refills predecessors; empty space divides evenly; pause shows the pause cue; film-strip reads proportionally with a moving playhead; release gate green.
+* Expected evidence: programmed-set demo video, test output.
+* Approver: Owner.
+
+## M16 — Audio Provider 0.15.0
+
+* Objective: the core no longer knows where audio comes from.
+* Expected deliveries: AudioProvider contract, local player refactored onto it, player-state events driving timeline slots, a second source plugin.
+* Completion criteria: local playback byte-identical in feel; pause/pre states fire timeline slots; a second origin plugs without core changes.
+* Expected evidence: provider test output, demo video.
+* Approver: Owner.
+
 ## Revision History
 
 | Version | Date | Change |
@@ -119,3 +135,4 @@
 | 0.1.0 | 2026-09-11 | Initial milestones |
 | 0.2.1 | 2026-09-16 | Add M5 Live Control, M6 Polish, M7 Stage Control for panel / fullscreen / auto-pilot |
 | 0.11.0 | 2026-09-27 | Backfill M8 Playlists-era through M12 Packs/Library; add M13 Show Timeline 0.12.0 |
+| 0.13.0 | 2026-09-29 | Add M14 Anchored Show 0.13.0, M15 Programmed Show 0.14.0, M16 Audio Provider 0.15.0 |

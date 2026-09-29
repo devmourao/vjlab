@@ -181,9 +181,54 @@ This brief is approved when scope, objectives, stakeholders, technologies and in
 | Reviewer | TBD |  |
 | Approver | Marcos Ferreira Mourão | 2026-09-11 |
 
-## 19. Revision History
+## 20. Long-Term Vision (Show Instrument)
+
+VJLab evolves from a local-audio visualizer into a modular web instrument
+for audio-reactive visuals: it interprets multiple audio sources (local
+files, microphone, browser tabs, external links) and orchestrates them
+through a dynamic, reactive timeline. The web app is the concept laboratory;
+the Unreal engine version is the long-term professional target. Same
+domain vocabulary, same content contracts, renderer behind a host seam.
+
+## 21. Domain Dictionary (Core Concepts)
+
+* Base: atomic visual element (particles, image mesh, fractal, tunnel and
+  more) with its own params and a unique audio reaction. Split into atomic
+  bases (code-backed) and composite bases (named content: ordered base
+  refs plus param overrides).
+* Scene: a combination of bases driven by shared global params. Authoring
+  a base combination may save it as a Scene or as a composite base for
+  reuse inside another composition.
+* Cue: one occurrence of a Scene in a Show playlist. Carries individual
+  params, a computed duration and entry/exit timestamps. Duration belongs
+  to the occurrence (`key`), never to the scene.
+* Show: a smart playlist composed of cues, with its own total runtime,
+  read against a track duration, a manual target, or alone.
+
+## 22. Playlist Rules
+
+* Slots 1–10: favorite cues (hotkeys Digit1–Digit0). Fired manually, off
+  the timed automation; the pilot never auto-targets them.
+* Slot 11 onward: execution playlist (timeline). Cues bound to music time;
+  with audio, show elapsed IS the track position.
+* Hybrid behavior: automatic pilot by default. A manual trigger takes over
+  (redirect); an `auto` interrupt returns to the cue programmed for that
+  exact audio timestamp on expiry, a `manual` one holds for Resume (Z).
+* A show may bind one or more playlists to a track; a playlist can be
+  auto-generated to mirror a track duration (with pre-show, pause and
+  post-show slots).
+
+## 23. Special States
+
+The show owns dedicated cues for Pre-show (track loaded, not started),
+Pause (audio paused) and Post-show. Player states (pre/playing/paused/
+post) fire timeline events; pause freezes the timeline instead of
+rebasing it.
+
+## 24. Revision History
 
 | Version | Date | Change | Author |
 | ------- | ---- | ------ | ------ |
 | 0.1.0 | 2026-09-11 | Initial creation | Marcos Ferreira Mourão |
 | 0.1.1 | 2026-09-11 | Trim future plans disclosure; add LED hardware as future evolution; approve | Marcos Ferreira Mourão |
+| 0.2.0 | 2026-09-27 | Long-term show-instrument vision, domain dictionary, playlist rules, special states | Marcos Ferreira Mourão |

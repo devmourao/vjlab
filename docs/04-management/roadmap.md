@@ -62,6 +62,20 @@ Strategic evolution from blank stage to public MVP. Each phase has a clear exit 
 * Dependencies: Scene Packs and Library shipped (E12).
 * Exit: v0.12.0 tag with a programmed set running ponta a ponta and updated glossary; manual takeover verified live.
 
+### Phase 9 — Programmed Show v0.14.0 (planned)
+
+* Objective: author shows against the track clock with fixed anchors and state slots.
+* Expected result: fixed cue timestamps, proportional distribution, pre/pause/post cues, track-to-playlist binding, film-strip timeline, per-cue transitions.
+* Dependencies: Anchored Show shipped (E14).
+* Exit: v0.14.0 tag with a programmed set demo and updated glossary.
+
+### Phase 10 — Audio Provider v0.15.0 (planned)
+
+* Objective: decouple audio origins from the visual engine (ADR-001).
+* Expected result: provider contract, refactored local player, state events, second source plugin.
+* Dependencies: Phase 9 released.
+* Exit: v0.15.0 tag with provider tests green and docs in sync.
+
 ## Out of Roadmap (Future Evolution)
 
 * DJ routes with embedded audio, tab / system capture, photorealistic scenarios, procedural avatars, hardware LED integration.
@@ -74,3 +88,4 @@ Strategic evolution from blank stage to public MVP. Each phase has a clear exit 
 | 0.1.0 | 2026-09-11 | Initial roadmap |
 | 0.2.0 | 2026-09-12 | Add Phase 6 Live Control v0.2.0 |
 | 0.11.0 | 2026-09-27 | Add Phase 8 Show Timeline v0.12.0; park Phase B in Future Evolution |
+| 0.13.0 | 2026-09-29 | Add Phase 9 Programmed Show v0.14.0 and Phase 10 Audio Provider v0.15.0 |

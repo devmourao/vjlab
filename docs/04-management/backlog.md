@@ -18,6 +18,8 @@
 * E12 — Scene Packs and Library v0.9.0 (instance foundation, pack format, scene CRUD)
 * E13 — Show Timeline v0.12.0 (timed cues, auto-advance, clock, coverage, visual timeline)
 * E14 — Anchored Show v0.13.0 (track-anchored pilot, interrupt pool/body split, resume)
+* E15 — Programmed Show v0.14.0 (fixed cues, redistribution, state slots, track binding, film-strip timeline)
+* E16 — Audio Provider v0.15.0 (provider abstraction, local refactor, state events, second source)
 
 ## Items
 
@@ -99,6 +101,15 @@
 | VJLAB-77 | Glossary + docs sync — Show/Cue/Clock/Takeover/Burst/macros | Documentation | Small | E13 | M13 | Done |
 | VJLAB-78 | Track-anchored pilot — elapsed IS track position, pool/body split, timed return | Feature | High | E14 | M14 | Done |
 | VJLAB-79 | Resume action (Z) — re-sync to track point, transport button both surfaces | Feature | Medium | E14 | M14 | Done |
+| VJLAB-80 | Fixed cue timestamps with predecessor redistribution (anchor at mm:ss, fill the gap) | Feature | High | E15 | M15 | New |
+| VJLAB-81 | Proportional auto-distribution of unfixed cues into empty space | Feature | High | E15 | M15 | New |
+| VJLAB-82 | Pre-show, pause and post-show state slots bound to player states | Feature | Medium | E15 | M15 | New |
+| VJLAB-83 | Explicit track-to-playlists binding plus auto-generate playlist from track | Feature | Medium | E15 | M15 | New |
+| VJLAB-84 | Film-strip timeline (horizontal/vertical, proportional thumbs, alternating borders, granularity zoom, playhead) | Feature | High | E15 | M15 | New |
+| VJLAB-85 | Per-cue transition modes (cut/dissolve select) | Enhancement | Low | E15 | M15 | New |
+| VJLAB-86 | AudioProvider interface plus local player refactor onto the contract | Refactor | High | E16 | M16 | New |
+| VJLAB-87 | Player-state events (pre/playing/paused/post) driving timeline slots | Feature | Medium | E16 | M16 | New |
+| VJLAB-88 | Second audio source plugin on the provider contract | Feature | Medium | E16 | M16 | New |
 
 ## Dependencies
 
@@ -121,6 +132,10 @@
 * VJLAB-70 to VJLAB-76 block VJLAB-77 (docs sync closes the epic).
 * VJLAB-73 blocks VJLAB-78 (anchored pilot reworks the Clock pilot).
 * VJLAB-78 blocks VJLAB-79 (resume targets the body timeline).
+* VJLAB-78 blocks VJLAB-80 and VJLAB-81 (fixed cues extend the anchored timeline).
+* VJLAB-80 blocks VJLAB-81 (distribution fills around anchors).
+* VJLAB-87 blocks VJLAB-82 (state slots consume player-state events).
+* VJLAB-86 blocks VJLAB-87 and VJLAB-88 (events and sources ride the contract).
 
 ## Notes for Sprint 1 Candidates
 
@@ -150,3 +165,4 @@
 | 0.10.1 | 2026-09-23 | Add VJLAB-69 popup polish round with shared control kit (Sprint 32) |
 | 0.11.0 | 2026-09-27 | Add E13 Show Timeline with VJLAB-70 to VJLAB-77 (Sprints 33-35) |
 | 0.12.0 | 2026-09-27 | Add E14 Anchored Show with VJLAB-78/79 (Sprint 36) |
+| 0.13.0 | 2026-09-29 | Add E15 Programmed Show (VJLAB-80 to VJLAB-85) and E16 Audio Provider (VJLAB-86 to VJLAB-88) |
