@@ -172,6 +172,9 @@ function executeControlCommand(
     case 'playlistRemoveScene':
       store.removeSceneFromPlaylist(command.playlistId, command.key);
       break;
+    case 'setCueAnchor':
+      store.setCueAnchor(command.key, command.seconds);
+      break;
     case 'setCueTiming':
       store.setCueTiming(command.key, {
         ...(command.patch.durationSec !== undefined

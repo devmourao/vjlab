@@ -5,9 +5,11 @@ import {
   bodyEntries,
   cueTiming,
   cueWindows,
+  distributeBodyEntries,
   isPoolIndex,
   liveRefs,
   positionIndex,
+  sanitizeAnchor,
   selectActivePlaylist,
   showTotalSec,
   transitionRef,
@@ -358,6 +360,76 @@ describe('directorStore', () => {
     expect(pool.every((follow) => follow === 'manual')).toBe(true);
     api.setBodyFollow('manual');
     expect(states()).toEqual(['manual', 'manual']);
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('anchors cues and refills predecessors on demand', () => {
+    expect(sanitizeAnchor(null)).toBeNull();
+    expect(sanitizeAnchor(-5)).toBeNull();
+    expect(sanitizeAnchor('x')).toBeNull();
+    expect(sanitizeAnchor(103.6)).toBe(104);
+    // Fixed pins the start; gaps read as holds of the previous cue.
+    const windows = cueWindows([
+      { key: 'a', sceneId: 0, durationSec: 30 },
+      { key: 'b', sceneId: 1, durationSec: 30, startSec: 103 },
+      { key: 'c', sceneId: 2, durationSec: 30 },
+    ]);
+    expect(windows.map((window) => [window.startSec, window.endSec])).toEqual([
+      [0, 30],
+      [103, 133],
+      [133, 163],
+    ]);
+    // Predecessors split the gap evenly (102 s over 2 cues).
+    const filled = distributeBodyEntries(
+      [
+        { key: 'a', sceneId: 0, durationSec: 30 },
+        { key: 'b', sceneId: 1, durationSec: 30 },
+        { key: 'c', sceneId: 2, durationSec: 30, startSec: 102 },
+      ],
+      1000,
+    );
+    expect(filled.map((entry) => entry.durationSec)).toEqual([51, 51, 30]);
+    expect(
+      cueWindows(filled).map((window) => [window.startSec, window.endSec]),
+    ).toEqual([
+      [0, 51],
+      [51, 102],
+      [102, 132],
+    ]);
+    // Trailing runs split the remaining space (example: 3 cues, 60 s).
+    const even = distributeBodyEntries(
+      [
+        { key: 'a', sceneId: 0, durationSec: 30 },
+        { key: 'b', sceneId: 1, durationSec: 30 },
+        { key: 'c', sceneId: 2, durationSec: 30 },
+      ],
+      60,
+    );
+    expect(even.map((entry) => entry.durationSec)).toEqual([20, 20, 20]);
+  });
+
+  it('anchors and distributes the active body through the store', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Anchor test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < DECK_SIZE + 3; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    let body = bodyEntries(
+      selectActivePlaylist(useDirectorStore.getState()).entries,
+    );
+    api.setCueAnchor(body[2].key, 102);
+    api.setCueAnchor('missing', 10);
+    body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
+    expect(sanitizeAnchor(body[2].startSec)).toBe(102);
+    api.distributeBody(null);
+    body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
+    expect(body.map((entry) => entry.durationSec)).toEqual([51, 51, 30]);
+    api.setCueAnchor(body[2].key, null);
+    body = bodyEntries(selectActivePlaylist(useDirectorStore.getState()).entries);
+    expect(body[2].startSec ?? null).toBeNull();
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });

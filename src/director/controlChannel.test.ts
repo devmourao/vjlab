@@ -309,6 +309,30 @@ describe('controlChannel', () => {
         command: { type: 'setCueTiming', key: 'e0' },
       }),
     ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: 103 },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: null },
+      }),
+    ).toBe(true);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0', seconds: 'soon' },
+      }),
+    ).toBe(false);
+    expect(
+      isControlMessage({
+        type: 'command',
+        command: { type: 'setCueAnchor', key: 'e0' },
+      }),
+    ).toBe(false);
   });
 
   it('builds a serializable snapshot from store state', () => {
@@ -341,7 +365,8 @@ describe('controlChannel', () => {
       snapshot.entries.every(
         (entry) =>
           typeof entry.durationSec === 'number' &&
-          (entry.follow === 'manual' || entry.follow === 'auto'),
+          (entry.follow === 'manual' || entry.follow === 'auto') &&
+          (entry.startSec === null || typeof entry.startSec === 'number'),
       ),
     ).toBe(true);
     expect(typeof snapshot.showTotalSec).toBe('number');

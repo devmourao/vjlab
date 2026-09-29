@@ -3,6 +3,7 @@ import type { ScenePreset } from '../scenes/presets';
 import {
   bodyEntries,
   cueTiming,
+  sanitizeAnchor,
   selectActivePlaylist,
   showTotalSec,
   useDirectorStore,
@@ -78,6 +79,7 @@ export type ControlCommand =
       key: string;
       patch: { durationSec?: number; follow?: string };
     }
+  | { type: 'setCueAnchor'; key: string; seconds: number | null }
   | { type: 'exportScenes' }
   | { type: 'importPack'; pack: unknown };
 
@@ -112,6 +114,7 @@ export interface SnapshotEntry {
   sceneId: number;
   durationSec: number;
   follow: CueFollow;
+  startSec: number | null;
 }
 
 export interface ControlSnapshot {
@@ -198,6 +201,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set([
     'playlistAddScene',
     'playlistRemoveScene',
     'setCueTiming',
+    'setCueAnchor',
   'togglePlayback',
   'seekTrack',
   'skipTrack',
@@ -295,6 +299,11 @@ function hasValidPayload(command: Record<string, unknown>): boolean {
       return typeof command['id'] === 'string';
     case 'pinScene':
       return typeof command['key'] === 'string';
+    case 'setCueAnchor':
+      return (
+        typeof command['key'] === 'string' &&
+        (command['seconds'] === null || typeof command['seconds'] === 'number')
+      );
     case 'setCueTiming': {
       if (typeof command['key'] !== 'string') return false;
       if (!isRecord(command['patch'])) return false;
@@ -396,6 +405,7 @@ export function buildSnapshot(
         sceneId: entry.sceneId,
         durationSec: timing.durationSec,
         follow: timing.follow,
+        startSec: sanitizeAnchor(entry.startSec),
       };
     }),
     playlists: state.playlists.map((entry) => ({
