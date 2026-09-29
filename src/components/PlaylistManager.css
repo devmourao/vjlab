@@ -164,6 +164,17 @@
   color: #fca5a5;
 }
 
+/* Locked-interval conflicts name the clash and block distribution. */
+.playlist-conflict {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.08);
+  color: #fca5a5;
+  font-size: 12px;
+}
+
 /* Read-only cue chip on the manage surface (editing lives in SceneList). */
 .playlist-time {
   margin-left: auto;

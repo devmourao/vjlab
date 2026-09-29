@@ -7,6 +7,7 @@ import {
   cueWindows,
   sanitizeAnchor,
   useDirectorStore,
+  windowConflicts,
   type CueFollow,
   type CueWindow,
   type PlaylistEntry,
@@ -15,6 +16,7 @@ import { PRESETS } from '../scenes/presets';
 import type { ScenePreset } from '../scenes/presets';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
 import { cueUnitHeight } from './cueUnits';
+import { CueTimeInput } from './CueTimeInput';
 import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
@@ -48,6 +50,8 @@ export interface SceneListOps {
     patch: { durationSec?: number; follow?: CueFollow },
   ) => void;
   onCueAnchor?: (key: string, seconds: number | null) => void;
+  onCueEnd?: (key: string, seconds: number | null) => void;
+  onFillGap?: (beforeKey: string) => void;
   onDistribute?: (spaceSec: number | null) => void;
   onExport?: () => void;
   onImport?: (file: File) => void;
@@ -65,6 +69,7 @@ interface SceneRow {
   timing?: { durationSec: number; follow: CueFollow };
   window?: CueWindow;
   anchor?: number | null;
+  endPin?: number | null;
 }
 
 function keyLabel(index: number): string {
@@ -155,6 +160,22 @@ export function SceneList({
     ops.onCueAnchor ??
     ((key: string, seconds: number | null) =>
       useDirectorStore.getState().setCueAnchor(key, seconds));
+  const endCue =
+    ops.onCueEnd ??
+    ((key: string, seconds: number | null) =>
+      useDirectorStore.getState().setCueEnd(key, seconds));
+  const fillCueGap =
+    ops.onFillGap ??
+    ((beforeKey: string) =>
+      useDirectorStore.getState().fillGap(beforeKey));
+  const conflictKeys = new Set(
+    entries
+      ? windowConflicts(bodyEntries(entries)).flatMap((conflict) => [
+          conflict.key,
+          conflict.withKey,
+        ])
+      : [],
+  );
   const distribute =
     ops.onDistribute ??
     ((spaceSec: number | null) =>
@@ -175,6 +196,7 @@ export function SceneList({
             ? windowsByKey.get(entry.key)
             : bodyWindowsByKey.get(entry.key),
           anchor: sanitizeAnchor(entry.startSec),
+          endPin: sanitizeAnchor(entry.endSec),
         };
       })
       .filter((row): row is SceneRow => row !== null);
@@ -269,12 +291,15 @@ export function SceneList({
       {manage && report && <p className="scene-report" data-testid="import-report">{report}</p>}
       {(() => {
         const renderRow = (row: SceneRow, visibleIndex: number) => {
-          const { key, preset, position, timing, window, anchor } = row;
+          const { key, preset, position, timing, window, anchor, endPin } = row;
           const counting = cueClock?.key === key;
           const follow = timing?.follow ?? 'manual';
           // Pool positions are manual-only overlays: no anchor controls.
           const pool = position !== null && position < DECK_SIZE;
           const fixed = anchor ?? null;
+          const fixedEnd = endPin ?? null;
+          const bothPinned = fixed !== null && fixedEnd !== null;
+          const inConflict = conflictKeys.has(key);
           const bodyRow = entries && position !== null && position >= DECK_SIZE;
           const unitWindow = bodyRow ? bodyWindowsByKey.get(key) : undefined;
           const unitHeight =
@@ -316,13 +341,23 @@ export function SceneList({
           return (
           <Fragment key={key}>
           {gap !== undefined && (
-            <li className="cue-unit-gap" aria-hidden="true">
-              <span>vão {formatTrackTime(gap)}</span>
+            <li className="cue-unit-gap warn" data-testid={`cue-gap-${key}`}>
+              <button
+                type="button"
+                className="cue-gap-fill"
+                onClick={() => fillCueGap(key)}
+                data-testid={`cue-gap-fill-${key}`}
+                title={`Blank gap of ${formatTrackTime(gap)} with no cue — activate to insert the previous cue trimmed to fit`}
+              >
+                vão {formatTrackTime(gap)} sem cue · preencher
+              </button>
             </li>
           )}
           <li
             className={
-              timing ? (bodyRow ? 'scene-row timed unit' : 'scene-row timed') : 'scene-row'
+              timing
+                ? `scene-row timed${bodyRow ? ' unit' : ''}${inConflict ? ' conflict' : ''}`
+                : 'scene-row'
             }
             style={unitHeight !== undefined ? { minHeight: unitHeight } : undefined}
             {...sectionDropProps(orderIndex, moveRow)}
@@ -426,22 +461,32 @@ export function SceneList({
                       <span className="scene-actions-group" role="group" aria-label="Duration seconds">
                         <button
                           type="button"
+                          disabled={bothPinned}
                           onClick={() =>
                             timeCue(key, { durationSec: timing.durationSec - CUE_STEP_SEC })
                           }
                           data-testid={`cue-minus-${key}`}
-                          title={`Shorten cue by ${CUE_STEP_SEC}s`}
+                          title={
+                            bothPinned
+                              ? 'Duration derived from pinned start and end'
+                              : `Shorten cue by ${CUE_STEP_SEC}s`
+                          }
                           aria-label={`Shorten cue by ${CUE_STEP_SEC} seconds`}
                         >
                           −{CUE_STEP_SEC}s
                         </button>
                         <button
                           type="button"
+                          disabled={bothPinned}
                           onClick={() =>
                             timeCue(key, { durationSec: timing.durationSec + CUE_STEP_SEC })
                           }
                           data-testid={`cue-plus-${key}`}
-                          title={`Lengthen cue by ${CUE_STEP_SEC}s`}
+                          title={
+                            bothPinned
+                              ? 'Duration derived from pinned start and end'
+                              : `Lengthen cue by ${CUE_STEP_SEC}s`
+                          }
                           aria-label={`Lengthen cue by ${CUE_STEP_SEC} seconds`}
                         >
                           +{CUE_STEP_SEC}s
@@ -464,49 +509,32 @@ export function SceneList({
                         </button>
                       </span>
                       {!pool && (
-                        <span className="scene-actions-group" role="group" aria-label="Fixed start seconds">
-                          {fixed === null ? (
+                        <span className="scene-actions-group" role="group" aria-label="Pinned start and end">
+                          <CueTimeInput
+                            valueSec={fixed}
+                            onCommit={(seconds) => anchorCue(key, seconds)}
+                            testId={`anchor-start-${key}`}
+                            label={`Pinned start mm:ss for cue ${position !== null ? position + 1 : key}`}
+                          />
+                          <CueTimeInput
+                            valueSec={fixedEnd}
+                            onCommit={(seconds) => endCue(key, seconds)}
+                            testId={`anchor-end-${key}`}
+                            label={`Pinned end mm:ss for cue ${position !== null ? position + 1 : key}`}
+                          />
+                          {(fixed !== null || fixedEnd !== null) && (
                             <button
                               type="button"
-                              onClick={() =>
-                                anchorCue(key, window?.startSec ?? 0)
-                              }
-                              data-testid={`anchor-fix-${key}`}
-                              title="Pin this cue at its natural start (harmless first step)"
-                              aria-label="Pin cue at its natural start time"
+                              onClick={() => {
+                                anchorCue(key, null);
+                                endCue(key, null);
+                              }}
+                              data-testid={`anchor-clear-${key}`}
+                              title="Clear pinned start and end (back to sequential flow)"
+                              aria-label="Clear pinned start and end"
                             >
-                              ◈ Fix
+                              ✕
                             </button>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => anchorCue(key, fixed - CUE_STEP_SEC)}
-                                data-testid={`anchor-minus-${key}`}
-                                title={`Move fixed start earlier by ${CUE_STEP_SEC}s`}
-                                aria-label="Move fixed start earlier by five seconds"
-                              >
-                                −{CUE_STEP_SEC}s
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => anchorCue(key, fixed + CUE_STEP_SEC)}
-                                data-testid={`anchor-plus-${key}`}
-                                title={`Move fixed start later by ${CUE_STEP_SEC}s`}
-                                aria-label="Move fixed start later by five seconds"
-                              >
-                                +{CUE_STEP_SEC}s
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => anchorCue(key, null)}
-                                data-testid={`anchor-clear-${key}`}
-                                title="Clear fixed start (back to sequential flow)"
-                                aria-label="Clear fixed start"
-                              >
-                                ✕
-                              </button>
-                            </>
                           )}
                         </span>
                       )}

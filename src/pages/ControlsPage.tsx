@@ -324,12 +324,16 @@ export default function ControlsPage() {
                         send({ type: 'setCueTiming', key, patch }),
                       onCueAnchor: (key, seconds) =>
                         send({ type: 'setCueAnchor', key, seconds }),
+                      onCueEnd: (key, seconds) =>
+                        send({ type: 'setCueEnd', key, seconds }),
+                      onFillGap: (beforeKey) =>
+                        send({ type: 'fillGap', key: beforeKey }),
                       onDistribute: (space) =>
                         send({ type: 'distributeBody', space }),
                     }}
                   />
                   <TimelineView
-                    entries={snapshot.entries}
+                    entries={bodyEntries(snapshot.entries)}
                     trackDuration={snapshot.duration > 0 ? snapshot.duration : null}
                     position={snapshot.fileName ? snapshot.position : null}
                     names={

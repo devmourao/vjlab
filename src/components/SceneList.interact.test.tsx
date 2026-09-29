@@ -61,22 +61,31 @@ describe('SceneList timing interaction', () => {
     );
     const refresh = () =>
       rerender(<SceneList manage={false} entries={getEntries()} />);
-    // Pool rows carry no anchor controls; body rows offer Fix first.
-    expect(screen.queryByTestId(`anchor-fix-${getEntries()[2].key}`)).toBeNull();
-    expect(screen.getByTestId(`anchor-fix-${bodyKey}`)).toBeTruthy();
-    expect(screen.queryByTestId(`anchor-plus-${bodyKey}`)).toBeNull();
-    // Fix pins at the natural start (harmless), then adjusts.
-    fireEvent.click(screen.getByTestId(`anchor-fix-${bodyKey}`));
+    // Pool rows carry no pin inputs; body rows offer start/end pins.
+    expect(screen.queryByTestId(`anchor-start-${getEntries()[2].key}`)).toBeNull();
+    expect(screen.getByTestId(`anchor-start-${bodyKey}`)).toBeTruthy();
+    expect(screen.getByTestId(`anchor-end-${bodyKey}`)).toBeTruthy();
+    // Typing mm:ss pins the start; clearing the field releases it.
+    const startInput = screen.getByTestId(
+      `anchor-start-${bodyKey}`,
+    ) as HTMLInputElement;
+    fireEvent.change(startInput, { target: { value: '1:43' } });
+    fireEvent.blur(startInput);
     refresh();
     expect(
-      screen.getByTestId(`anchor-plus-${bodyKey}`),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByTestId(`anchor-plus-${bodyKey}`));
+      selectActivePlaylist(useDirectorStore.getState()).entries.find(
+        (entry) => entry.key === bodyKey,
+      )?.startSec,
+    ).toBe(103);
+    // Garbage never reaches the store.
+    fireEvent.change(startInput, { target: { value: 'soon' } });
+    fireEvent.blur(startInput);
     refresh();
-    const fixed = selectActivePlaylist(
-      useDirectorStore.getState(),
-    ).entries.find((entry) => entry.key === bodyKey);
-    expect(fixed?.startSec).toBe(5);
+    expect(
+      selectActivePlaylist(useDirectorStore.getState()).entries.find(
+        (entry) => entry.key === bodyKey,
+      )?.startSec,
+    ).toBe(103);
     fireEvent.click(screen.getByTestId(`anchor-clear-${bodyKey}`));
     expect(
       selectActivePlaylist(useDirectorStore.getState()).entries.find(
@@ -124,7 +133,7 @@ describe('SceneList timing interaction', () => {
         />,
       );
     // Anchored gap reads as labeled empty space between units.
-    expect(screen.getByText('vão 0:10')).toBeTruthy();
+    expect(screen.getByText(/vão 0:10/)).toBeTruthy();
     // Active unit pill carries progress; off-program would read amber.
     expect(
       screen.getByTestId(`cue-pfill-${getEntries()[10].key}`),
@@ -140,6 +149,31 @@ describe('SceneList timing interaction', () => {
         selectActivePlaylist(useDirectorStore.getState()).entries[10],
       ).durationSec,
     ).toBe(12);
+    unmount();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('flags overlaps red and blocks distribution until resolved', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Conflict test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < 12; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const getEntries = () =>
+      selectActivePlaylist(useDirectorStore.getState()).entries;
+    api.setCueAnchor(getEntries()[10].key, 43);
+    api.setCueAnchor(getEntries()[11].key, 60);
+    const { unmount } = render(
+      <>
+        <SceneList manage={false} entries={getEntries()} />
+      </>,
+    );
+    expect(
+      document.querySelector('.scene-row.conflict'),
+    ).not.toBeNull();
     unmount();
     api.deletePlaylist(id);
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);

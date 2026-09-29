@@ -108,6 +108,8 @@
 | VJLAB-84 | Film-strip timeline (horizontal/vertical, proportional thumbs, alternating borders, granularity zoom, playhead) | Feature | High | E15 | M15 | New |
 | VJLAB-89 | Bottom transport with show progress readout (scrub, skip, times, cue i/n) | Feature | High | E15 | M15 | Done |
 | VJLAB-85 | Per-cue transition modes (cut/dissolve select) | Enhancement | Low | E15 | M15 | New |
+| VJLAB-90 | End pins with overlap guard (endSec, mm:ss inputs, named refusals) | Feature | High | E15 | M15 | Done |
+| VJLAB-91 | Distribution v2 (shrink-to-fit, dirty dot, gap disclaimer with fill) | Feature | High | E15 | M15 | Done |
 | VJLAB-86 | AudioProvider interface plus local player refactor onto the contract | Refactor | High | E16 | M16 | New |
 | VJLAB-87 | Player-state events (pre/playing/paused/post) driving timeline slots | Feature | Medium | E16 | M16 | New |
 | VJLAB-88 | Second audio source plugin on the provider contract | Feature | Medium | E16 | M16 | New |

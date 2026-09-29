@@ -7,6 +7,7 @@ import {
   sanitizeAnchor,
   showTotalSec,
   useDirectorStore,
+  windowConflicts,
 } from '../director/directorStore';
 import { PRESETS } from '../scenes/presets';
 import { CoverageMeter } from './CoverageMeter';
@@ -26,6 +27,7 @@ export function PlaylistManager() {
   const playlists = useDirectorStore((s) => s.playlists);
   const activePlaylistId = useDirectorStore((s) => s.activePlaylistId);
   const customPresets = useDirectorStore((s) => s.customPresets);
+  const showDirty = useDirectorStore((s) => s.showDirty);
   const [draft, setDraft] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
@@ -120,6 +122,24 @@ export function PlaylistManager() {
         referenceSec={active.targetSec ?? null}
         referenceLabel="TARGET"
       />
+      {(() => {
+        const conflicts = windowConflicts(bodyEntries(active.entries));
+        if (conflicts.length === 0) return null;
+        const names = new Map(library.map((preset) => [preset.id, preset.name]));
+        const label = (key: string) => {
+          const entry = active.entries.find((item) => item.key === key);
+          return entry ? (names.get(entry.sceneId) ?? `#${entry.sceneId}`) : key;
+        };
+        return (
+          <p className="playlist-conflict" data-testid="playlist-conflict">
+            Sobreposição:{' '}
+            {conflicts
+              .map((conflict) => `${label(conflict.withKey)} × ${label(conflict.key)}`)
+              .join('; ')}
+            {' '}— ajuste os pinos para distribuir.
+          </p>
+        );
+      })()}
       <div className="playlist-target">
         <span>Show target {formatTrackTime(active.targetSec ?? 0)}</span>
         <button
@@ -180,16 +200,22 @@ export function PlaylistManager() {
               : 'manual'}
           </button>
         )}
-        {bodyEntries(active.entries).some(
-          (entry) => sanitizeAnchor(entry.startSec) !== null,
-        ) || bodyEntries(active.entries).length > 1 ? (
+        {bodyEntries(active.entries).length > 1 ? (
           <button
             type="button"
+            disabled={
+              windowConflicts(bodyEntries(active.entries)).length > 0
+            }
             onClick={() => store.distributeBody(active.targetSec ?? null)}
-            title="Even unfixed body cues over the target (else the current total)"
+            title={
+              windowConflicts(bodyEntries(active.entries)).length > 0
+                ? 'Resolve overlaps first (see message above)'
+                : 'Even unfixed body cues over the target (else the current total)'
+            }
             data-testid="body-distribute"
+            data-dirty={showDirty ? 'true' : undefined}
           >
-            Distribute
+            {showDirty ? 'Distribute •' : 'Distribute'}
           </button>
         ) : null}
       </div>

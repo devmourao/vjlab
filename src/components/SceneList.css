@@ -259,6 +259,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Blank-gap disclaimer: amber warning with one-tap fill. */
+.cue-unit-gap.warn {
+  border-left-color: rgba(252, 211, 77, 0.6);
+}
+
+.cue-gap-fill {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px dashed rgba(252, 211, 77, 0.6);
+  border-radius: 8px;
+  background: rgba(252, 211, 77, 0.08);
+  color: #fcd34d;
+  font-size: 11px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Locked-interval conflicts never go silent: red rows name the clash
+   (the manager header lists the pairs). */
+.scene-row.conflict {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
+.scene-row.conflict .scene-item {
+  border-color: rgba(248, 113, 113, 0.7);
+}
+
 .cue-pill.free {
   background: transparent;
   border-style: dashed;
