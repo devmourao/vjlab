@@ -7,6 +7,7 @@ import {
   useDirectorStore,
 } from '../director/directorStore';
 import { BottomSheet } from './BottomSheet';
+import { PlayerBar } from './PlayerBar';
 import { PlaylistManager } from './PlaylistManager';
 import { TimelineView } from './TimelineView';
 
@@ -53,6 +54,49 @@ describe('panel surfaces', () => {
       />,
     );
     expect(screen.getByTestId('timeline-view')).toBeTruthy();
+    unmount();
+  });
+
+  it('drives the track from the bottom bar with show progress', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Player test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < 12; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    const { unmount } = render(<PlayerBar engine={stubEngine} />);
+    expect(screen.getByTestId('player-bar')).toBeTruthy();
+    expect(screen.getByTestId('track-toggle')).toBeTruthy();
+    expect(screen.getByLabelText('Seek in track')).toBeTruthy();
+    expect(screen.getByTestId('player-show-progress')).toBeTruthy();
+    unmount();
+    api.deletePlaylist(id);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
+  it('reads cue positions on a track ruler with playhead', () => {
+    const names = new Map([
+      [0, 'Nebula Drift'],
+      [1, 'Neon Bloom'],
+    ]);
+    const { unmount } = render(
+      <TimelineView
+        entries={[
+          { key: 'a', sceneId: 0, durationSec: 30 },
+          { key: 'b', sceneId: 1, durationSec: 30 },
+        ]}
+        names={names}
+        activeKey="a"
+        cueClock={null}
+        onSelect={() => undefined}
+        trackDuration={2400}
+        position={75}
+      />,
+    );
+    expect(screen.getByTestId('timeline-ruler')).toBeTruthy();
+    expect(screen.getByTestId('timeline-playhead')).toBeTruthy();
+    expect(screen.getByText('0:30→1:00')).toBeTruthy();
     unmount();
   });
 });
