@@ -25,6 +25,7 @@ import {
   type StrobeMode,
 } from './fx';
 import { DEFAULT_TRANSITION_DURATION, nextDuration } from './transition';
+import type { AudioStatus } from './audioStatus';
 
 export type PanelMode = 'docked' | 'detached' | 'hidden';
 
@@ -98,6 +99,18 @@ interface DirectorState {
   createPlaylist: (name: string) => void;
   renamePlaylist: (id: string, name: string) => void;
   setPlaylistTarget: (playlistId: string, seconds: number | null) => void;
+  setStateCue: (
+    playlistId: string,
+    slot: 'pre' | 'pause' | 'post',
+    sceneId: number | null,
+  ) => void;
+  /** Runtime-only player status for state slots; never persisted. */
+  audioStatus: AudioStatus;
+  setAudioStatus: (status: AudioStatus) => void;
+  trackBindings: TrackBindings;
+  bindTrack: (trackName: string, playlistId: string) => void;
+  unbindTrack: (trackName: string) => void;
+  generateBody: (spaceSec: number | null) => void;
   deletePlaylist: (id: string) => void;
   setActivePlaylist: (id: string) => void;
   addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
@@ -514,7 +527,14 @@ export interface ScenePlaylist {
   entries: PlaylistEntry[];
   /** Manual show target in seconds (coverage reference); absent = none. */
   targetSec?: number | null;
+  /** State-slot scene refs (additive); unset slots change nothing. */
+  preCue?: number | null;
+  pauseCue?: number | null;
+  postCue?: number | null;
 }
+
+/** Track-name to playlist binding (explicit links, persisted). */
+export type TrackBindings = Record<string, string>;
 
 /** Manual show target bounds (seconds). */
 export const MAX_SHOW_TARGET_SEC = 86400;
@@ -529,6 +549,40 @@ export function sanitizeShowTarget(value: unknown): number | null {
 
 const PLAYLISTS_KEY = 'vjlab.playlists.v1';
 const ACTIVE_PLAYLIST_KEY = 'vjlab.activePlaylist.v1';
+const TRACK_BINDINGS_KEY = 'vjlab.trackBindings.v1';
+
+function sanitizeStateCue(
+  value: unknown,
+  valid: Set<number>,
+): number | null {
+  return typeof value === 'number' && valid.has(value) ? value : null;
+}
+
+function readTrackBindings(validIds: Set<string>): TrackBindings {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return {};
+    const raw = window.localStorage.getItem(TRACK_BINDINGS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    const bindings: TrackBindings = {};
+    for (const [name, id] of Object.entries(parsed)) {
+      if (typeof id === 'string' && validIds.has(id)) bindings[name] = id;
+    }
+    return bindings;
+  } catch {
+    return {};
+  }
+}
+
+function writeTrackBindings(bindings: TrackBindings): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(TRACK_BINDINGS_KEY, JSON.stringify(bindings));
+  } catch {
+    // Ignore
+  }
+}
 
 function sanitizeEntries(ids: unknown, valid: Set<number>): PlaylistEntry[] {
   if (!Array.isArray(ids)) return [];
@@ -647,6 +701,9 @@ function readPlaylists(
         name: (record['name'] as string).slice(0, 40) || 'Untitled',
         entries,
         targetSec: sanitizeShowTarget(record['targetSec']),
+        preCue: sanitizeStateCue(record['preCue'], valid),
+        pauseCue: sanitizeStateCue(record['pauseCue'], valid),
+        postCue: sanitizeStateCue(record['postCue'], valid),
       });
     }
     if (playlists.length === 0) return fallback();
@@ -779,6 +836,10 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
   playlists: playlistsInitial.playlists,
   activePlaylistId: playlistsInitial.activeId,
   showDirty: false,
+  audioStatus: 'empty' as AudioStatus,
+  trackBindings: readTrackBindings(
+    new Set(playlistsInitial.playlists.map((entry) => entry.id)),
+  ),
   activeEntryKey: activeEntryKeyInitial,
   panelMode: 'docked',
   autoPilotOn: true,
@@ -1125,6 +1186,70 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
   },
+  setStateCue: (playlistId, slot, sceneId) => {
+    const state = get();
+    const valid = new Set(allPresets(state.customPresets).map((entry) => entry.id));
+    const clean = sanitizeStateCue(sceneId, valid);
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === playlistId
+        ? {
+            ...entry,
+            preCue: slot === 'pre' ? clean : (entry.preCue ?? null),
+            pauseCue: slot === 'pause' ? clean : (entry.pauseCue ?? null),
+            postCue: slot === 'post' ? clean : (entry.postCue ?? null),
+          }
+        : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists });
+  },
+  setAudioStatus: (status) => {
+    if (useDirectorStore.getState().audioStatus === status) return;
+    set({ audioStatus: status });
+  },
+  bindTrack: (trackName, playlistId) => {
+    const state = get();
+    if (!trackName || !state.playlists.some((entry) => entry.id === playlistId)) {
+      return;
+    }
+    const next = { ...state.trackBindings, [trackName]: playlistId };
+    writeTrackBindings(next);
+    set({ trackBindings: next });
+  },
+  unbindTrack: (trackName) => {
+    const state = get();
+    if (!(trackName in state.trackBindings)) return;
+    const next = { ...state.trackBindings };
+    delete next[trackName];
+    writeTrackBindings(next);
+    set({ trackBindings: next });
+  },
+  generateBody: (spaceSec) => {
+    const state = get();
+    const active = selectActivePlaylist(state);
+    if (active.entries.length <= DECK_SIZE) return;
+    const explicit =
+      typeof spaceSec === 'number' && Number.isFinite(spaceSec) && spaceSec > 0
+        ? spaceSec
+        : null;
+    const space = explicit ?? active.targetSec ?? showTotalSec(bodyEntries(active.entries));
+    if (!(space > 0)) return;
+    const order = allPresets(state.customPresets).map((entry) => entry.id);
+    if (order.length === 0) return;
+    const count = Math.max(1, Math.round(space / DEFAULT_CUE_DURATION_SEC));
+    const pool = active.entries.slice(0, DECK_SIZE);
+    const body: PlaylistEntry[] = Array.from({ length: count }, (_, index) => ({
+      key: `e${Date.now().toString(36)}${index}`,
+      sceneId: order[index % order.length],
+      durationSec: DEFAULT_CUE_DURATION_SEC,
+      follow: 'manual' as CueFollow,
+    }));
+    const nextPlaylists = state.playlists.map((entry) =>
+      entry.id === active.id ? { ...entry, entries: [...pool, ...body] } : entry,
+    );
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    set({ playlists: nextPlaylists, showDirty: true });
+  },
   deletePlaylist: (id) => {
     const state = get();
     if (state.playlists.length <= 1) return;
@@ -1132,6 +1257,11 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     if (nextPlaylists.length === state.playlists.length) return;
     const nextActive = state.activePlaylistId === id ? nextPlaylists[0].id : state.activePlaylistId;
     writePlaylists(nextPlaylists, nextActive);
+    const nextBindings: TrackBindings = {};
+    for (const [name, boundId] of Object.entries(state.trackBindings)) {
+      if (boundId !== id) nextBindings[name] = boundId;
+    }
+    writeTrackBindings(nextBindings);
     const switched = nextActive !== state.activePlaylistId;
     const nextKey = switched
       ? (nextPlaylists[0].entries.find(
@@ -1140,7 +1270,7 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
         nextPlaylists[0].entries[0]?.key ??
         null)
       : state.activeEntryKey;
-    set({ playlists: nextPlaylists, activePlaylistId: nextActive, activeEntryKey: nextKey });
+    set({ playlists: nextPlaylists, activePlaylistId: nextActive, activeEntryKey: nextKey, trackBindings: nextBindings });
   },
   setActivePlaylist: (id) => {
     const state = get();
@@ -1542,6 +1672,10 @@ export const liveRefs = {
   /** Set while the pilot drives a cue change; manual moves clear it. */
   showPilotDriving: false,
   showInterrupt: null as ShowInterrupt | null,
+  /** Occurrence key held by a state cue; manual moves adopt it. */
+  stateHeldKey: null as string | null,
+  /** Manual takeover since the last tick (state cues adopt, never fight). */
+  userTookOver: false,
 };
 
 export const transitionRef = {

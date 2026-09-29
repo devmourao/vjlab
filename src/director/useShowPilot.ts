@@ -22,6 +22,7 @@ export function useShowPilot() {
       liveRefs.showPilotDriving = false;
       return;
     }
+    liveRefs.userTookOver = true;
     noteManualCue(useDirectorStore.getState(), activeEntryKey);
   }, [activeEntryKey]);
 

@@ -517,6 +517,49 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
   });
 
+  it('binds tracks, assigns state cues and generates bodies', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Bound test');
+    const id = useDirectorStore.getState().activePlaylistId;
+    for (let i = 0; i < DECK_SIZE + 2; i += 1) {
+      api.addSceneToPlaylist(id, i % 6);
+    }
+    // State cues accept valid scenes, reject ghosts.
+    api.setStateCue(id, 'pause', 1);
+    api.setStateCue(id, 'pre', 999);
+    const active = selectActivePlaylist(useDirectorStore.getState());
+    expect(active.pauseCue).toBe(1);
+    expect(active.preCue ?? null).toBeNull();
+    // Bindings persist per track name and die with the playlist.
+    api.bindTrack('demo.mp3', id);
+    api.bindTrack('', id);
+    api.bindTrack('demo.mp3', 'missing');
+    expect(useDirectorStore.getState().trackBindings['demo.mp3']).toBe(id);
+    // Autogen fills the body from library order at the default duration.
+    api.generateBody(65);
+    const body = bodyEntries(
+      selectActivePlaylist(useDirectorStore.getState()).entries,
+    );
+    expect(body).toHaveLength(2);
+    expect(
+      body.every(
+        (entry) =>
+          typeof entry.sceneId === 'number' && entry.durationSec === 30,
+      ),
+    ).toBe(true);
+    // Status bridge is idempotent and runtime-only.
+    api.setAudioStatus('paused');
+    api.setAudioStatus('paused');
+    expect(useDirectorStore.getState().audioStatus).toBe('paused');
+    api.setAudioStatus('empty');
+    api.deletePlaylist(id);
+    expect(
+      useDirectorStore.getState().trackBindings['demo.mp3'] ?? null,
+    ).toBeNull();
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
+
   it('stores a manual show target per playlist', () => {
     const api = useDirectorStore.getState();
     const previousActive = api.activePlaylistId;

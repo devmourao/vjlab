@@ -342,6 +342,41 @@ describe('showClock', () => {
     expect(showDrivesScenes(useDirectorStore.getState())).toBe(false);
   });
 
+  it('answers player states with dedicated cues', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    buildShow([
+      { sceneId: 0, durationSec: 30, follow: 'auto' },
+      { sceneId: 1, durationSec: 30, follow: 'auto' },
+    ]);
+    const id = useDirectorStore.getState().activePlaylistId;
+    api.setStateCue(id, 'pause', 2);
+    api.setPreset(0);
+    api.setAudioStatus('paused');
+    expect(pilotTick()).toBe('advanced');
+    expect(transitionRef.to).toBe(2);
+    transitionRef.active = false;
+    // Arrived: holds without refiring.
+    const poolKey = selectActivePlaylist(useDirectorStore.getState()).entries.find(
+      (entry) => entry.sceneId === 2,
+    )?.key;
+    api.setPreset(2, poolKey ?? null);
+    liveRefs.showPilotDriving = false;
+    expect(pilotTick()).toBe('held');
+    // Manual takeover during pause is adopted, never fought.
+    liveRefs.userTookOver = true;
+    api.setPreset(0);
+    expect(pilotTick()).toBe('held');
+    expect(transitionRef.active).toBe(false);
+    // Playing hands back to the timeline (wall sync first, no dissolve).
+    liveRefs.userTookOver = false;
+    api.setAudioStatus('playing');
+    expect(pilotTick()).toBe('idle');
+    expect(transitionRef.active).toBe(false);
+    api.setAudioStatus('empty');
+    cleanupShow(previousActive);
+  });
+
   it('stays pure manual with ten or fewer cues', () => {
     useAudioTime();
     const api = useDirectorStore.getState();

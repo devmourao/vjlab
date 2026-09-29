@@ -89,6 +89,8 @@ export function resetAnchor(): void {
   liveRefs.showAnchor = null;
   liveRefs.showLastElapsedSec = 0;
   liveRefs.showInterrupt = null;
+  liveRefs.stateHeldKey = null;
+  liveRefs.userTookOver = false;
 }
 
 /** Window index holding `elapsed`; clamps to the last cue (end holds). */
@@ -231,6 +233,33 @@ export type PilotOutcome = 'advanced' | 'seek' | 'held' | 'idle';
 export function pilotTick(): PilotOutcome {
   const state = useDirectorStore.getState();
   if (transitionRef.active) return 'idle';
+  // Player states override the timeline (user takeover still wins).
+  if (!activeInterrupt(state)) {
+    const slotScene =
+      state.audioStatus === 'paused'
+        ? (selectActivePlaylist(state).pauseCue ?? null)
+        : state.audioStatus === 'ended'
+          ? (selectActivePlaylist(state).postCue ?? null)
+          : state.audioStatus === 'pre'
+            ? (selectActivePlaylist(state).preCue ?? null)
+            : null;
+    if (slotScene !== null) {
+      if (liveRefs.userTookOver) {
+        liveRefs.userTookOver = false;
+        liveRefs.stateHeldKey = state.activeEntryKey;
+        return 'held';
+      }
+      if (slotScene !== state.activePresetId) {
+        liveRefs.showPilotDriving = true;
+        liveRefs.showInterrupt = null;
+        state.requestDissolve(slotScene);
+        liveRefs.stateHeldKey = transitionRef.toKey;
+        return 'advanced';
+      }
+      liveRefs.stateHeldKey = state.activeEntryKey;
+      return 'held';
+    }
+  }
   const windows = activeBodyWindows(state);
   if (windows.length === 0) return 'held';
   const elapsed = showElapsedSec();
