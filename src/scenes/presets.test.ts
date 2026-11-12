@@ -14,8 +14,8 @@ import {
 } from './presets';
 
 describe('presets', () => {
-  it('defines six presets on valid scenes', () => {
-    expect(PRESETS).toHaveLength(6);
+  it('defines presets on valid scenes', () => {
+    expect(PRESETS).toHaveLength(7);
     for (const preset of PRESETS) {
       expect([0, 1, 2, 3]).toContain(preset.scene);
       expect(preset.gain).toBeGreaterThan(0);
@@ -23,7 +23,7 @@ describe('presets', () => {
   });
 
   it('covers every preset exactly once in the playlist', () => {
-    expect([...PLAYLIST].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect([...PLAYLIST].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 
   it('gives every preset a dark background', () => {
@@ -33,13 +33,21 @@ describe('presets', () => {
   });
 
   it('wraps preset navigation', () => {
-    expect(nextPresetId(5)).toBe(0);
-    expect(prevPresetId(0)).toBe(5);
-    expect(getPreset(-1).id).toBe(5);
+    expect(nextPresetId(6)).toBe(0);
+    expect(prevPresetId(0)).toBe(6);
+    expect(getPreset(-1).id).toBe(6);
   });
 
   it('resolves every preset through instances', () => {
-    const bases = ['particles', 'mesh', 'tunnel', 'tunnel', 'tunnel', 'fractal'];
+    const bases = [
+      'particles',
+      'mesh',
+      'tunnel',
+      'tunnel',
+      'tunnel',
+      'fractal',
+      'mesh',
+    ];
     for (const preset of PRESETS) {
       const instances = resolveInstances(preset);
       expect(instances.length).toBeGreaterThan(0);
@@ -48,6 +56,8 @@ describe('presets', () => {
     expect(resolveInstances({ ...getPreset(0), instances: [] })[0].base).toBe(
       'particles',
     );
+    const djCover = resolveInstances(getPreset(6));
+    expect(djCover.map((entry) => entry.base)).toEqual(['mesh', 'particles']);
   });
 
   it('declares only honored params on every instance', () => {

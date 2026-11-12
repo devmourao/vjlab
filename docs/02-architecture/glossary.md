@@ -29,6 +29,31 @@ full-screen overlay above the living Stage, from the deck or remotely
 from the Console popup. The Scenes console section stays lean: list
 plus transport only.
 
+## Base
+
+Reusable audio-reactive generator with a declared param schema and
+named mechanics (`pulse`, `orbit`, `displace`, `scroll`, `morph`).
+Catalog categories: `field`, `form`, `media`, `fx`. Industry sense:
+Resolume Source / VDMX layer source. Unity target: Prefab +
+ScriptableObject params.
+
+## Scene
+
+Ready-to-play composition of 1..N base instances plus matter (palette,
+background, gain, speed). The playlist item — Winamp/WMP visualization
+entry. Unity target: composition asset.
+
+## Template
+
+Starter scene recipe with defaults and optional slots (e.g. DJ Cover
+album art). Saving materializes a normal Scene; templates are not a
+runtime type. Unity target: prefab pack / starter composition.
+
+## Compose / Perform / Program
+
+Product modes: Compose builds scenes from templates; Perform directs
+the living stage; Program times cues against the track clock.
+
 ## Playlist and deck
 
 A playlist is an ordered sequence of scene occurrences; the same scene

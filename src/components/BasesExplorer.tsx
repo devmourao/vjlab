@@ -12,8 +12,13 @@ export function BasesExplorer() {
         {Object.values(BASE_CAPABILITIES).map((capability) => (
           <li key={capability.base} className="bases-card">
             <strong>{capability.label}</strong>
-            <span className="bases-id">{capability.base}</span>
+            <span className="bases-id">
+              {capability.base} · {capability.category}
+            </span>
             <p>{capability.description}</p>
+            <p className="bases-mechanics">
+              mechanics: {capability.mechanics.join(', ')}
+            </p>
             <ul className="bases-params">
               {capability.params.map((param) => (
                 <li key={param.name}>

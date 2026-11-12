@@ -6,6 +6,7 @@ import {
   cueTiming,
   cueWindows,
   distributeBodyEntries,
+  ensureShippedPresetEntries,
   isPoolIndex,
   liveRefs,
   positionIndex,
@@ -610,5 +611,36 @@ describe('directorStore', () => {
     expect(useDirectorStore.getState().zoomTarget).toBe(2.5);
     api.setStrobeRate(99);
     expect(useDirectorStore.getState().strobeRateHz).toBe(12);
+  });
+
+  it('appends missing shipped presets onto the Main playlist only', () => {
+    const playlists = [
+      {
+        id: 'main',
+        name: 'Main',
+        entries: [
+          { key: 'e0', sceneId: 0, durationSec: 30, follow: 'manual' as const },
+          { key: 'e1', sceneId: 1, durationSec: 30, follow: 'manual' as const },
+        ],
+      },
+      {
+        id: 'alt',
+        name: 'Alt',
+        entries: [
+          { key: 'a0', sceneId: 2, durationSec: 30, follow: 'manual' as const },
+        ],
+      },
+    ];
+    const result = ensureShippedPresetEntries(playlists, [0, 1, 6]);
+    expect(result.changed).toBe(true);
+    expect(result.playlists[0].entries.map((entry) => entry.sceneId)).toEqual([
+      0, 1, 6,
+    ]);
+    expect(result.playlists[1].entries.map((entry) => entry.sceneId)).toEqual([
+      2,
+    ]);
+    expect(ensureShippedPresetEntries(result.playlists, [0, 1, 6]).changed).toBe(
+      false,
+    );
   });
 });
