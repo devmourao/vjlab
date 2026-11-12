@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
+import { PRESETS } from '../scenes/presets';
 import { draftToPreset } from '../scenes/presetDraft';
 import {
   SCENE_TEMPLATES,
@@ -30,19 +31,61 @@ function defaultParamsFor(base: BaseId): Record<string, unknown> {
   return { ...host, ...baseParams };
 }
 
+function seedFromPreset(preset: ScenePreset) {
+  return {
+    name: preset.name,
+    primary: preset.palette.primary,
+    emissive: preset.palette.emissive,
+    background: preset.background,
+    gain: preset.gain,
+    speed: preset.speed,
+    instances: (preset.instances && preset.instances.length > 0
+      ? preset.instances
+      : [{ base: 'particles' as const }]
+    ).map((inst) => ({
+      base: inst.base,
+      params: { ...(inst.params ?? {}) },
+    })),
+  };
+}
+
+function imageSlotsFromInstances(instances: BaseInstance[]) {
+  const slots: Array<{ path: string; label: string; kind: 'image' }> = [];
+  instances.forEach((inst, index) => {
+    if (inst.base !== 'mesh') return;
+    slots.push({
+      path: `${index}.map`,
+      label:
+        Number(inst.params?.['cover'] ?? 0) >= 0.5
+          ? 'Album / track image'
+          : 'Mesh image',
+      kind: 'image',
+    });
+  });
+  return slots;
+}
+
 /**
- * Compose-mode builder: pick a scene template (Winamp-style recipe),
- * fill friendly slots, tweak a few knobs, save into the playlist.
- * Advanced base assembly stays collapsed so the happy path stays clear.
+ * Single Compose surface for create + edit. Create starts from a template;
+ * edit loads the scene and keeps the same preview / slots / advanced path.
  */
 export function PresetBuilder({
+  preset = null,
   onClose,
   onSave,
 }: {
+  preset?: ScenePreset | null;
   onClose: () => void;
-  onSave?: (draft: Omit<ScenePreset, 'id'>) => void;
+  onSave?: (draft: Omit<ScenePreset, 'id'>, editingId: number | null) => void;
 }) {
-  const seed = useMemo(() => materializeTemplate('dj-cover'), []);
+  const isEdit = Boolean(preset);
+  const isNativeEdit = Boolean(
+    preset && PRESETS.some((entry) => entry.id === preset.id),
+  );
+  const seed = useMemo(
+    () => (preset ? seedFromPreset(preset) : materializeTemplate('dj-cover')),
+    [preset],
+  );
   const [templateId, setTemplateId] = useState<SceneTemplateId>('dj-cover');
   const [name, setName] = useState(seed.name);
   const [primary, setPrimary] = useState(seed.primary);
@@ -51,10 +94,12 @@ export function PresetBuilder({
   const [gain, setGain] = useState(seed.gain);
   const [speed, setSpeed] = useState(seed.speed);
   const [instances, setInstances] = useState<BaseInstance[]>(seed.instances);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
 
-  const template = getTemplate(templateId);
+  const templateSlots = isEdit
+    ? imageSlotsFromInstances(instances)
+    : (getTemplate(templateId).slots ?? []);
 
   const applyTemplate = (id: SceneTemplateId) => {
     const next = materializeTemplate(id);
@@ -100,54 +145,80 @@ export function PresetBuilder({
       return;
     }
     if (onSave) {
-      onSave(result.preset);
+      // Native customize always saves as a new custom scene (null editingId).
+      onSave(
+        result.preset,
+        isEdit && preset && !isNativeEdit ? preset.id : null,
+      );
     } else {
       const store = useDirectorStore.getState();
-      const created = store.createScene(result.preset);
-      store.setPreset(created.id);
+      if (isEdit && preset && !isNativeEdit) {
+        store.updateScene(preset.id, result.preset);
+      } else {
+        const created = store.createScene({
+          ...result.preset,
+          name: isNativeEdit
+            ? `${result.preset.name} (custom)`
+            : result.preset.name,
+        });
+        store.setPreset(created.id);
+      }
     }
     onClose();
   };
 
   return (
-    <div className="builder-veil" data-testid="preset-builder">
-      <div className="builder-card" role="dialog" aria-label="Scene builder">
+    <div
+      className="builder-veil"
+      data-testid={isEdit ? 'scene-editor' : 'preset-builder'}
+    >
+      <div
+        className="builder-card"
+        role="dialog"
+        aria-label={isEdit ? 'Edit scene' : 'Compose scene'}
+      >
         <div className="builder-head">
-          <strong>Compose scene</strong>
+          <strong>
+            {isEdit
+              ? `${isNativeEdit ? 'Customize' : 'Edit'} · ${preset?.name}`
+              : 'Compose scene'}
+          </strong>
           <button type="button" className="builder-close" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <section aria-label="Scene templates">
-          <h3>1 · Choose a template</h3>
-          <p className="builder-hint">
-            Templates are starter recipes. Saving creates a normal scene in your
-            playlist — same model Unity will port later.
-          </p>
-          <div className="builder-templates" data-testid="template-picker">
-            {SCENE_TEMPLATES.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className={
-                  entry.id === templateId
-                    ? 'builder-template is-active'
-                    : 'builder-template'
-                }
-                data-testid={`template-${entry.id}`}
-                onClick={() => applyTemplate(entry.id)}
-              >
-                <strong>{entry.name}</strong>
-                <span className="builder-template-cat">{entry.category}</span>
-                <span>{entry.blurb}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        {!isEdit && (
+          <section aria-label="Scene templates">
+            <h3>1 · Choose a template</h3>
+            <p className="builder-hint">
+              Start from a recipe, drop art if needed, save into your visual
+              playlist.
+            </p>
+            <div className="builder-templates" data-testid="template-picker">
+              {SCENE_TEMPLATES.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={
+                    entry.id === templateId
+                      ? 'builder-template is-active'
+                      : 'builder-template'
+                  }
+                  data-testid={`template-${entry.id}`}
+                  onClick={() => applyTemplate(entry.id)}
+                >
+                  <strong>{entry.name}</strong>
+                  <span className="builder-template-cat">{entry.category}</span>
+                  <span>{entry.blurb}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section aria-label="Live preview">
-          <h3>2 · Preview</h3>
+          <h3>{isEdit ? '1 · Preview' : '2 · Preview'}</h3>
           <PreviewStage
             instances={instances}
             palette={{ primary, emissive }}
@@ -158,7 +229,7 @@ export function PresetBuilder({
         </section>
 
         <section aria-label="Quick adjust">
-          <h3>3 · Adjust and save</h3>
+          <h3>{isEdit ? '2 · Adjust and save' : '3 · Adjust and save'}</h3>
           <label className="builder-field">
             <span>Name</span>
             <input
@@ -168,12 +239,16 @@ export function PresetBuilder({
             />
           </label>
 
-          {template.slots?.map((slot) => {
+          {templateSlots.map((slot) => {
             const parsed = parseSlotPath(slot.path);
             const current =
               parsed && instances[parsed.instanceIndex]
                 ? instances[parsed.instanceIndex].params?.[parsed.param]
                 : null;
+            const hasCustom =
+              typeof current === 'string' &&
+              current.length > 0 &&
+              !current.includes('cover-placeholder');
             return (
               <label
                 key={slot.path}
@@ -190,12 +265,11 @@ export function PresetBuilder({
                     setSlotValue(slot.path, URL.createObjectURL(file));
                   }}
                 />
-                {typeof current === 'string' && current.length > 0 && (
-                  <span className="builder-slot-ok">Image attached</span>
-                )}
-                {(!current || current === null) && (
+                {hasCustom ? (
+                  <span className="builder-slot-ok">Custom image attached</span>
+                ) : (
                   <span className="builder-slot-wait">
-                    Optional — wireframe until you drop art
+                    Drop album art — placeholder shows until you do
                   </span>
                 )}
               </label>
@@ -334,7 +408,11 @@ export function PresetBuilder({
             data-testid="builder-save"
             onClick={save}
           >
-            Save to playlist
+            {isNativeEdit
+              ? 'Save as custom'
+              : isEdit
+                ? 'Save scene'
+                : 'Save to playlist'}
           </button>
         </div>
       </div>

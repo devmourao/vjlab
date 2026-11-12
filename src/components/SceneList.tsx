@@ -268,8 +268,13 @@ export function SceneList({
         <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
           Compose
         </button>
-        <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
-          Create
+        <button
+          type="button"
+          onClick={() => setBuilding(true)}
+          data-testid="create-scene"
+          title="Same as Compose — template-first scene builder"
+        >
+          New scene
         </button>
         <button
           type="button"
@@ -551,22 +556,28 @@ export function SceneList({
                   </button>
                 </>
               )}
-              {manage && !isNative(preset.id) && (
+              {manage && (
                 <>
-                  <button type="button" onClick={() => setEditing(preset)} data-testid={`edit-scene-${preset.id}`}>
-                    Edit
-                  </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      ops.onRemove
-                        ? ops.onRemove(key)
-                        : useDirectorStore.getState().deleteScene(preset.id)
-                    }
-                    data-testid={`delete-scene-${preset.id}`}
+                    onClick={() => setEditing(preset)}
+                    data-testid={`edit-scene-${preset.id}`}
                   >
-                    Delete
+                    {isNative(preset.id) ? 'Customize' : 'Edit'}
                   </button>
+                  {!isNative(preset.id) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ops.onRemove
+                          ? ops.onRemove(key)
+                          : useDirectorStore.getState().deleteScene(preset.id)
+                      }
+                      data-testid={`delete-scene-${preset.id}`}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </>
               )}
             </div>

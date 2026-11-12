@@ -75,11 +75,12 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       instanceDefaults('mesh', {
         cameraSensitivity: 1,
         zoom: 1,
-        map: null,
+        cover: 1,
+        map: '/cover-placeholder.svg',
       }),
       instanceDefaults('particles', {
         cameraSensitivity: 0.08,
-        zoom: 1.35,
+        zoom: 1.45,
       }),
     ],
     slots: [{ path: '0.map', label: 'Album / track image', kind: 'image' }],

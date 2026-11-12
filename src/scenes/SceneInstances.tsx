@@ -49,6 +49,7 @@ function renderBase(
         emissive={palette.emissive}
         gain={gain}
         mapUrl={mapUrl}
+        coverMode={Number(instance.params?.['cover'] ?? 0) >= 0.5}
       />
     );
   if (instance.base === 'tunnel')
