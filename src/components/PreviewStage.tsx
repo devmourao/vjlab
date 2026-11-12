@@ -15,6 +15,7 @@ export function PreviewStage({
   gain,
   speed,
   sticky = true,
+  variant = 'panel',
 }: {
   instances: BaseInstance[];
   palette: ScenePalette;
@@ -22,15 +23,34 @@ export function PreviewStage({
   gain: number;
   speed: number;
   sticky?: boolean;
+  variant?: 'panel' | 'hero';
 }) {
+  const className = [
+    'preview-stage',
+    sticky ? 'sticky' : '',
+    variant === 'hero' ? 'hero' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div
-      className={sticky ? 'preview-stage sticky' : 'preview-stage'}
-      data-testid="preview-stage"
-    >
+    <div className={className} data-testid="preview-stage">
       <Canvas dpr={1} camera={{ position: [0, 0, 6] }}>
         <color attach="background" args={[background]} />
-        <ambientLight intensity={1} />
+        <ambientLight intensity={0.55} />
+        <pointLight
+          position={[3, 2, 4]}
+          color={palette.primary}
+          intensity={1.1}
+          distance={24}
+        />
+        <pointLight
+          position={[-3, 0, -2]}
+          color={palette.emissive}
+          intensity={0.7}
+          distance={20}
+        />
+        <fog attach="fog" args={[background, 7, 24]} />
         <SceneInstances
           groupKey="preview"
           instances={instances}

@@ -20,8 +20,8 @@ import {
   GLITCH_STRENGTH,
 } from '../director/fx';
 
-const BLOOM_BASE = 0.6;
-const VIGNETTE_BASE = 0.55;
+const BLOOM_BASE = 0.85;
+const VIGNETTE_BASE = 0.6;
 
 export function PostRig() {
   const hueShift = useDirectorStore((s) => s.hueShift);
@@ -50,13 +50,13 @@ export function PostRig() {
       />
       <Bloom
         intensity={applyMix(BLOOM_BASE, mixBloom, masterMix)}
-        luminanceThreshold={0.75}
-        luminanceSmoothing={0.2}
+        luminanceThreshold={0.55}
+        luminanceSmoothing={0.25}
         mipmapBlur={!liteOn}
       />
       <Vignette
         darkness={applyMix(VIGNETTE_BASE, mixVignette, masterMix)}
-        offset={0.25}
+        offset={0.28}
       />
       {/* Own pass: GlitchEffect transforms UVs and the library rejects
           sharing a pass with convolution effects (Bloom). The group stays

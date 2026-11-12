@@ -99,6 +99,13 @@ const fragmentShader = `
     col += ball * color1 * 0.35;
     col += ray * rayCol * 1.2;
 
+    // Soft vignette + sparkle on treble keeps the plane from reading flat.
+    float spark = pow(max(0.0, sin(radius * 40.0 - time * 3.0)), 24.0) * treble * 0.45;
+    col += spark * color2;
+    float vig = smoothstep(1.35, 0.35, radius);
+    col *= 0.55 + vig * 0.55;
+    col += pow(max(col, 0.0), vec3(1.15)) * 0.08;
+
     gl_FragColor = vec4(col, 1.0);
   }
 `;
