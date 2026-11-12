@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
 import { draftToPreset } from '../scenes/presetDraft';
+import {
+  SCENE_TEMPLATES,
+  getTemplate,
+  materializeTemplate,
+  parseSlotPath,
+  type SceneTemplateId,
+} from '../scenes/templates';
 import { InstanceParamFields } from './InstanceParamFields';
 import { PreviewStage } from './PreviewStage';
 import './PresetBuilder.css';
@@ -24,9 +31,9 @@ function defaultParamsFor(base: BaseId): Record<string, unknown> {
 }
 
 /**
- * Visual preset builder: browse native bases, preview the draft in an
- * isolated mini stage, tweak schema knobs, then save as a custom scene.
- * The preview never writes to the store — saving is explicit.
+ * Compose-mode builder: pick a scene template (Winamp-style recipe),
+ * fill friendly slots, tweak a few knobs, save into the playlist.
+ * Advanced base assembly stays collapsed so the happy path stays clear.
  */
 export function PresetBuilder({
   onClose,
@@ -35,16 +42,48 @@ export function PresetBuilder({
   onClose: () => void;
   onSave?: (draft: Omit<ScenePreset, 'id'>) => void;
 }) {
-  const [name, setName] = useState('Built Scene');
-  const [primary, setPrimary] = useState('#22d3ee');
-  const [emissive, setEmissive] = useState('#0e7490');
-  const [background, setBackground] = useState('#01090d');
-  const [gain, setGain] = useState(1);
-  const [speed, setSpeed] = useState(1);
-  const [instances, setInstances] = useState<BaseInstance[]>([
-    { base: 'tunnel', params: defaultParamsFor('tunnel') },
-  ]);
+  const seed = useMemo(() => materializeTemplate('dj-cover'), []);
+  const [templateId, setTemplateId] = useState<SceneTemplateId>('dj-cover');
+  const [name, setName] = useState(seed.name);
+  const [primary, setPrimary] = useState(seed.primary);
+  const [emissive, setEmissive] = useState(seed.emissive);
+  const [background, setBackground] = useState(seed.background);
+  const [gain, setGain] = useState(seed.gain);
+  const [speed, setSpeed] = useState(seed.speed);
+  const [instances, setInstances] = useState<BaseInstance[]>(seed.instances);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const template = getTemplate(templateId);
+
+  const applyTemplate = (id: SceneTemplateId) => {
+    const next = materializeTemplate(id);
+    setTemplateId(id);
+    setName(next.name);
+    setPrimary(next.primary);
+    setEmissive(next.emissive);
+    setBackground(next.background);
+    setGain(next.gain);
+    setSpeed(next.speed);
+    setInstances(next.instances);
+    setError(null);
+    setAdvancedOpen(id === 'blank');
+  };
+
+  const setSlotValue = (path: string, value: unknown) => {
+    const parsed = parseSlotPath(path);
+    if (!parsed) return;
+    setInstances((prev) =>
+      prev.map((inst, index) =>
+        index === parsed.instanceIndex
+          ? {
+              ...inst,
+              params: { ...(inst.params ?? {}), [parsed.param]: value },
+            }
+          : inst,
+      ),
+    );
+  };
 
   const save = () => {
     const result = draftToPreset({
@@ -72,33 +111,37 @@ export function PresetBuilder({
 
   return (
     <div className="builder-veil" data-testid="preset-builder">
-      <div className="builder-card" role="dialog" aria-label="Preset builder">
+      <div className="builder-card" role="dialog" aria-label="Scene builder">
         <div className="builder-head">
-          <strong>Preset builder</strong>
+          <strong>Compose scene</strong>
           <button type="button" className="builder-close" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <section aria-label="Base browser">
-          <h3>1 · Pick bases</h3>
-          <div className="builder-browser">
-            {BASE_OPTIONS.map((base: BaseId) => (
-              <div key={base} className="builder-base">
-                <strong>{BASE_CAPABILITIES[base].label}</strong>
-                <span>{BASE_CAPABILITIES[base].description}</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setInstances((prev) => [
-                      ...prev,
-                      { base, params: defaultParamsFor(base) },
-                    ])
-                  }
-                >
-                  Add
-                </button>
-              </div>
+        <section aria-label="Scene templates">
+          <h3>1 · Choose a template</h3>
+          <p className="builder-hint">
+            Templates are starter recipes. Saving creates a normal scene in your
+            playlist — same model Unity will port later.
+          </p>
+          <div className="builder-templates" data-testid="template-picker">
+            {SCENE_TEMPLATES.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className={
+                  entry.id === templateId
+                    ? 'builder-template is-active'
+                    : 'builder-template'
+                }
+                data-testid={`template-${entry.id}`}
+                onClick={() => applyTemplate(entry.id)}
+              >
+                <strong>{entry.name}</strong>
+                <span className="builder-template-cat">{entry.category}</span>
+                <span>{entry.blurb}</span>
+              </button>
             ))}
           </div>
         </section>
@@ -114,62 +157,169 @@ export function PresetBuilder({
           />
         </section>
 
-        <section aria-label="Assemble">
-          <h3>3 · Assemble and save</h3>
+        <section aria-label="Quick adjust">
+          <h3>3 · Adjust and save</h3>
           <label className="builder-field">
             <span>Name</span>
-            <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+            <input
+              value={name}
+              maxLength={40}
+              onChange={(e) => setName(e.target.value)}
+            />
           </label>
+
+          {template.slots?.map((slot) => {
+            const parsed = parseSlotPath(slot.path);
+            const current =
+              parsed && instances[parsed.instanceIndex]
+                ? instances[parsed.instanceIndex].params?.[parsed.param]
+                : null;
+            return (
+              <label
+                key={slot.path}
+                className="builder-field builder-slot"
+                data-testid={`slot-${slot.path}`}
+              >
+                <span>{slot.label}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setSlotValue(slot.path, URL.createObjectURL(file));
+                  }}
+                />
+                {typeof current === 'string' && current.length > 0 && (
+                  <span className="builder-slot-ok">Image attached</span>
+                )}
+                {(!current || current === null) && (
+                  <span className="builder-slot-wait">
+                    Optional — wireframe until you drop art
+                  </span>
+                )}
+              </label>
+            );
+          })}
+
           <div className="builder-grid">
             <label className="builder-field">
               <span>Primary</span>
-              <input value={primary} onChange={(e) => setPrimary(e.target.value)} />
+              <input
+                value={primary}
+                onChange={(e) => setPrimary(e.target.value)}
+              />
             </label>
             <label className="builder-field">
               <span>Emissive</span>
-              <input value={emissive} onChange={(e) => setEmissive(e.target.value)} />
+              <input
+                value={emissive}
+                onChange={(e) => setEmissive(e.target.value)}
+              />
             </label>
             <label className="builder-field">
               <span>Background</span>
-              <input value={background} onChange={(e) => setBackground(e.target.value)} />
+              <input
+                value={background}
+                onChange={(e) => setBackground(e.target.value)}
+              />
             </label>
             <label className="builder-field">
               <span>Gain {gain.toFixed(1)}</span>
-              <input type="range" min={0.4} max={2} step={0.1} value={gain} onChange={(e) => setGain(Number(e.target.value))} />
+              <input
+                type="range"
+                min={0.4}
+                max={2}
+                step={0.1}
+                value={gain}
+                onChange={(e) => setGain(Number(e.target.value))}
+              />
             </label>
             <label className="builder-field">
               <span>Speed {speed.toFixed(1)}</span>
-              <input type="range" min={0.5} max={2} step={0.1} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
+              <input
+                type="range"
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+              />
             </label>
           </div>
-          {instances.map((inst, index) => (
-            <div key={index} className="builder-instance">
-              <div className="builder-instance-head">
-                <strong>{BASE_CAPABILITIES[inst.base].label}</strong>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setInstances((prev) => prev.filter((_, i) => i !== index))
-                  }
-                >
-                  Remove
-                </button>
+        </section>
+
+        <section aria-label="Advanced assembly">
+          <button
+            type="button"
+            className="builder-advanced-toggle"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            {advancedOpen ? 'Hide advanced bases' : 'Advanced · edit bases'}
+          </button>
+          {advancedOpen && (
+            <div className="builder-advanced">
+              <div className="builder-browser">
+                {BASE_OPTIONS.map((base: BaseId) => (
+                  <div key={base} className="builder-base">
+                    <strong>{BASE_CAPABILITIES[base].label}</strong>
+                    <span className="builder-template-cat">
+                      {BASE_CAPABILITIES[base].category}
+                    </span>
+                    <span>{BASE_CAPABILITIES[base].description}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInstances((prev) => [
+                          ...prev,
+                          { base, params: defaultParamsFor(base) },
+                        ])
+                      }
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))}
               </div>
-              <InstanceParamFields
-                base={inst.base}
-                params={inst.params ?? {}}
-                onParam={(key, value) =>
-                  setInstances((prev) =>
-                    prev.map((entry, i) =>
-                      i === index
-                        ? { ...entry, params: { ...(entry.params ?? {}), [key]: value } }
-                        : entry,
-                    ),
-                  )
-                }
-              />
+              {instances.map((inst, index) => (
+                <div key={`${inst.base}-${index}`} className="builder-instance">
+                  <div className="builder-instance-head">
+                    <strong>{BASE_CAPABILITIES[inst.base].label}</strong>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInstances((prev) =>
+                          prev.filter((_, i) => i !== index),
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <InstanceParamFields
+                    base={inst.base}
+                    params={inst.params ?? {}}
+                    onParam={(key, value) =>
+                      setInstances((prev) =>
+                        prev.map((entry, i) =>
+                          i === index
+                            ? {
+                                ...entry,
+                                params: {
+                                  ...(entry.params ?? {}),
+                                  [key]: value,
+                                },
+                              }
+                            : entry,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </section>
 
         {error && <p className="builder-error">{error}</p>}
@@ -178,8 +328,13 @@ export function PresetBuilder({
           <button type="button" className="builder-cancel" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="builder-save" onClick={save}>
-            Save scene
+          <button
+            type="button"
+            className="builder-save"
+            data-testid="builder-save"
+            onClick={save}
+          >
+            Save to playlist
           </button>
         </div>
       </div>

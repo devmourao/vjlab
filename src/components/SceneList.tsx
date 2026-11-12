@@ -266,7 +266,7 @@ export function SceneList({
       {manage && (
       <div className="scene-library-actions">
         <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
-          Builder
+          Compose
         </button>
         <button type="button" onClick={() => setEditing(null)} data-testid="create-scene">
           Create

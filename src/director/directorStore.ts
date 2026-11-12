@@ -644,6 +644,32 @@ function entriesFromLegacy(
   }));
 }
 
+/**
+ * Append newly shipped built-in presets missing from Main so upgrades
+ * (e.g. DJ Cover) appear in the visual playlist without wiping local edits.
+ */
+export function ensureShippedPresetEntries(
+  playlists: ScenePlaylist[],
+  shippedIds: number[] = PRESETS.map((preset) => preset.id),
+): { playlists: ScenePlaylist[]; changed: boolean } {
+  let changed = false;
+  const next = playlists.map((playlist) => {
+    if (playlist.id !== 'main') return playlist;
+    const present = new Set(playlist.entries.map((entry) => entry.sceneId));
+    const missing = shippedIds.filter((id) => !present.has(id));
+    if (missing.length === 0) return playlist;
+    changed = true;
+    const extras: PlaylistEntry[] = missing.map((sceneId, index) => ({
+      key: `shipped${sceneId}-${index}`,
+      sceneId,
+      durationSec: DEFAULT_CUE_DURATION_SEC,
+      follow: 'manual',
+    }));
+    return { ...playlist, entries: [...playlist.entries, ...extras] };
+  });
+  return { playlists: next, changed };
+}
+
 function readPlaylists(
   custom: ScenePreset[],
   legacyOrder: number[],
@@ -707,12 +733,14 @@ function readPlaylists(
       });
     }
     if (playlists.length === 0) return fallback();
+    const migrated = ensureShippedPresetEntries(playlists);
     const storedActive = window.localStorage.getItem(ACTIVE_PLAYLIST_KEY);
-    const activeId = playlists.some((entry) => entry.id === storedActive)
+    const activeId = migrated.playlists.some((entry) => entry.id === storedActive)
       ? (storedActive as string)
-      : playlists[0].id;
+      : migrated.playlists[0].id;
     cleanupLegacyKeys();
-    return { playlists, activeId };
+    if (migrated.changed) writePlaylists(migrated.playlists, activeId);
+    return { playlists: migrated.playlists, activeId };
   } catch {
     return fallback();
   }

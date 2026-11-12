@@ -85,6 +85,26 @@ export const PRESETS: ScenePreset[] = [
     speed: 0.8,
     instances: [{ base: 'fractal' }],
   },
+  {
+    id: 6,
+    name: 'DJ Cover',
+    scene: 1,
+    palette: { primary: '#7dd3fc', emissive: '#38bdf8' },
+    background: '#020617',
+    gain: 1.2,
+    speed: 1,
+    // Proof template: focal media mesh + particle aura (unity-port-contract §7).
+    instances: [
+      {
+        base: 'mesh',
+        params: { cameraSensitivity: 1, zoom: 1 },
+      },
+      {
+        base: 'particles',
+        params: { cameraSensitivity: 0.08, zoom: 1.35 },
+      },
+    ],
+  },
 ];
 
 export const PRESET_COUNT = PRESETS.length;

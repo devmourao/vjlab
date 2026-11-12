@@ -52,7 +52,10 @@ export interface ScenePreset {
 
 ## 6. Next Step
 
-Sprint 20 will keep `instances` optional and add the first multi-base scene (`Tunnel Centered + Particle Field`) as proof, without removing the 4 single-base presets.
+Sprint 20 kept `instances` optional and added multi-base scenes
+(`Tunnel + Dust`, later `DJ Cover`). Portable templates and the Unity
+port contract live in `docs/02-architecture/unity-port-contract.md`
+and `src/scenes/templates.ts`.
 
 ## 7. Revision History
 

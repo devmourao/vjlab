@@ -34,10 +34,18 @@ export interface BurstResponse {
   decaySec: number | null;
 }
 
+/** Catalog category for Compose UI and Unity pack browsing. */
+export type BaseCategory = 'field' | 'form' | 'media' | 'fx';
+
+/** Portable reaction verbs (see unity-port-contract.md §6). */
+export type BaseMechanic = 'pulse' | 'orbit' | 'displace' | 'scroll' | 'morph';
+
 export interface BaseCapability {
   base: BaseId;
   label: string;
   description: string;
+  category: BaseCategory;
+  mechanics: BaseMechanic[];
   params: BaseParamSchema[];
   burst: BurstResponse;
 }
@@ -69,6 +77,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'particles',
     label: 'Particle Field',
     description: 'Audio-reactive point cloud with bass pulse and treble scale.',
+    category: 'field',
+    mechanics: ['pulse', 'orbit'],
     burst: { targets: 'scale', peak: 0.6, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
@@ -79,6 +89,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'mesh',
     label: 'Deformable Mesh',
     description: 'Bass-displaced sphere, flat wireframe or per-instance image.',
+    category: 'form',
+    mechanics: ['displace', 'pulse'],
     burst: { targets: 'displacement', peak: 0.3, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
@@ -89,6 +101,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'tunnel',
     label: 'Tunnel Field',
     description: 'Ring tunnel advancing with mids and treble travel.',
+    category: 'field',
+    mechanics: ['scroll', 'pulse', 'orbit'],
     burst: { targets: 'scale', peak: 0.5, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
@@ -99,6 +113,8 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
     base: 'fractal',
     label: 'Fractal Bloom',
     description: 'Full-screen audio-reactive fractal shader plane.',
+    category: 'field',
+    mechanics: ['morph', 'pulse'],
     burst: { targets: 'morph + zoom', peak: 1.5, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
