@@ -23,7 +23,10 @@ export function TunnelFieldScene({
       new THREE.MeshStandardMaterial({
         color,
         emissive,
-        emissiveIntensity: 1.4,
+        emissiveIntensity: 1.55,
+        roughness: 0.28,
+        metalness: 0.35,
+        toneMapped: false,
       }),
     // Palette applies on preset switch (remount via key in host).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -40,27 +43,39 @@ export function TunnelFieldScene({
     const { bass, mids, treble } = readBands();
     liveRefs.boost = decayBurst(liveRefs.boost, delta);
     const time = clock.elapsedTime;
-    const speedBase = (2 + mids * 7) * speed;
+    const speedBase = (2 + mids * 7.5 + bass * 1.2) * speed;
     const span = RING_COUNT * RING_SPACING;
-    void delta;
+    const isTriMode = useDirectorStore.getState().activePresetId === 3;
 
     group.children.forEach((ring, i) => {
-      // Each ring may be a group (doubleTri) or mesh
-      const target = ring as THREE.Group;
-      // Handle doubleTri: ring is a group with two meshes, update its position
-      target.position.z = wrapRingZ(offsets[i] + ((time * speedBase) % span));
+      const target = ring as THREE.Object3D;
+      const z = wrapRingZ(offsets[i] + ((time * speedBase) % span));
+      target.position.z = z;
+      // Traveling radius wave: rings swell as they approach the camera.
+      const depth = THREE.MathUtils.clamp(-z / span, 0, 1);
+      const wave =
+        1 +
+        bass * 0.22 * gain * (1 - depth) +
+        Math.sin(time * 2.4 + i * 0.45) * 0.04 * (0.5 + treble) +
+        liveRefs.boost * 0.12 * (1 - depth);
+      target.scale.setScalar(wave);
     });
 
     group.scale.setScalar(
-      1 + bass * 0.3 * gain + liveRefs.boost * BASE_CAPABILITIES.tunnel.burst.peak,
+      1 + bass * 0.28 * gain + liveRefs.boost * BASE_CAPABILITIES.tunnel.burst.peak,
     );
-    // Standard rotation on z for Tri (visible), y for Hyper
-    const activeId = useDirectorStore.getState().activePresetId;
-    const isTriMode = activeId === 3;
-    if (isTriMode) group.rotation.z += delta * 0.4 * (0.5 + mids);
-    else group.rotation.y += delta * 0.15 * (0.5 + mids);
-    material.color.setHSL((0.55 + treble * 0.45 + time * 0.02) % 1, 0.9, 0.6);
-    material.emissive.setHSL((0.55 + treble * 0.45) % 1, 0.9, 0.35);
+    if (isTriMode) group.rotation.z += delta * 0.45 * (0.5 + mids);
+    else group.rotation.y += delta * 0.18 * (0.5 + mids);
+
+    const hue = (0.52 + treble * 0.4 + time * 0.025 + bass * 0.05) % 1;
+    // Mute/unmute glow via HSL lightness — avoids assigning material fields
+    // that trip react-hooks/immutability on memoized Three materials.
+    material.color.setHSL(hue, 0.85, 0.55 + bass * 0.08 + liveRefs.boost * 0.05);
+    material.emissive.setHSL(
+      hue,
+      0.9,
+      0.28 + bass * 0.18 + liveRefs.boost * 0.12 + treble * 0.06,
+    );
   });
 
   const activePresetId = useDirectorStore((s) => s.activePresetId);
@@ -72,15 +87,15 @@ export function TunnelFieldScene({
         isTri ? (
           <group key={i} position={[0, 0, z]}>
             <mesh material={material} rotation={[0, 0, 0]}>
-              <torusGeometry args={[2.8, 0.09, 8, 3]} />
+              <torusGeometry args={[2.8, 0.1, 10, 3]} />
             </mesh>
             <mesh material={material} rotation={[0, 0, Math.PI]}>
-              <torusGeometry args={[2.8, 0.09, 8, 3]} />
+              <torusGeometry args={[2.8, 0.1, 10, 3]} />
             </mesh>
           </group>
         ) : (
           <mesh key={i} position={[0, 0, z]} material={material}>
-            <torusGeometry args={[2.6, 0.045, 8, 64]} />
+            <torusGeometry args={[2.65, 0.055, 12, 72]} />
           </mesh>
         ),
       )}

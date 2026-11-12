@@ -39,6 +39,7 @@ import { FX_SLOTS, type FxSlot } from '../director/fx';
 import { CameraRig } from '../scenes/CameraRig';
 import { PostRig } from '../scenes/PostRig';
 import { SceneHost } from '../scenes/SceneHost';
+import { StageAtmosphere } from '../scenes/StageAtmosphere';
 import { PRESETS, getPreset, type BaseInstance } from '../scenes/presets';
 import { CAMERA_POSITION } from '../stageConfig';
 
@@ -489,7 +490,8 @@ function DeckPage() {
       </div>
       <Canvas dpr={liteOn ? 1 : [1, 2]} camera={{ position: CAMERA_POSITION }}>
         <color attach="background" args={[preset.background]} />
-        <ambientLight intensity={1} />
+        <ambientLight intensity={0.55} />
+        <StageAtmosphere />
         <CameraRig />
         <SceneHost />
         <PostRig />

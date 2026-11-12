@@ -1,4 +1,4 @@
-export const PARTICLE_COUNT = 240;
+export const PARTICLE_COUNT = 320;
 
 export const RING_COUNT = 24;
 

@@ -49,8 +49,9 @@ export function DeformableMeshScene({
     };
   }, [mapUrl]);
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const { base, normals } = useMemo(() => {
-    const geometry = new THREE.SphereGeometry(1.2, 40, 40);
+    const geometry = new THREE.SphereGeometry(1.2, 48, 48);
     const positions = geometry.attributes.position.array.slice();
     const directions = new Float32Array(positions.length);
     const v = new THREE.Vector3();
@@ -69,7 +70,7 @@ export function DeformableMeshScene({
     if (!mesh) return;
     const geometry = mesh.geometry as THREE.BufferGeometry;
     const position = geometry.attributes.position as THREE.BufferAttribute;
-    const { bass, mids } = readBands();
+    const { bass, mids, treble } = readBands();
     liveRefs.boost = decayBurst(liveRefs.boost, delta);
     const time = clock.elapsedTime;
 
@@ -89,19 +90,28 @@ export function DeformableMeshScene({
     }
     position.needsUpdate = true;
     geometry.computeVertexNormals();
+
+    mesh.rotation.y += delta * (0.12 + mids * 0.35);
+    mesh.rotation.x = Math.sin(time * 0.35) * 0.08 + bass * 0.06;
+    if (materialRef.current) {
+      materialRef.current.emissiveIntensity =
+        0.75 + bass * 1.15 + liveRefs.boost * 0.7 + treble * 0.25;
+    }
   });
 
   return (
     <mesh ref={meshRef} key={mapUrl ? (texture ? 'textured' : 'loading') : 'flat'}>
-      <sphereGeometry args={[1.2, 40, 40]} />
+      <sphereGeometry args={[1.2, 48, 48]} />
       {mapUrl && texture ? (
         <meshBasicMaterial map={texture} toneMapped={false} />
       ) : (
         <meshStandardMaterial
+          ref={materialRef}
           color={color}
           emissive={emissive}
-          emissiveIntensity={0.7}
+          emissiveIntensity={0.85}
           wireframe
+          toneMapped={false}
         />
       )}
     </mesh>
