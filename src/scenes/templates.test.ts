@@ -12,6 +12,8 @@ describe('scene templates', () => {
     expect(dj.instances.map((i) => i.base)).toEqual(['mesh', 'particles']);
     expect(dj.slots?.[0]?.path).toBe('0.map');
     expect(dj.category).toBe('media');
+    expect(dj.instances[0].params?.['cover']).toBe(1);
+    expect(dj.instances[0].params?.['map']).toBe('/cover-placeholder.svg');
   });
 
   it('materializes an editable clone, not a shared reference', () => {

@@ -6,22 +6,33 @@ import { liveRefs } from '../director/directorStore';
 import { BASE_CAPABILITIES } from './bases';
 import { decayBurst, meshDisplacement } from './sceneMath';
 
+const COVER_SIZE = 2.7;
+const COVER_FRAME = 2.95;
+
+/**
+ * Form base: deformable wireframe sphere, or album-cover plate when
+ * `coverMode` is on (DJ Cover template). Cover keeps the art readable —
+ * pulse/scale only, no vertex warp.
+ */
 export function DeformableMeshScene({
   color = '#f0abfc',
   emissive = '#a21caf',
   gain = 1,
   mapUrl = null,
+  coverMode = false,
 }: {
   color?: string;
   emissive?: string;
   gain?: number;
   mapUrl?: string | null;
+  coverMode?: boolean;
 }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
-  // Textured mode is unlit (tone mapping off) so uploaded images keep
-  // their original colors. Flat mode keeps the lit wireframe look.
-  // The map belongs to this instance only — never to global state.
   useEffect(() => {
     if (!mapUrl) return;
     const loader = new THREE.TextureLoader();
@@ -31,7 +42,7 @@ export function DeformableMeshScene({
       (loaded) => {
         if (cancelled) return;
         loaded.colorSpace = THREE.SRGBColorSpace;
-        console.info(`[texture] loaded ${loaded.image.width}x${loaded.image.height}`);
+        loaded.anisotropy = 8;
         setTexture((previous) => {
           previous?.dispose();
           return loaded;
@@ -48,8 +59,7 @@ export function DeformableMeshScene({
       cancelled = true;
     };
   }, [mapUrl]);
-  const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+
   const { base, normals } = useMemo(() => {
     const geometry = new THREE.SphereGeometry(1.2, 48, 48);
     const positions = geometry.attributes.position.array.slice();
@@ -66,13 +76,31 @@ export function DeformableMeshScene({
   }, []);
 
   useFrame(({ clock }, delta) => {
+    const { bass, mids, treble } = readBands();
+    liveRefs.boost = decayBurst(liveRefs.boost, delta);
+    const time = clock.elapsedTime;
+
+    if (coverMode) {
+      const group = groupRef.current;
+      if (!group) return;
+      const pulse =
+        1 +
+        bass * 0.12 * gain +
+        liveRefs.boost * BASE_CAPABILITIES.mesh.burst.peak * 0.55;
+      group.scale.setScalar(pulse);
+      group.rotation.y = Math.sin(time * 0.35) * 0.18 + mids * 0.08;
+      group.rotation.x = Math.sin(time * 0.22) * 0.06 + bass * 0.04;
+      if (frameMatRef.current) {
+        frameMatRef.current.emissiveIntensity =
+          0.55 + bass * 1.4 + liveRefs.boost * 0.9 + treble * 0.25;
+      }
+      return;
+    }
+
     const mesh = meshRef.current;
     if (!mesh) return;
     const geometry = mesh.geometry as THREE.BufferGeometry;
     const position = geometry.attributes.position as THREE.BufferAttribute;
-    const { bass, mids, treble } = readBands();
-    liveRefs.boost = decayBurst(liveRefs.boost, delta);
-    const time = clock.elapsedTime;
 
     for (let i = 0; i < position.count; i += 1) {
       const x = base[i * 3];
@@ -98,6 +126,43 @@ export function DeformableMeshScene({
         0.75 + bass * 1.15 + liveRefs.boost * 0.7 + treble * 0.25;
     }
   });
+
+  if (coverMode) {
+    const hasArt = Boolean(mapUrl && texture);
+    return (
+      <group ref={groupRef}>
+        {/* Soft back plate / frame glow */}
+        <mesh position={[0, 0, -0.04]}>
+          <planeGeometry args={[COVER_FRAME, COVER_FRAME]} />
+          <meshStandardMaterial
+            ref={frameMatRef}
+            color={color}
+            emissive={emissive}
+            emissiveIntensity={1.35}
+            roughness={0.35}
+            metalness={0.25}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Album face */}
+        <mesh position={[0, 0, 0.02]}>
+          <planeGeometry args={[COVER_SIZE, COVER_SIZE]} />
+          {hasArt ? (
+            <meshBasicMaterial map={texture} toneMapped={false} />
+          ) : (
+            <meshStandardMaterial
+              color={color}
+              emissive={emissive}
+              emissiveIntensity={0.95}
+              roughness={0.45}
+              metalness={0.12}
+              toneMapped={false}
+            />
+          )}
+        </mesh>
+      </group>
+    );
+  }
 
   return (
     <mesh ref={meshRef} key={mapUrl ? (texture ? 'textured' : 'loading') : 'flat'}>

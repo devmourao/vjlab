@@ -93,15 +93,20 @@ export const PRESETS: ScenePreset[] = [
     background: '#020617',
     gain: 1.2,
     speed: 1,
-    // Proof template: focal media mesh + particle aura (unity-port-contract §7).
+    // Proof template: readable cover plate + particle aura.
     instances: [
       {
         base: 'mesh',
-        params: { cameraSensitivity: 1, zoom: 1 },
+        params: {
+          cameraSensitivity: 1,
+          zoom: 1,
+          cover: 1,
+          map: '/cover-placeholder.svg',
+        },
       },
       {
         base: 'particles',
-        params: { cameraSensitivity: 0.08, zoom: 1.35 },
+        params: { cameraSensitivity: 0.08, zoom: 1.45 },
       },
     ],
   },

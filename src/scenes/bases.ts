@@ -88,13 +88,23 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
   mesh: {
     base: 'mesh',
     label: 'Deformable Mesh',
-    description: 'Bass-displaced sphere, flat wireframe or per-instance image.',
+    description:
+      'Bass-displaced sphere, or album cover plate when cover=1 (readable art + pulse).',
     category: 'form',
     mechanics: ['displace', 'pulse'],
     burst: { targets: 'displacement', peak: 0.3, decaySec: null },
     params: [
       { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
       { name: 'map', type: 'image', scope: 'instance', default: null },
+      {
+        name: 'cover',
+        type: 'number',
+        scope: 'instance',
+        family: 'spatial',
+        min: 0,
+        max: 1,
+        default: 0,
+      },
     ],
   },
   tunnel: {
