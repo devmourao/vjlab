@@ -27,9 +27,27 @@ describe('scene templates', () => {
   it('lists stable template ids for pack/Unity mapping', () => {
     expect(SCENE_TEMPLATES.map((t) => t.id)).toEqual([
       'dj-cover',
+      'cover-orbit',
+      'spectrum-stack',
+      'tunnel-dust',
       'pure-field',
       'tunnel-run',
       'blank',
+    ]);
+  });
+
+  it('includes multi-base recombination recipes', () => {
+    expect(getTemplate('spectrum-stack').instances.map((i) => i.base)).toEqual([
+      'bars',
+      'particles',
+    ]);
+    expect(getTemplate('cover-orbit').instances.map((i) => i.base)).toEqual([
+      'mesh',
+      'rings',
+    ]);
+    expect(getTemplate('tunnel-dust').instances.map((i) => i.base)).toEqual([
+      'tunnel',
+      'particles',
     ]);
   });
 

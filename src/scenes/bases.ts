@@ -131,6 +131,30 @@ export const BASE_CAPABILITIES: Record<BaseId, BaseCapability> = {
       { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
     ],
   },
+  bars: {
+    base: 'bars',
+    label: 'Spectrum Bars',
+    description: 'Classic vertical spectrum — bass left, treble right.',
+    category: 'form',
+    mechanics: ['pulse'],
+    burst: { targets: 'height', peak: 0.7, decaySec: null },
+    params: [
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
+      { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
+    ],
+  },
+  rings: {
+    base: 'rings',
+    label: 'Orbit Rings',
+    description: 'Orbiting dot ring — light second layer under covers or tunnels.',
+    category: 'field',
+    mechanics: ['orbit', 'pulse'],
+    burst: { targets: 'scale', peak: 0.55, decaySec: null },
+    params: [
+      { name: 'gain', type: 'number', scope: 'preset', family: 'modulation', min: 0.4, max: 2, default: 1 },
+      { name: 'speed', type: 'number', scope: 'preset', family: 'transport', min: 0.5, max: 2, default: 1 },
+    ],
+  },
 };
 
 /** Stable session key for per-instance overrides (never global). */

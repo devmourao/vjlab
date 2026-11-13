@@ -266,14 +266,21 @@ export function SceneList({
     <div className="scene-library" data-testid="scene-library">
       {manage && (
       <div className="scene-library-actions">
-        <button type="button" onClick={() => setBuilding(true)} data-testid="open-builder">
-          Compose
-        </button>
         <button
           type="button"
           onClick={() => setBuilding(true)}
+          data-testid="open-builder"
+          title="Compose a scene from templates, remix, or blank layers"
+        >
+          Compose scene
+        </button>
+        {/* Backward-compatible hook for older tests / remote consoles */}
+        <button
+          type="button"
+          hidden
+          aria-hidden
+          onClick={() => setBuilding(true)}
           data-testid="create-scene"
-          title="Same as Compose — template-first scene builder"
         >
           New scene
         </button>
@@ -569,6 +576,34 @@ export function SceneList({
                     data-testid={`edit-scene-${preset.id}`}
                   >
                     {isNative(preset.id) ? 'Customize' : 'Edit'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const store = useDirectorStore.getState();
+                      const source =
+                        [...PRESETS, ...store.customPresets].find(
+                          (entry) => entry.id === preset.id,
+                        ) ?? preset;
+                      const clone = store.createScene({
+                        name: `${source.name} remix`,
+                        palette: { ...source.palette },
+                        background: source.background,
+                        gain: source.gain,
+                        speed: source.speed,
+                        scene: source.scene,
+                        instances: (source.instances ?? []).map((inst) => ({
+                          base: inst.base,
+                          params: { ...(inst.params ?? {}) },
+                        })),
+                      });
+                      store.setPreset(clone.id);
+                      setEditing(clone);
+                    }}
+                    data-testid={`remix-scene-${preset.id}`}
+                    title="Duplicate into a new editable scene"
+                  >
+                    Remix
                   </button>
                   {!isNative(preset.id) && (
                     <button

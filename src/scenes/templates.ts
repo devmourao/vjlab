@@ -6,7 +6,14 @@ import {
 import type { BaseId, BaseInstance, ScenePalette } from './presets';
 
 /** Portable template id — stable across web and future Unity packs. */
-export type SceneTemplateId = 'dj-cover' | 'pure-field' | 'tunnel-run' | 'blank';
+export type SceneTemplateId =
+  | 'dj-cover'
+  | 'pure-field'
+  | 'tunnel-run'
+  | 'spectrum-stack'
+  | 'cover-orbit'
+  | 'tunnel-dust'
+  | 'blank';
 
 export interface SceneTemplate {
   id: SceneTemplateId;
@@ -84,6 +91,62 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       }),
     ],
     slots: [{ path: '0.map', label: 'Album / track image', kind: 'image' }],
+  },
+  {
+    id: 'cover-orbit',
+    name: 'Cover Orbit',
+    blurb: 'Album plate with orbiting ring — media + motion layer.',
+    category: 'media',
+    palette: { primary: '#c4b5fd', emissive: '#8b5cf6' },
+    background: '#0b0614',
+    gain: 1.15,
+    speed: 1.05,
+    instances: [
+      instanceDefaults('mesh', {
+        cover: 1,
+        map: '/cover-placeholder.svg',
+        zoom: 1,
+      }),
+      instanceDefaults('rings', {
+        cameraSensitivity: 0.35,
+        zoom: 1.1,
+      }),
+    ],
+    slots: [{ path: '0.map', label: 'Album / track image', kind: 'image' }],
+  },
+  {
+    id: 'spectrum-stack',
+    name: 'Spectrum Stack',
+    blurb: 'Bars up front, particles behind — classic analyser stack.',
+    category: 'form',
+    palette: { primary: '#fbbf24', emissive: '#f59e0b' },
+    background: '#090601',
+    gain: 1.25,
+    speed: 1.1,
+    instances: [
+      instanceDefaults('bars', { zoom: 1.05 }),
+      instanceDefaults('particles', {
+        cameraSensitivity: 0.12,
+        zoom: 1.35,
+      }),
+    ],
+  },
+  {
+    id: 'tunnel-dust',
+    name: 'Tunnel + Dust',
+    blurb: 'Depth tunnel with a soft particle veil.',
+    category: 'field',
+    palette: { primary: '#22d3ee', emissive: '#0e7490' },
+    background: '#01090d',
+    gain: 1.15,
+    speed: 1.15,
+    instances: [
+      instanceDefaults('tunnel'),
+      instanceDefaults('particles', {
+        cameraSensitivity: 0.15,
+        zoom: 1.25,
+      }),
+    ],
   },
   {
     id: 'pure-field',

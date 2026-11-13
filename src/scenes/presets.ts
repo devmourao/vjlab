@@ -3,7 +3,23 @@ export interface ScenePalette {
   emissive: string;
 }
 
-export type BaseId = 'particles' | 'mesh' | 'tunnel' | 'fractal';
+export type BaseId =
+  | 'particles'
+  | 'mesh'
+  | 'tunnel'
+  | 'fractal'
+  | 'bars'
+  | 'rings';
+
+/** Ordered catalog for Compose pickers (Open/Closed: append only). */
+export const BASE_IDS: BaseId[] = [
+  'particles',
+  'mesh',
+  'tunnel',
+  'fractal',
+  'bars',
+  'rings',
+];
 
 export interface BaseInstance {
   base: BaseId;
