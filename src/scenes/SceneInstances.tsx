@@ -12,26 +12,38 @@ import { RingOrbitScene } from './RingOrbitScene';
 import { TunnelFieldScene } from './TunnelFieldScene';
 import type { BaseInstance, ScenePalette } from './presets';
 
+/**
+ * Per-piece transform host: camera follow, world pin, and self-spin are
+ * independent — industry pattern (layer transform ≠ generator animation).
+ */
 function ParallaxGroup({
   sensitivity,
   zoom,
   position,
   rotation,
+  spin,
   children,
 }: {
   sensitivity: number;
   zoom?: number;
   position: [number, number, number];
   rotation: [number, number, number];
+  spin: [number, number, number];
   children: React.ReactNode;
 }) {
   const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
+  const spinAccum = useRef([0, 0, 0]);
+  useFrame((_, delta) => {
     const g = ref.current;
     if (!g) return;
-    g.rotation.y = rotation[1] + liveRefs.azimuth * sensitivity;
-    g.rotation.x = rotation[0] + liveRefs.elevation * sensitivity;
-    g.rotation.z = rotation[2];
+    spinAccum.current[0] += spin[0] * delta;
+    spinAccum.current[1] += spin[1] * delta;
+    spinAccum.current[2] += spin[2] * delta;
+    g.rotation.x =
+      rotation[0] + spinAccum.current[0] + liveRefs.elevation * sensitivity;
+    g.rotation.y =
+      rotation[1] + spinAccum.current[1] + liveRefs.azimuth * sensitivity;
+    g.rotation.z = rotation[2] + spinAccum.current[2];
     if (zoom !== undefined) g.scale.setScalar(zoom);
   });
   return (
@@ -62,8 +74,6 @@ function renderBase(
     instance.params?.['emissive'],
     palette.emissive,
   );
-  const locked = Number(instance.params?.['lockMotion'] ?? 0) >= 0.5;
-  const effectiveSpeed = locked ? 0 : speed;
 
   if (instance.base === 'mesh')
     return (
@@ -81,7 +91,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
       />
     );
   if (instance.base === 'fractal')
@@ -90,7 +100,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
         orientation={Number(instance.params?.['orientation'] ?? 0)}
       />
     );
@@ -100,7 +110,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
       />
     );
   if (instance.base === 'rings')
@@ -109,7 +119,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
       />
     );
   if (instance.base === 'grid')
@@ -118,7 +128,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
       />
     );
   if (instance.base === 'fog')
@@ -127,7 +137,7 @@ function renderBase(
         color={color}
         emissive={emissive}
         gain={gain}
-        speed={effectiveSpeed}
+        speed={speed}
       />
     );
   return (
@@ -135,7 +145,7 @@ function renderBase(
       color={color}
       emissive={emissive}
       gain={gain}
-      speed={effectiveSpeed}
+      speed={speed}
     />
   );
 }
@@ -164,8 +174,9 @@ export function SceneInstances({
   return (
     <group key={groupKey}>
       {instances.map((inst, idx) => {
-        const locked = Number(inst.params?.['lockMotion'] ?? 0) >= 0.5;
-        const sens = locked
+        // Pin in world = ignore camera only (animation/spin keep running).
+        const pinned = Number(inst.params?.['lockMotion'] ?? 0) >= 0.5;
+        const sens = pinned
           ? 0
           : ((inst.params?.['cameraSensitivity'] as number | undefined) ?? 1);
         const zoom = inst.params?.['zoom'] as number | undefined;
@@ -178,6 +189,11 @@ export function SceneInstances({
           Number(inst.params?.['rotX'] ?? 0),
           Number(inst.params?.['rotY'] ?? 0),
           Number(inst.params?.['rotZ'] ?? 0),
+        ];
+        const spin: [number, number, number] = [
+          Number(inst.params?.['spinX'] ?? 0),
+          Number(inst.params?.['spinY'] ?? 0),
+          Number(inst.params?.['spinZ'] ?? 0),
         ];
         const mapUrl =
           inst.base === 'mesh' ? (getMapUrl?.(inst.base, idx) ?? null) : null;
@@ -192,6 +208,7 @@ export function SceneInstances({
             zoom={zoom}
             position={position}
             rotation={rotation}
+            spin={spin}
           >
             {renderBase(inst, palette, gain, speed, mapUrl)}
           </ParallaxGroup>

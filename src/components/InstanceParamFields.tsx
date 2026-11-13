@@ -111,6 +111,7 @@ function renderSchema(
   }
   if (schema.type === 'toggle') {
     const on = Number(value ?? 0) >= 0.5;
+    const isPin = schema.name === 'lockMotion';
     return (
       <label key={schema.name} className="param-field param-toggle">
         <span>{paramLabel(schema)}</span>
@@ -121,8 +122,20 @@ function renderSchema(
           className={on ? 'param-switch is-on' : 'param-switch'}
           onClick={() => onParam(schema.name, on ? 0 : 1)}
         >
-          {on ? 'On — motion locked' : 'Off — free to move'}
+          {isPin
+            ? on
+              ? 'On — stays put (ignores camera)'
+              : 'Off — follows camera'
+            : on
+              ? 'On'
+              : 'Off'}
         </button>
+        {isPin && (
+          <span className="param-help">
+            Pin a floor/wall/ceiling while other pieces still follow the desk.
+            Does not freeze the piece’s own animation or self-spin.
+          </span>
+        )}
       </label>
     );
   }
