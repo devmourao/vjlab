@@ -56,12 +56,14 @@ the living stage; Program times cues against the track clock.
 
 ## Playlist and deck
 
-A playlist is an ordered sequence of scene occurrences; the same scene
+A playlist (visual set / setlist) is an ordered sequence of scene
+occurrences — Winamp/WMP visualization playlist sense. The same scene
 may appear more than once. Positions 1-10 form the quick-access deck
 and map to Digit1-Digit9 and Digit0, so position IS the shortcut:
 arrows renumber shortcuts, and starring pins the occurrence into the
 deck (unstarring drops it past position 10). Console lists collapse to
-the deck with a full-list toggle.
+the deck with a full-list toggle. Thumbs (cover art or palette wash)
+identify each cue; Play visual set starts auto-follow from the body.
 
 ## Guide
 

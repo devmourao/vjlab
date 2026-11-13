@@ -5,6 +5,59 @@
   overflow-y: auto;
 }
 
+.playlist-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(34, 211, 238, 0.16), transparent 55%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.playlist-kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.playlist-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.playlist-lead {
+  margin: 0;
+  max-width: 42ch;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.playlist-play-set {
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #5eead4;
+  color: #041016;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.playlist-play-set:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .playlist-bar {
   display: flex;
   flex-wrap: wrap;
@@ -94,6 +147,41 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.playlist-row.visual {
+  min-height: 64px;
+  padding: 8px;
+}
+
+.playlist-row.visual.is-live {
+  border-color: rgba(94, 234, 212, 0.45);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.playlist-thumb-hit,
+.playlist-name-hit {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.playlist-name-hit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playlist-thumb-missing {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .playlist-name {
@@ -208,13 +296,16 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
-/* Read-only cue chip on the manage surface (editing lives in SceneList). */
+/* Cue timing under the scene name in visual rows. */
 .playlist-time {
-  margin-left: auto;
   flex-shrink: 0;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.65);
   font-variant-numeric: tabular-nums;
+}
+
+.playlist-name-hit .playlist-time {
+  margin-left: 0;
 }
 
 .playlist-target {

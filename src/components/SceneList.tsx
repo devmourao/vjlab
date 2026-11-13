@@ -20,6 +20,7 @@ import { CueTimeInput } from './CueTimeInput';
 import type { CueCountdown } from '../director/showClock';
 import { PresetBuilder } from './PresetBuilder';
 import { SceneEditor } from './SceneEditor';
+import { SceneThumb } from './SceneThumb';
 import './SceneList.css';
 
 /** Entries per console page before the full-list toggle. Matches the deck. */
@@ -408,13 +409,17 @@ export function SceneList({
                 </span>
               )}
               <span
-                className="scene-swatch"
-                style={{ background: preset.palette.primary }}
-                aria-hidden
+                className="scene-swatch-wrap"
                 title={position === null ? 'Drag to reorder' : undefined}
                 draggable={position === null}
                 {...(position === null ? rowDragStart(orderIndex) : {})}
-              />
+              >
+                <SceneThumb
+                  preset={preset}
+                  size="sm"
+                  active={highlighted}
+                />
+              </span>
               <strong>{preset.name}</strong>
               {inDeck && (
                 <span className="scene-fav" title="Pinned to deck" aria-hidden>

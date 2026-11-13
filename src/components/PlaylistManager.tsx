@@ -9,24 +9,33 @@ import {
   useDirectorStore,
   windowConflicts,
 } from '../director/directorStore';
-import { PRESETS } from '../scenes/presets';
+import { PRESETS, type ScenePreset } from '../scenes/presets';
 import { CoverageMeter } from './CoverageMeter';
+import { SceneThumb } from './SceneThumb';
 import { rowDragStart, sectionDropProps } from './controls/sectionDrag';
 import './PlaylistManager.css';
 
 /** Manual show-target stepper step (seconds). */
 export const SHOW_TARGET_STEP_SEC = 60;
 
+function resolvePreset(
+  id: number,
+  library: ScenePreset[],
+): ScenePreset | null {
+  return library.find((preset) => preset.id === id) ?? null;
+}
+
 /**
- * Library tab managing playlists: create, rename, delete and switch,
- * plus membership (library on the left, playlist sequence on the right).
- * Positions 1-DECK_SIZE map to Digit1-Digit0; starring pins the
- * occurrence into the deck by position.
+ * Visual setlist (Winamp-style): ordered scene occurrences with thumbs,
+ * pin-to-deck, and one-tap play. Library pane feeds the set; binding a
+ * track still switches which set loads with that song.
  */
 export function PlaylistManager({ trackName }: { trackName?: string | null }) {
   const playlists = useDirectorStore((s) => s.playlists);
   const activePlaylistId = useDirectorStore((s) => s.activePlaylistId);
   const customPresets = useDirectorStore((s) => s.customPresets);
+  const activePresetId = useDirectorStore((s) => s.activePresetId);
+  const activeEntryKey = useDirectorStore((s) => s.activeEntryKey);
   const showDirty = useDirectorStore((s) => s.showDirty);
   const trackBindings = useDirectorStore((s) => s.trackBindings);
   const [draft, setDraft] = useState('');
@@ -46,11 +55,46 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
     setDraft('');
   };
 
+  const playCue = (sceneId: number, key: string) => {
+    store.requestDissolve(sceneId, key);
+    store.setLibraryOpen(false);
+  };
+
+  const playVisualSet = () => {
+    const body = bodyEntries(active.entries);
+    const first = body[0] ?? active.entries[0];
+    if (!first) return;
+    store.setBodyFollow('auto');
+    store.requestDissolve(first.sceneId, first.key);
+    store.setLibraryOpen(false);
+  };
+
   return (
     <div className="playlist-manager" data-testid="playlist-manager">
+      <div className="playlist-hero">
+        <div>
+          <p className="playlist-kicker">Visual set</p>
+          <h2 className="playlist-title">{active.name}</h2>
+          <p className="playlist-lead">
+            Ordered visualizations — like a Winamp playlist. Pin favorites to
+            the deck (1–0), then play the set or jump a cue.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="playlist-play-set"
+          data-testid="play-visual-set"
+          disabled={active.entries.length === 0}
+          onClick={playVisualSet}
+          title="Auto-follow the set from the first body cue (or first entry)"
+        >
+          Play visual set
+        </button>
+      </div>
+
       <div className="playlist-bar">
         <label className="playlist-pick">
-          <span>Playlist</span>
+          <span>Setlist</span>
           <select
             value={active.id}
             aria-label="Active playlist"
@@ -136,7 +180,11 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
             <select
               aria-label={`${label}-show cue`}
               value={
-                (slot === 'pre' ? active.preCue : slot === 'pause' ? active.pauseCue : active.postCue) ?? ''
+                (slot === 'pre'
+                  ? active.preCue
+                  : slot === 'pause'
+                    ? active.pauseCue
+                    : active.postCue) ?? ''
               }
               onChange={(event) =>
                 store.setStateCue(
@@ -185,18 +233,22 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
       {(() => {
         const conflicts = windowConflicts(bodyEntries(active.entries));
         if (conflicts.length === 0) return null;
-        const names = new Map(library.map((preset) => [preset.id, preset.name]));
         const label = (key: string) => {
           const entry = active.entries.find((item) => item.key === key);
-          return entry ? (names.get(entry.sceneId) ?? `#${entry.sceneId}`) : key;
+          return entry
+            ? (names.get(entry.sceneId) ?? `#${entry.sceneId}`)
+            : key;
         };
         return (
           <p className="playlist-conflict" data-testid="playlist-conflict">
             Sobreposição:{' '}
             {conflicts
-              .map((conflict) => `${label(conflict.withKey)} × ${label(conflict.key)}`)
-              .join('; ')}
-            {' '}— ajuste os pinos para distribuir.
+              .map(
+                (conflict) =>
+                  `${label(conflict.withKey)} × ${label(conflict.key)}`,
+              )
+              .join('; ')}{' '}
+            — ajuste os pinos para distribuir.
           </p>
         );
       })()}
@@ -263,9 +315,7 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
         {bodyEntries(active.entries).length > 1 ? (
           <button
             type="button"
-            disabled={
-              windowConflicts(bodyEntries(active.entries)).length > 0
-            }
+            disabled={windowConflicts(bodyEntries(active.entries)).length > 0}
             onClick={() => store.distributeBody(active.targetSec ?? null)}
             title={
               windowConflicts(bodyEntries(active.entries)).length > 0
@@ -282,14 +332,15 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
 
       <div className="playlist-panes">
         <div className="playlist-pane">
-          <h3>Library · {library.length}</h3>
-          <ul className="playlist-rows">
+          <h3>Scene library · {library.length}</h3>
+          <ul className="playlist-rows" data-testid="visual-library">
             {library.map((preset) => (
-              <li key={preset.id} className="playlist-row">
+              <li key={preset.id} className="playlist-row visual">
+                <SceneThumb preset={preset} size="sm" />
                 <span className="playlist-name">{preset.name}</span>
                 <button
                   type="button"
-                  title="Append to playlist (duplicates allowed)"
+                  title="Append to visual set (duplicates allowed)"
                   onClick={() => store.addSceneToPlaylist(active.id, preset.id)}
                 >
                   +
@@ -300,16 +351,22 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
         </div>
         <div className="playlist-pane">
           <h3>
-            {active.name} · {active.entries.length} · deck{' '}
+            Setlist · {active.entries.length} · deck{' '}
             {Math.min(active.entries.length, DECK_SIZE)}/{DECK_SIZE}
           </h3>
-          <ul className="playlist-rows">
+          <ul className="playlist-rows" data-testid="visual-setlist">
             {active.entries.map((entry, index) => {
               const inDeck = index < DECK_SIZE;
+              const preset = resolvePreset(entry.sceneId, library);
+              const isLive =
+                activeEntryKey === entry.key ||
+                (!activeEntryKey && activePresetId === entry.sceneId);
               return (
                 <li
                   key={entry.key}
-                  className="playlist-row"
+                  className={
+                    isLive ? 'playlist-row visual is-live' : 'playlist-row visual'
+                  }
                   {...sectionDropProps(index, (from, to) =>
                     store.movePlaylistScene(from, to),
                   )}
@@ -326,17 +383,40 @@ export function PlaylistManager({ trackName }: { trackName?: string | null }) {
                   >
                     {index + 1}
                   </span>
-                  <span className="playlist-name">
-                    {names.get(entry.sceneId) ?? `#${entry.sceneId}`}
-                  </span>
-                  <span
-                    className="playlist-time"
-                    title={`Cue ${formatTrackTime(cueTiming(entry).durationSec)} · ${cueTiming(entry).follow}`}
+                  {preset ? (
+                    <button
+                      type="button"
+                      className="playlist-thumb-hit"
+                      title="Play this visualization"
+                      data-testid={`play-cue-${entry.key}`}
+                      onClick={() => playCue(entry.sceneId, entry.key)}
+                    >
+                      <SceneThumb
+                        preset={preset}
+                        size="md"
+                        active={isLive}
+                      />
+                    </button>
+                  ) : (
+                    <span className="playlist-thumb-missing" />
+                  )}
+                  <button
+                    type="button"
+                    className="playlist-name-hit"
+                    onClick={() => playCue(entry.sceneId, entry.key)}
                   >
-                    {sanitizeAnchor(entry.startSec) !== null
-                      ? `◈ ${formatTrackTime(sanitizeAnchor(entry.startSec) ?? 0)}`
-                      : formatTrackTime(cueTiming(entry).durationSec)}
-                  </span>
+                    <span className="playlist-name">
+                      {names.get(entry.sceneId) ?? `#${entry.sceneId}`}
+                    </span>
+                    <span
+                      className="playlist-time"
+                      title={`Cue ${formatTrackTime(cueTiming(entry).durationSec)} · ${cueTiming(entry).follow}`}
+                    >
+                      {sanitizeAnchor(entry.startSec) !== null
+                        ? `◈ ${formatTrackTime(sanitizeAnchor(entry.startSec) ?? 0)}`
+                        : formatTrackTime(cueTiming(entry).durationSec)}
+                    </span>
+                  </button>
                   <div className="playlist-actions">
                     <button
                       type="button"

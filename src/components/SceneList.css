@@ -78,6 +78,12 @@
   flex-shrink: 0;
 }
 
+.scene-swatch-wrap {
+  flex-shrink: 0;
+  display: inline-flex;
+  cursor: grab;
+}
+
 .scene-fav {
   color: #facc15;
   font-size: 12px;
