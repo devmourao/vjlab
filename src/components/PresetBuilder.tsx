@@ -3,6 +3,7 @@ import { useDirectorStore } from '../director/directorStore';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
 import { PRESETS } from '../scenes/presets';
+import { readImageAsDataUrl } from '../scenes/imageDataUrl';
 import { draftToPreset } from '../scenes/presetDraft';
 import {
   SCENE_TEMPLATES,
@@ -96,6 +97,7 @@ export function PresetBuilder({
   const [instances, setInstances] = useState<BaseInstance[]>(seed.instances);
   const [advancedOpen, setAdvancedOpen] = useState(isEdit);
   const [error, setError] = useState<string | null>(null);
+  const [slotBusy, setSlotBusy] = useState(false);
 
   const templateSlots = isEdit
     ? imageSlotsFromInstances(instances)
@@ -154,14 +156,33 @@ export function PresetBuilder({
       const store = useDirectorStore.getState();
       if (isEdit && preset && !isNativeEdit) {
         store.updateScene(preset.id, result.preset);
+        store.setPreset(preset.id);
       } else {
-        const created = store.createScene({
-          ...result.preset,
-          name: isNativeEdit
-            ? `${result.preset.name} (custom)`
-            : result.preset.name,
-        });
-        store.setPreset(created.id);
+        // Native customize: create off-playlist, then remap setlist slots
+        // so we don't leave a duplicate cue next to the remapped ones.
+        const created = store.createScene(
+          {
+            ...result.preset,
+            name: isNativeEdit
+              ? `${result.preset.name} (custom)`
+              : result.preset.name,
+          },
+          { addToPlaylist: !isNativeEdit },
+        );
+        if (isNativeEdit && preset) {
+          store.replacePlaylistSceneId(preset.id, created.id);
+          const after = useDirectorStore.getState();
+          const active = after.playlists.find(
+            (entry) => entry.id === after.activePlaylistId,
+          );
+          const alreadyQueued = active?.entries.some(
+            (entry) => entry.sceneId === created.id,
+          );
+          if (!alreadyQueued && active) {
+            after.addSceneToPlaylist(active.id, created.id);
+          }
+        }
+        useDirectorStore.getState().setPreset(created.id);
       }
     }
     onClose();
@@ -259,17 +280,30 @@ export function PresetBuilder({
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
+                  disabled={slotBusy}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    e.target.value = '';
                     if (!file) return;
-                    setSlotValue(slot.path, URL.createObjectURL(file));
+                    setSlotBusy(true);
+                    setError(null);
+                    void readImageAsDataUrl(file)
+                      .then((dataUrl) => {
+                        setSlotValue(slot.path, dataUrl);
+                      })
+                      .catch(() => {
+                        setError('Could not read that image — try PNG or JPG');
+                      })
+                      .finally(() => setSlotBusy(false));
                   }}
                 />
-                {hasCustom ? (
+                {slotBusy ? (
+                  <span className="builder-slot-wait">Loading image…</span>
+                ) : hasCustom ? (
                   <span className="builder-slot-ok">Custom image attached</span>
                 ) : (
                   <span className="builder-slot-wait">
-                    Drop album art — placeholder shows until you do
+                    Drop album art — preview updates as soon as it loads
                   </span>
                 )}
               </label>

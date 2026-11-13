@@ -107,19 +107,20 @@ export function SceneInstances({
         const sens =
           (inst.params?.['cameraSensitivity'] as number | undefined) ?? 1;
         const zoom = inst.params?.['zoom'] as number | undefined;
+        const mapUrl =
+          inst.base === 'mesh' ? (getMapUrl?.(inst.base, idx) ?? null) : null;
+        // Fingerprint without stuffing huge data URLs into React keys.
+        const mapKey =
+          typeof mapUrl === 'string'
+            ? `${mapUrl.length}:${mapUrl.slice(0, 24)}:${mapUrl.slice(-24)}`
+            : 'nomap';
         return (
           <ParallaxGroup
-            key={`${groupKey}-${inst.base}-${idx}`}
+            key={`${groupKey}-${inst.base}-${idx}-${mapKey}`}
             sensitivity={sens}
             zoom={zoom}
           >
-            {renderBase(
-              inst,
-              palette,
-              gain,
-              speed,
-              inst.base === 'mesh' ? (getMapUrl?.(inst.base, idx) ?? null) : null,
-            )}
+            {renderBase(inst, palette, gain, speed, mapUrl)}
           </ParallaxGroup>
         );
       })}
