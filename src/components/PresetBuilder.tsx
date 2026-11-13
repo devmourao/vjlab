@@ -114,6 +114,10 @@ export function PresetBuilder({
   const [gain, setGain] = useState(seed.gain);
   const [speed, setSpeed] = useState(seed.speed);
   const [instances, setInstances] = useState<BaseInstance[]>(seed.instances);
+  /** Accordion: one open piece at a time keeps long stacks scannable. */
+  const [expandedLayer, setExpandedLayer] = useState<number | null>(
+    seed.instances.length > 0 ? 0 : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [slotBusy, setSlotBusy] = useState(false);
 
@@ -132,6 +136,7 @@ export function PresetBuilder({
         params: { ...(inst.params ?? {}) },
       })),
     );
+    setExpandedLayer(next.instances.length > 0 ? 0 : null);
     setError(null);
   };
 
@@ -178,6 +183,30 @@ export function PresetBuilder({
       const [item] = next.splice(index, 1);
       next.splice(target, 0, item);
       return next;
+    });
+    setExpandedLayer((open) => {
+      if (open === null) return null;
+      if (open === index) return index + delta;
+      if (open === index + delta) return index;
+      return open;
+    });
+  };
+
+  const addInstance = (base: BaseId) => {
+    setInstances((prev) => {
+      const next = [...prev, { base, params: defaultParamsFor(base) }];
+      setExpandedLayer(next.length - 1);
+      return next;
+    });
+  };
+
+  const removeInstance = (index: number) => {
+    setInstances((prev) => prev.filter((_, i) => i !== index));
+    setExpandedLayer((open) => {
+      if (open === null) return null;
+      if (open === index) return null;
+      if (open > index) return open - 1;
+      return open;
     });
   };
 
@@ -377,12 +406,7 @@ export function PresetBuilder({
                         <button
                           type="button"
                           data-testid={`add-base-${base}`}
-                          onClick={() =>
-                            setInstances((prev) => [
-                              ...prev,
-                              { base, params: defaultParamsFor(base) },
-                            ])
-                          }
+                          onClick={() => addInstance(base)}
                         >
                           Add piece
                         </button>
@@ -394,66 +418,111 @@ export function PresetBuilder({
               {instances.length === 0 && (
                 <p className="builder-hint">No layers yet — add a base above.</p>
               )}
-              {instances.map((inst, index) => (
-                <div
-                  key={`${inst.base}-${index}`}
-                  className="builder-instance"
-                  data-testid={`layer-${index}`}
-                >
-                  <div className="builder-instance-head">
-                    <strong>
-                      {index + 1}. {BASE_CAPABILITIES[inst.base].label}
-                    </strong>
-                    <div className="builder-instance-actions">
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        aria-label="Move layer up"
-                        onClick={() => moveInstance(index, -1)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === instances.length - 1}
-                        aria-label="Move layer down"
-                        onClick={() => moveInstance(index, 1)}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setInstances((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
-                      >
-                        Remove
-                      </button>
+              <div className="builder-layer-stack" data-testid="layer-stack">
+                {instances.map((inst, index) => {
+                  const open = expandedLayer === index;
+                  const locked =
+                    Number(inst.params?.['lockMotion'] ?? 0) >= 0.5;
+                  const category = BASE_CAPABILITIES[inst.base].category;
+                  return (
+                    <div
+                      key={`${inst.base}-${index}`}
+                      className={
+                        open
+                          ? `builder-instance is-open cat-${category}`
+                          : `builder-instance cat-${category}`
+                      }
+                      data-testid={`layer-${index}`}
+                    >
+                      <div className="builder-instance-head">
+                        <button
+                          type="button"
+                          className="builder-instance-toggle"
+                          aria-expanded={open}
+                          data-testid={`layer-toggle-${index}`}
+                          onClick={() =>
+                            setExpandedLayer((current) =>
+                              current === index ? null : index,
+                            )
+                          }
+                        >
+                          <span className="builder-instance-chevron" aria-hidden>
+                            {open ? '▾' : '▸'}
+                          </span>
+                          <span className="builder-instance-title">
+                            <strong>
+                              {index + 1}. {BASE_CAPABILITIES[inst.base].label}
+                            </strong>
+                            <span className="builder-template-cat">
+                              {category}
+                            </span>
+                            {locked && (
+                              <span className="builder-instance-chip">
+                                locked
+                              </span>
+                            )}
+                          </span>
+                          {!open && (
+                            <span className="builder-instance-hint">
+                              Click to edit params
+                            </span>
+                          )}
+                        </button>
+                        <div className="builder-instance-actions">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            aria-label="Move layer up"
+                            onClick={() => moveInstance(index, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === instances.length - 1}
+                            aria-label="Move layer down"
+                            onClick={() => moveInstance(index, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeInstance(index)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      {open && (
+                        <div
+                          className="builder-instance-body"
+                          data-testid={`layer-body-${index}`}
+                        >
+                          <InstanceParamFields
+                            base={inst.base}
+                            params={inst.params ?? {}}
+                            onParam={(key, value) =>
+                              setInstances((prev) =>
+                                prev.map((entry, i) =>
+                                  i === index
+                                    ? {
+                                        ...entry,
+                                        params: {
+                                          ...(entry.params ?? {}),
+                                          [key]: value,
+                                        },
+                                      }
+                                    : entry,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <InstanceParamFields
-                    base={inst.base}
-                    params={inst.params ?? {}}
-                    onParam={(key, value) =>
-                      setInstances((prev) =>
-                        prev.map((entry, i) =>
-                          i === index
-                            ? {
-                                ...entry,
-                                params: {
-                                  ...(entry.params ?? {}),
-                                  [key]: value,
-                                },
-                              }
-                            : entry,
-                        ),
-                      )
-                    }
-                  />
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </section>
 
             <section aria-label="Look">
