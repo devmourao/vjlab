@@ -5,6 +5,29 @@
   overflow-y: auto;
 }
 
+.bases-intro {
+  padding: 12px 14px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 12px;
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.bases-intro p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.bases-section-title {
+  margin: 4px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  font-weight: 700;
+}
+
 .bases-list {
   margin: 0;
   padding: 0;

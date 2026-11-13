@@ -13,6 +13,8 @@ export type SceneTemplateId =
   | 'spectrum-stack'
   | 'cover-orbit'
   | 'tunnel-dust'
+  | 'floor-bloom'
+  | 'led-haze'
   | 'blank';
 
 export interface SceneTemplate {
@@ -145,6 +147,45 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       instanceDefaults('particles', {
         cameraSensitivity: 0.15,
         zoom: 1.25,
+      }),
+    ],
+  },
+  {
+    id: 'floor-bloom',
+    name: 'Floor Bloom',
+    blurb: 'Fractal as a locked floor plane with soft fog above.',
+    category: 'field',
+    palette: { primary: '#ff7aff', emissive: '#00ffff' },
+    background: '#05020a',
+    gain: 1.2,
+    speed: 0.9,
+    instances: [
+      instanceDefaults('fractal', {
+        orientation: 1,
+        lockMotion: 1,
+        cameraSensitivity: 0,
+        zoom: 0.85,
+      }),
+      instanceDefaults('fog', {
+        posY: 0.4,
+        cameraSensitivity: 0.2,
+      }),
+    ],
+  },
+  {
+    id: 'led-haze',
+    name: 'LED Haze',
+    blurb: 'Grid wall with atmosphere fog — club backdrop stack.',
+    category: 'form',
+    palette: { primary: '#34d399', emissive: '#059669' },
+    background: '#020806',
+    gain: 1.15,
+    speed: 1,
+    instances: [
+      instanceDefaults('grid', { posZ: -0.4 }),
+      instanceDefaults('fog', {
+        posZ: 0.6,
+        cameraSensitivity: 0.15,
       }),
     ],
   },

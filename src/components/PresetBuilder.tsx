@@ -349,33 +349,47 @@ export function PresetBuilder({
             )}
 
             <section aria-label="Layers">
-              <h3>{isEdit ? '1 · Layers' : '2 · Layers'}</h3>
+              <h3>{isEdit ? '1 · Puzzle pieces' : '2 · Puzzle pieces'}</h3>
               <p className="builder-hint">
-                Order is draw order. Add, reorder, or remove bases — the
-                preview updates live.
+                Bases are the pieces. Add from the catalog, place each with
+                Position / Lock / Colors, reorder for draw depth — preview
+                stays live.
               </p>
               <div className="builder-browser" data-testid="base-picker">
-                {BASE_IDS.map((base) => (
-                  <div key={base} className="builder-base">
-                    <strong>{BASE_CAPABILITIES[base].label}</strong>
-                    <span className="builder-template-cat">
-                      {BASE_CAPABILITIES[base].category}
-                    </span>
-                    <span>{BASE_CAPABILITIES[base].description}</span>
-                    <button
-                      type="button"
-                      data-testid={`add-base-${base}`}
-                      onClick={() =>
-                        setInstances((prev) => [
-                          ...prev,
-                          { base, params: defaultParamsFor(base) },
-                        ])
-                      }
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
+                {(
+                  ['field', 'form', 'media', 'fx'] as const
+                ).flatMap((category) => {
+                  const bases = BASE_IDS.filter(
+                    (base) => BASE_CAPABILITIES[base].category === category,
+                  );
+                  if (bases.length === 0) return [];
+                  return [
+                    <p key={`cat-${category}`} className="builder-cat-label">
+                      {category}
+                    </p>,
+                    ...bases.map((base) => (
+                      <div key={base} className="builder-base">
+                        <strong>{BASE_CAPABILITIES[base].label}</strong>
+                        <span className="builder-template-cat">
+                          {BASE_CAPABILITIES[base].category}
+                        </span>
+                        <span>{BASE_CAPABILITIES[base].description}</span>
+                        <button
+                          type="button"
+                          data-testid={`add-base-${base}`}
+                          onClick={() =>
+                            setInstances((prev) => [
+                              ...prev,
+                              { base, params: defaultParamsFor(base) },
+                            ])
+                          }
+                        >
+                          Add piece
+                        </button>
+                      </div>
+                    )),
+                  ];
+                })}
               </div>
               {instances.length === 0 && (
                 <p className="builder-hint">No layers yet — add a base above.</p>
@@ -508,26 +522,54 @@ export function PresetBuilder({
               })}
 
               <div className="builder-grid">
-                <label className="builder-field">
+                <label className="builder-field builder-color-field">
                   <span>Primary</span>
-                  <input
-                    value={primary}
-                    onChange={(e) => setPrimary(e.target.value)}
-                  />
+                  <div className="builder-color-row">
+                    <input
+                      type="color"
+                      value={/^#[0-9a-f]{6}$/i.test(primary) ? primary : '#7dd3fc'}
+                      onChange={(e) => setPrimary(e.target.value)}
+                      aria-label="Primary color picker"
+                    />
+                    <input
+                      value={primary}
+                      onChange={(e) => setPrimary(e.target.value)}
+                    />
+                  </div>
                 </label>
-                <label className="builder-field">
+                <label className="builder-field builder-color-field">
                   <span>Emissive</span>
-                  <input
-                    value={emissive}
-                    onChange={(e) => setEmissive(e.target.value)}
-                  />
+                  <div className="builder-color-row">
+                    <input
+                      type="color"
+                      value={/^#[0-9a-f]{6}$/i.test(emissive) ? emissive : '#38bdf8'}
+                      onChange={(e) => setEmissive(e.target.value)}
+                      aria-label="Emissive color picker"
+                    />
+                    <input
+                      value={emissive}
+                      onChange={(e) => setEmissive(e.target.value)}
+                    />
+                  </div>
                 </label>
-                <label className="builder-field">
+                <label className="builder-field builder-color-field">
                   <span>Background</span>
-                  <input
-                    value={background}
-                    onChange={(e) => setBackground(e.target.value)}
-                  />
+                  <div className="builder-color-row">
+                    <input
+                      type="color"
+                      value={
+                        /^#[0-9a-f]{6}$/i.test(background)
+                          ? background
+                          : '#020617'
+                      }
+                      onChange={(e) => setBackground(e.target.value)}
+                      aria-label="Background color picker"
+                    />
+                    <input
+                      value={background}
+                      onChange={(e) => setBackground(e.target.value)}
+                    />
+                  </div>
                 </label>
                 <label className="builder-field">
                   <span>Gain {gain.toFixed(1)}</span>

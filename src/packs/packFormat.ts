@@ -193,6 +193,21 @@ function normalizeInstances(
         }
         continue;
       }
+      if (schema.type === 'color') {
+        if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) {
+          params[key] = value;
+        } else if (value === null || value === '') {
+          // Inherit scene palette — omit.
+        } else {
+          warnings.push(`param '${key}' must be #rrggbb, ignored`);
+        }
+        continue;
+      }
+      if (schema.type === 'toggle') {
+        const on = Number(value) >= 0.5 ? 1 : 0;
+        params[key] = on;
+        continue;
+      }
       const clamped = clampNumber(
         value,
         schema.min ?? Number.NEGATIVE_INFINITY,

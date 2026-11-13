@@ -92,6 +92,8 @@ describe('presets', () => {
       fractal: 1.5,
       bars: 0.7,
       rings: 0.55,
+      grid: 0.65,
+      fog: 0.4,
     });
     for (const capability of Object.values(BASE_CAPABILITIES)) {
       expect(capability.burst.targets.length).toBeGreaterThan(0);
@@ -109,7 +111,9 @@ describe('presets', () => {
     expect(byName.get('speed')).toBe('transport');
     expect(byName.get('map')).toBeUndefined();
     for (const schema of HOST_PARAM_SCHEMAS) {
-      expect(schema.family).toBe('spatial');
+      expect(['spatial', 'color']).toContain(schema.family);
     }
+    expect(HOST_PARAM_SCHEMAS.some((s) => s.name === 'lockMotion')).toBe(true);
+    expect(HOST_PARAM_SCHEMAS.some((s) => s.name === 'posY')).toBe(true);
   });
 });

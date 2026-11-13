@@ -110,16 +110,26 @@ const fragmentShader = `
   }
 `;
 
+/** 0 = wall/screen, 1 = floor, 2 = ceiling. */
+function orientationEuler(orientation: number): [number, number, number] {
+  const mode = Math.round(Math.max(0, Math.min(2, orientation)));
+  if (mode === 1) return [-Math.PI / 2, 0, 0];
+  if (mode === 2) return [Math.PI / 2, 0, 0];
+  return [0, 0, 0];
+}
+
 export function FractalScene({
   color = '#ff7aff',
   emissive = '#00ffff',
   gain = 1,
   speed = 1,
+  orientation = 0,
 }: {
   color?: string;
   emissive?: string;
   gain?: number;
   speed?: number;
+  orientation?: number;
 }) {
   const liteOn = useDirectorStore((s) => s.liteOn);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
@@ -179,14 +189,22 @@ export function FractalScene({
     void liteOn;
   });
 
+  const euler = orientationEuler(orientation);
+  const yOffset = Math.round(orientation) === 1 ? -1.6 : Math.round(orientation) === 2 ? 1.6 : 0;
+
   return (
-    <mesh scale={[1.9, 1.1, 1]}>
+    <mesh
+      scale={[1.9, 1.1, 1]}
+      rotation={euler}
+      position={[0, yOffset, Math.round(orientation) === 0 ? 0 : -0.4]}
+    >
       <planeGeometry args={[16, 9]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
         uniforms={uniforms}
+        side={THREE.DoubleSide}
       />
     </mesh>
   );

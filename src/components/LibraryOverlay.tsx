@@ -20,7 +20,7 @@ const TABS: Array<{ id: LibraryTab; label: string }> = [
   { id: 'scenes', label: 'Scenes' },
   { id: 'playlists', label: 'Setlist' },
   { id: 'timeline', label: 'Timeline' },
-  { id: 'bases', label: 'Bases' },
+  { id: 'bases', label: 'Pieces' },
   { id: 'keys', label: 'Keys' },
 ];
 

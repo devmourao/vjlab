@@ -9,7 +9,9 @@ export type BaseId =
   | 'tunnel'
   | 'fractal'
   | 'bars'
-  | 'rings';
+  | 'rings'
+  | 'grid'
+  | 'fog';
 
 /** Ordered catalog for Compose pickers (Open/Closed: append only). */
 export const BASE_IDS: BaseId[] = [
@@ -19,6 +21,8 @@ export const BASE_IDS: BaseId[] = [
   'fractal',
   'bars',
   'rings',
+  'grid',
+  'fog',
 ];
 
 export interface BaseInstance {

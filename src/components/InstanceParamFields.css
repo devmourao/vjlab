@@ -4,6 +4,14 @@
   opacity: 0.6;
 }
 
+.param-group-title {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
 .param-field {
   display: flex;
   flex-direction: column;
@@ -11,11 +19,73 @@
   font-size: 13px;
 }
 
-.param-field input {
+.param-field input[type='text'],
+.param-field input:not([type]),
+.param-field input[type='url'] {
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
+}
+
+.param-field input[type='range'] {
+  min-height: 28px;
+}
+
+.param-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-color-row input[type='color'] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.param-color-row input:not([type='color']) {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.param-clear {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.param-toggle .param-switch {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.param-toggle .param-switch.is-on {
+  border-color: rgba(34, 211, 238, 0.7);
+  background: rgba(34, 211, 238, 0.14);
 }

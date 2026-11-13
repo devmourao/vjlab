@@ -52,4 +52,6 @@ export const BASE_THUMB_LABEL: Record<BaseId, string> = {
   fractal: 'F',
   bars: 'B',
   rings: 'R',
+  grid: 'G',
+  fog: 'A',
 };
