@@ -380,9 +380,9 @@ export function PresetBuilder({
             <section aria-label="Layers">
               <h3>{isEdit ? '1 · Puzzle pieces' : '2 · Puzzle pieces'}</h3>
               <p className="builder-hint">
-                Bases are the pieces. Add from the catalog, place each with
-                Position / Lock / Colors, reorder for draw depth — preview
-                stays live.
+                Bases are the pieces. Pin a wall/floor so it ignores the
+                camera; give others Self-spin so they don’t rotate as one
+                glued block. Preview stays live.
               </p>
               <div className="builder-browser" data-testid="base-picker">
                 {(
@@ -458,7 +458,7 @@ export function PresetBuilder({
                             </span>
                             {locked && (
                               <span className="builder-instance-chip">
-                                locked
+                                pinned
                               </span>
                             )}
                           </span>

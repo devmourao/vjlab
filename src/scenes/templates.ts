@@ -153,7 +153,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
   {
     id: 'floor-bloom',
     name: 'Floor Bloom',
-    blurb: 'Fractal as a locked floor plane with soft fog above.',
+    blurb: 'Fractal pinned as floor; fog still drifts with the desk.',
     category: 'field',
     palette: { primary: '#ff7aff', emissive: '#00ffff' },
     background: '#05020a',
@@ -168,24 +168,30 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       }),
       instanceDefaults('fog', {
         posY: 0.4,
-        cameraSensitivity: 0.2,
+        cameraSensitivity: 0.35,
+        spinY: 0.15,
       }),
     ],
   },
   {
     id: 'led-haze',
     name: 'LED Haze',
-    blurb: 'Grid wall with atmosphere fog — club backdrop stack.',
+    blurb: 'Pinned LED wall; fog self-spins slowly in front.',
     category: 'form',
     palette: { primary: '#34d399', emissive: '#059669' },
     background: '#020806',
     gain: 1.15,
     speed: 1,
     instances: [
-      instanceDefaults('grid', { posZ: -0.4 }),
+      instanceDefaults('grid', {
+        posZ: -0.4,
+        lockMotion: 1,
+        cameraSensitivity: 0,
+      }),
       instanceDefaults('fog', {
         posZ: 0.6,
-        cameraSensitivity: 0.15,
+        cameraSensitivity: 0.2,
+        spinY: 0.25,
       }),
     ],
   },

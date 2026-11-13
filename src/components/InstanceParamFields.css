@@ -89,3 +89,9 @@
   border-color: rgba(34, 211, 238, 0.7);
   background: rgba(34, 211, 238, 0.14);
 }
+
+.param-help {
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.55;
+}
