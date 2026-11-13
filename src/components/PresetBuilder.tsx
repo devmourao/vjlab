@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDirectorStore } from '../director/directorStore';
 import { BASE_CAPABILITIES, HOST_PARAM_SCHEMAS } from '../scenes/bases';
 import type { BaseId, BaseInstance, ScenePreset } from '../scenes/presets';
@@ -265,7 +265,19 @@ export function PresetBuilder({
 
   const title = isEdit
     ? `${isNativeEdit ? 'Customize' : 'Edit'} · ${preset?.name}`
-    : 'Compose scene';
+    : 'Compose';
+
+  // Escape closes the workbench first (before Library/desk handlers).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code !== 'Escape') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
 
   return (
     <div
@@ -275,18 +287,28 @@ export function PresetBuilder({
       <div
         className="builder-card"
         role="dialog"
+        aria-modal="true"
         aria-label={title}
       >
         <div className="builder-head">
           <div>
+            <div className="builder-mode-row">
+              <span className="builder-mode-chip">Compose mode</span>
+              <span className="builder-mode-vs">Stage waits behind</span>
+            </div>
             <strong>{title}</strong>
             <p className="builder-subtitle">
-              Preview stays pinned — stack bases, tune look, save to the
-              setlist.
+              Full workbench — stack pieces, place and pin, tune look, then
+              save to the setlist. Esc closes Compose and returns to Manage.
             </p>
           </div>
-          <button type="button" className="builder-close" onClick={onClose}>
-            Close
+          <button
+            type="button"
+            className="builder-close"
+            data-testid="builder-close"
+            onClick={onClose}
+          >
+            Back to Manage
           </button>
         </div>
 
@@ -690,7 +712,7 @@ export function PresetBuilder({
 
         <div className="builder-actions">
           <button type="button" className="builder-cancel" onClick={onClose}>
-            Cancel
+            Discard
           </button>
           <button
             type="button"
@@ -699,10 +721,10 @@ export function PresetBuilder({
             onClick={save}
           >
             {isNativeEdit
-              ? 'Save as custom'
+              ? 'Save as custom → setlist'
               : isEdit
                 ? 'Save scene'
-                : 'Save to playlist'}
+                : 'Save to setlist'}
           </button>
         </div>
       </div>

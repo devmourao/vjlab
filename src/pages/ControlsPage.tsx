@@ -295,7 +295,7 @@ export default function ControlsPage() {
                     />
                     <div className="controls-row">
                       <button type="button" onClick={() => send({ type: 'openLibrary' })}>
-                        Manage scenes…
+                        Manage mode…
                       </button>
                     </div>
                   </div>

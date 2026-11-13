@@ -270,9 +270,9 @@ export function SceneList({
           type="button"
           onClick={() => setBuilding(true)}
           data-testid="open-builder"
-          title="Compose a scene from templates, remix, or blank layers"
+          title="Open the fullscreen Compose workbench"
         >
-          Compose scene
+          Open Compose →
         </button>
         {/* Backward-compatible hook for older tests / remote consoles */}
         <button
@@ -575,7 +575,7 @@ export function SceneList({
                     onClick={() => setEditing(preset)}
                     data-testid={`edit-scene-${preset.id}`}
                   >
-                    {isNative(preset.id) ? 'Customize' : 'Edit'}
+                    {isNative(preset.id) ? 'Customize in Compose' : 'Edit in Compose'}
                   </button>
                   <button
                     type="button"
