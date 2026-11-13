@@ -30,6 +30,8 @@ describe('scene templates', () => {
       'cover-orbit',
       'spectrum-stack',
       'tunnel-dust',
+      'floor-bloom',
+      'led-haze',
       'pure-field',
       'tunnel-run',
       'blank',

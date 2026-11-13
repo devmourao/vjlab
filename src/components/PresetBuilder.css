@@ -233,6 +233,36 @@
   gap: 8px;
 }
 
+.builder-cat-label {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.builder-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.builder-color-row input[type='color'] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.builder-color-row input:not([type='color']) {
+  flex: 1;
+}
+
 .builder-base {
   display: flex;
   flex-direction: column;
