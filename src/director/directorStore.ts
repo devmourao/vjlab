@@ -79,7 +79,10 @@ interface DirectorState {
   prevPreset: () => void;
   requestDissolve: (id: number, key?: string | null) => void;
   hardCutNext: () => void;
-  createScene: (preset: Omit<ScenePreset, 'id'>) => ScenePreset;
+  createScene: (
+    preset: Omit<ScenePreset, 'id'>,
+    options?: { addToPlaylist?: boolean },
+  ) => ScenePreset;
   updateScene: (id: number, patch: Partial<Omit<ScenePreset, 'id'>>) => void;
   deleteScene: (id: number) => void;
   importScenes: (packFile: unknown) => {
@@ -115,6 +118,8 @@ interface DirectorState {
   setActivePlaylist: (id: string) => void;
   addSceneToPlaylist: (playlistId: string, sceneId: number) => void;
   removeSceneFromPlaylist: (playlistId: string, key: string) => void;
+  /** Remap every playlist occurrence of fromId → toId (native customize). */
+  replacePlaylistSceneId: (fromId: number, toId: number) => void;
   setCueTiming: (
     key: string,
     patch: { durationSec?: number; follow?: CueFollow },
@@ -941,8 +946,9 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     set({ activeEntryKey: next.key });
     useDirectorStore.getState().setPreset(next.sceneId);
   },
-  createScene: (preset) => {
+  createScene: (preset, options) => {
     const state = get();
+    const addToPlaylist = options?.addToPlaylist !== false;
     const ids = allPresets(state.customPresets).map((entry) => entry.id);
     const nextId = ids.length === 0 ? 0 : Math.max(...ids) + 1;
     const created: ScenePreset = { ...preset, id: nextId } as ScenePreset;
@@ -950,24 +956,27 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     writeCustomPresets(nextCustom);
     const nextOrder = [...state.sceneOrder, created.id];
     writeSceneOrder(nextOrder);
-    const active = selectActivePlaylist(state);
-    const nextPlaylists = state.playlists.map((entry) =>
-      entry.id === active.id
-        ? {
-            ...entry,
-            entries: [
-              ...entry.entries,
-              {
-                key: `e${Date.now().toString(36)}`,
-                sceneId: created.id,
-                durationSec: DEFAULT_CUE_DURATION_SEC,
-                follow: 'manual' as CueFollow,
-              },
-            ],
-          }
-        : entry,
-    );
-    writePlaylists(nextPlaylists, state.activePlaylistId);
+    let nextPlaylists = state.playlists;
+    if (addToPlaylist) {
+      const active = selectActivePlaylist(state);
+      nextPlaylists = state.playlists.map((entry) =>
+        entry.id === active.id
+          ? {
+              ...entry,
+              entries: [
+                ...entry.entries,
+                {
+                  key: `e${Date.now().toString(36)}`,
+                  sceneId: created.id,
+                  durationSec: DEFAULT_CUE_DURATION_SEC,
+                  follow: 'manual' as CueFollow,
+                },
+              ],
+            }
+          : entry,
+      );
+      writePlaylists(nextPlaylists, state.activePlaylistId);
+    }
     set({ customPresets: nextCustom, sceneOrder: nextOrder, playlists: nextPlaylists });
     return created;
   },
@@ -1347,6 +1356,31 @@ export const useDirectorStore = create<DirectorState>((set, get) => ({
     );
     writePlaylists(nextPlaylists, state.activePlaylistId);
     set({ playlists: nextPlaylists });
+  },
+  replacePlaylistSceneId: (fromId, toId) => {
+    const state = get();
+    if (fromId === toId) return;
+    if (!findPreset(state.customPresets, toId)) return;
+    let changed = false;
+    const nextPlaylists = state.playlists.map((playlist) => {
+      let playlistChanged = false;
+      const entries = playlist.entries.map((entry) => {
+        if (entry.sceneId !== fromId) return entry;
+        playlistChanged = true;
+        return { ...entry, sceneId: toId };
+      });
+      if (!playlistChanged) return playlist;
+      changed = true;
+      return { ...playlist, entries };
+    });
+    if (!changed) return;
+    writePlaylists(nextPlaylists, state.activePlaylistId);
+    const nextActive =
+      state.activePresetId === fromId ? toId : state.activePresetId;
+    set({
+      playlists: nextPlaylists,
+      activePresetId: nextActive,
+    });
   },
   setCueTiming: (key, patch) => {
     const state = get();

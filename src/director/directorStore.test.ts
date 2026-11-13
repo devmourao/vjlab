@@ -643,4 +643,48 @@ describe('directorStore', () => {
       false,
     );
   });
+
+  it('remaps playlist scene ids when customizing a native cover', () => {
+    const api = useDirectorStore.getState();
+    const previousActive = api.activePlaylistId;
+    api.createPlaylist('Cover remap');
+    const playlistId = useDirectorStore.getState().activePlaylistId;
+    api.addSceneToPlaylist(playlistId, 6);
+    api.addSceneToPlaylist(playlistId, 0);
+    api.addSceneToPlaylist(playlistId, 6);
+    api.setPreset(6);
+
+    const custom = api.createScene(
+      {
+        name: 'DJ Cover (custom)',
+        palette: { primary: '#ffffff', emissive: '#88aaff' },
+        background: '#050508',
+        gain: 1,
+        speed: 1,
+        scene: 0 as const,
+        instances: [
+          {
+            base: 'mesh',
+            params: {
+              cover: 1,
+              map: 'data:image/png;base64,abc',
+            },
+          },
+        ],
+      },
+      { addToPlaylist: false },
+    );
+
+    api.replacePlaylistSceneId(6, custom.id);
+    const entries = selectActivePlaylist(useDirectorStore.getState()).entries;
+    expect(entries.map((entry) => entry.sceneId)).toEqual([
+      custom.id,
+      0,
+      custom.id,
+    ]);
+    expect(useDirectorStore.getState().activePresetId).toBe(custom.id);
+
+    api.deletePlaylist(playlistId);
+    expect(useDirectorStore.getState().activePlaylistId).toBe(previousActive);
+  });
 });

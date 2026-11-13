@@ -34,25 +34,55 @@ export function DeformableMeshScene({
   const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useEffect(() => {
-    if (!mapUrl) return;
-    const loader = new THREE.TextureLoader();
     let cancelled = false;
+
+    if (!mapUrl) {
+      setTexture((previous) => {
+        previous?.dispose();
+        return null;
+      });
+      return;
+    }
+
+    const applyTexture = (loaded: THREE.Texture) => {
+      if (cancelled) {
+        loaded.dispose();
+        return;
+      }
+      loaded.colorSpace = THREE.SRGBColorSpace;
+      loaded.anisotropy = 8;
+      loaded.needsUpdate = true;
+      setTexture((previous) => {
+        previous?.dispose();
+        return loaded;
+      });
+    };
+
+    const isRemote = /^https?:/i.test(mapUrl);
+    const loader = new THREE.TextureLoader();
+    // crossOrigin on data: / blob: URLs can make the decode fail.
+    if (isRemote) loader.setCrossOrigin('anonymous');
     loader.load(
       mapUrl,
-      (loaded) => {
-        if (cancelled) return;
-        loaded.colorSpace = THREE.SRGBColorSpace;
-        loaded.anisotropy = 8;
-        setTexture((previous) => {
-          previous?.dispose();
-          return loaded;
-        });
-      },
+      applyTexture,
       undefined,
       (error) => {
         if (cancelled) return;
         console.error('[texture] failed to load image', error);
-        setTexture(null);
+        const image = new Image();
+        if (isRemote) image.crossOrigin = 'anonymous';
+        image.onload = () => {
+          if (cancelled) return;
+          applyTexture(new THREE.Texture(image));
+        };
+        image.onerror = () => {
+          if (cancelled) return;
+          setTexture((previous) => {
+            previous?.dispose();
+            return null;
+          });
+        };
+        image.src = mapUrl;
       },
     );
     return () => {
@@ -144,8 +174,15 @@ export function DeformableMeshScene({
             toneMapped={false}
           />
         </mesh>
-        {/* Album face */}
-        <mesh position={[0, 0, 0.02]}>
+        {/* Album face — remount when the map fingerprint changes */}
+        <mesh
+          key={
+            mapUrl
+              ? `${mapUrl.length}:${mapUrl.slice(0, 16)}:${mapUrl.slice(-16)}`
+              : 'cover-empty'
+          }
+          position={[0, 0, 0.02]}
+        >
           <planeGeometry args={[COVER_SIZE, COVER_SIZE]} />
           {hasArt ? (
             <meshBasicMaterial map={texture} toneMapped={false} />
