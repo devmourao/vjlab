@@ -18,7 +18,7 @@ type LibraryTab = 'scenes' | 'playlists' | 'timeline' | 'bases' | 'keys';
 
 const TABS: Array<{ id: LibraryTab; label: string }> = [
   { id: 'scenes', label: 'Scenes' },
-  { id: 'playlists', label: 'Playlists' },
+  { id: 'playlists', label: 'Setlist' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'bases', label: 'Bases' },
   { id: 'keys', label: 'Keys' },
