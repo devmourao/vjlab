@@ -32,7 +32,17 @@ function defaultParamsFor(base: BaseId): Record<string, unknown> {
   return { ...host, ...baseParams };
 }
 
-function seedFromPreset(preset: ScenePreset) {
+interface BuilderSeed {
+  name: string;
+  primary: string;
+  emissive: string;
+  background: string;
+  gain: number;
+  speed: number;
+  instances: BaseInstance[];
+}
+
+function seedFromPreset(preset: ScenePreset): BuilderSeed {
   return {
     name: preset.name,
     primary: preset.palette.primary,
@@ -109,14 +119,19 @@ export function PresetBuilder({
 
   const templateSlots = imageSlotsFromInstances(instances);
 
-  const applySeed = (next: ReturnType<typeof seedFromPreset>) => {
+  const applySeed = (next: BuilderSeed) => {
     setName(next.name);
     setPrimary(next.primary);
     setEmissive(next.emissive);
     setBackground(next.background);
     setGain(next.gain);
     setSpeed(next.speed);
-    setInstances(next.instances);
+    setInstances(
+      next.instances.map((inst) => ({
+        base: inst.base,
+        params: { ...(inst.params ?? {}) },
+      })),
+    );
     setError(null);
   };
 
