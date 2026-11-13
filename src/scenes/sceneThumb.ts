@@ -50,4 +50,6 @@ export const BASE_THUMB_LABEL: Record<BaseId, string> = {
   mesh: 'M',
   tunnel: 'T',
   fractal: 'F',
+  bars: 'B',
+  rings: 'R',
 };

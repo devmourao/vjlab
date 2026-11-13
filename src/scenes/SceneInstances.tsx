@@ -2,9 +2,11 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
 import { liveRefs } from '../director/directorStore';
+import { BarsFieldScene } from './BarsFieldScene';
 import { DeformableMeshScene } from './DeformableMeshScene';
 import { FractalScene } from './FractalScene';
 import { ParticleFieldScene } from './ParticleFieldScene';
+import { RingOrbitScene } from './RingOrbitScene';
 import { TunnelFieldScene } from './TunnelFieldScene';
 import type { BaseInstance, ScenePalette } from './presets';
 
@@ -64,6 +66,24 @@ function renderBase(
   if (instance.base === 'fractal')
     return (
       <FractalScene
+        color={palette.primary}
+        emissive={palette.emissive}
+        gain={gain}
+        speed={speed}
+      />
+    );
+  if (instance.base === 'bars')
+    return (
+      <BarsFieldScene
+        color={palette.primary}
+        emissive={palette.emissive}
+        gain={gain}
+        speed={speed}
+      />
+    );
+  if (instance.base === 'rings')
+    return (
+      <RingOrbitScene
         color={palette.primary}
         emissive={palette.emissive}
         gain={gain}

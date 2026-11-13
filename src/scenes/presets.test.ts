@@ -90,6 +90,8 @@ describe('presets', () => {
       mesh: 0.3,
       tunnel: 0.5,
       fractal: 1.5,
+      bars: 0.7,
+      rings: 0.55,
     });
     for (const capability of Object.values(BASE_CAPABILITIES)) {
       expect(capability.burst.targets.length).toBeGreaterThan(0);
