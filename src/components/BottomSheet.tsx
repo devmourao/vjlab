@@ -119,7 +119,7 @@ export function BottomSheet({ engine }: { engine: AudioEngineApi }) {
                   className="kit-link"
                   onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
                 >
-                  Manage scenes…
+                  Manage mode…
                 </button>
               </div>
               <SceneList

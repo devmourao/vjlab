@@ -65,7 +65,7 @@ export function SidePanel({ engine }: { engine: AudioEngineApi }) {
                 className="kit-link"
                 onClick={() => useDirectorStore.getState().setLibraryOpen(true)}
               >
-                Manage scenes…
+                Manage mode…
               </button>
             </div>
             <SceneList

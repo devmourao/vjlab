@@ -161,6 +161,7 @@
 
 .scene-library-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -177,6 +178,12 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+}
+
+.scene-library-actions button[data-testid='open-builder'] {
+  border-color: rgba(34, 211, 238, 0.65);
+  background: rgba(34, 211, 238, 0.16);
+  color: #a5f3fc;
 }
 
 .scene-report {

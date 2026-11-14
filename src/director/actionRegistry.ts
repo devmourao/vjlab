@@ -142,7 +142,7 @@ export const ACTIONS: ActionDef[] = [
     else void document.exitFullscreen().catch(() => {});
   } },
   { id: 'autopilot.toggle', label: 'Toggle auto-pilot tour', category: 'System', code: 'KeyA', guide: 'A', run: () => useDirectorStore.getState().toggleAutoPilot() },
-  { id: 'library.toggle', label: 'Toggle scene library', category: 'Library', code: 'KeyM', guide: 'M', run: () => {
+  { id: 'library.toggle', label: 'Toggle Manage mode', category: 'Library', code: 'KeyM', guide: 'M', run: () => {
     const store = useDirectorStore.getState();
     store.setLibraryOpen(!store.libraryOpen);
   } },

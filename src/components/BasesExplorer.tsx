@@ -20,8 +20,8 @@ export function BasesExplorer() {
       <div className="bases-intro">
         <strong>Bases = puzzle pieces</strong>
         <p>
-          Scenes are stacks of bases. Manage the catalog here; assemble and
-          place pieces in Compose (position, rotation, lock motion, colors).
+          Browse the catalog here in Manage. Open Compose for the fullscreen
+          workbench to stack, place, pin, and color pieces.
         </p>
       </div>
 

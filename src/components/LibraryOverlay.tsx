@@ -25,11 +25,9 @@ const TABS: Array<{ id: LibraryTab; label: string }> = [
 ];
 
 /**
- * Preparation surface: scene CRUD plus pack import/export plus the
- * bases reference, as a full-screen overlay above the living Stage.
- * Audio and WebGL keep running behind the veil; closing returns to
- * the show. Opens from the deck (M key, Manage buttons) or remotely
- * from the console popup.
+ * Manage mode: catalog scenes/setlist/pieces above the living Stage.
+ * Compose opens as its own fullscreen workbench on top. Closing Manage
+ * returns to Perform (the stage).
  */
 export function LibraryOverlay({ engine }: { engine?: AudioEngineApi }) {
   const libraryOpen = useDirectorStore((s) => s.libraryOpen);
@@ -52,18 +50,25 @@ export function LibraryOverlay({ engine }: { engine?: AudioEngineApi }) {
       <div
         className="library-dialog"
         role="dialog"
-        aria-label="Scene library"
+        aria-label="Manage scenes and setlist"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="library-head">
-          <strong>Library</strong>
+          <div>
+            <span className="library-mode-chip">Manage mode</span>
+            <strong>Scenes & setlist</strong>
+            <p className="library-subtitle">
+              Catalog and cue the show here. Open Compose for the fullscreen
+              workbench — then return to the stage to perform.
+            </p>
+          </div>
           <button
             type="button"
             className="library-close"
             data-testid="library-close"
             onClick={close}
           >
-            Close
+            Back to stage
           </button>
         </div>
         <div className="library-tabs" role="tablist" aria-label="Library sections">
